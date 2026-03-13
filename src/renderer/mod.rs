@@ -1,0 +1,364 @@
+pub mod camera;
+
+use wgpu::util::DeviceExt;
+use bytemuck::{Pod, Zeroable};
+use crate::trail::TrailVertex;
+use camera::Camera;
+use glam::Mat4;
+
+#[repr(C)]
+#[derive(Copy, Clone, Pod, Zeroable)]
+struct Uniforms {
+    view_proj: [[f32; 4]; 4],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Pod, Zeroable)]
+struct SurfaceVertex {
+    position: [f32; 3],
+}
+
+pub struct Renderer {
+    pub surface_config: wgpu::SurfaceConfiguration,
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
+    pub wgpu_surface: wgpu::Surface<'static>,
+
+    // Surface mesh pipeline
+    surface_pipeline: wgpu::RenderPipeline,
+    surface_vbuf: wgpu::Buffer,
+    surface_ibuf: wgpu::Buffer,
+    surface_index_count: u32,
+
+    // Trail pipeline
+    trail_pipeline: wgpu::RenderPipeline,
+    trail_vbuf: wgpu::Buffer,
+    trail_vbuf_capacity: usize,
+
+    // Uniforms
+    uniform_buf: wgpu::Buffer,
+    bind_group: wgpu::BindGroup,
+
+    pub camera: Camera,
+    depth_texture: wgpu::Texture,
+    depth_view: wgpu::TextureView,
+}
+
+const MAX_TRAIL_VERTS: usize = 100_000;
+
+impl Renderer {
+    pub async fn new(
+        window: std::sync::Arc<winit::window::Window>,
+        mesh_verts: &[[f32; 3]],
+        mesh_indices: &[u32],
+    ) -> Self {
+        let size = window.inner_size();
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::all(),
+            ..Default::default()
+        });
+        let wgpu_surface = instance.create_surface(window).unwrap();
+        let adapter = instance.request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::LowPower,
+            compatible_surface: Some(&wgpu_surface),
+            force_fallback_adapter: false,
+        }).await.expect("No adapter found");
+
+        let (device, queue) = adapter.request_device(&wgpu::DeviceDescriptor {
+            required_features: wgpu::Features::empty(),
+            required_limits: wgpu::Limits::default(),
+            label: None,
+            memory_hints: wgpu::MemoryHints::Performance,
+        }, None).await.expect("Device request failed");
+
+        let caps = wgpu_surface.get_capabilities(&adapter);
+        let format = caps.formats.iter().find(|f| f.is_srgb())
+            .copied().unwrap_or(caps.formats[0]);
+
+        let surface_config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format,
+            width: size.width,
+            height: size.height,
+            present_mode: wgpu::PresentMode::Fifo,
+            alpha_mode: caps.alpha_modes[0],
+            view_formats: vec![],
+            desired_maximum_frame_latency: 2,
+        };
+        wgpu_surface.configure(&device, &surface_config);
+
+        let aspect = size.width as f32 / size.height as f32;
+        let camera = Camera::new(aspect);
+        let uniforms = Uniforms { view_proj: camera.view_proj().to_cols_array_2d() };
+
+        let uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("uniforms"),
+            contents: bytemuck::bytes_of(&uniforms),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let bind_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &bind_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: uniform_buf.as_entire_binding(),
+            }],
+            label: None,
+        });
+
+        // Surface mesh pipeline
+        let surface_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("surface_shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/surface.wgsl").into()),
+        });
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: None,
+            bind_group_layouts: &[&bind_layout],
+            push_constant_ranges: &[],
+        });
+        let surface_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("surface_pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &surface_shader,
+                entry_point: "vs_main",
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: std::mem::size_of::<SurfaceVertex>() as u64,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &wgpu::vertex_attr_array![0 => Float32x3],
+                }],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &surface_shader,
+                entry_point: "fs_main",
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::LineList,
+                ..Default::default()
+            },
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth32Float,
+                depth_write_enabled: true,
+                depth_compare: wgpu::CompareFunction::Less,
+                stencil: Default::default(),
+                bias: Default::default(),
+            }),
+            multisample: Default::default(),
+            multiview: None,
+            cache: None,
+        });
+
+        // Surface vertex buffer
+        let surface_verts_bytes: Vec<u8> = mesh_verts.iter()
+            .flat_map(|v| bytemuck::bytes_of(v).iter().copied())
+            .collect();
+        let surface_vbuf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("surface_vbuf"),
+            contents: &surface_verts_bytes,
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+        // Convert triangles to lines for wireframe
+        let mut line_indices: Vec<u32> = Vec::new();
+        for tri in mesh_indices.chunks(3) {
+            if tri.len() == 3 {
+                line_indices.extend_from_slice(&[tri[0], tri[1], tri[1], tri[2], tri[2], tri[0]]);
+            }
+        }
+        let surface_index_count = line_indices.len() as u32;
+        let surface_ibuf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("surface_ibuf"),
+            contents: bytemuck::cast_slice(&line_indices),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+
+        // Trail pipeline
+        let trail_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("trail_shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/trail.wgsl").into()),
+        });
+        let trail_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("trail_pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &trail_shader,
+                entry_point: "vs_main",
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: std::mem::size_of::<TrailVertex>() as u64,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x4],
+                }],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &trail_shader,
+                entry_point: "fs_main",
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::LineStrip,
+                ..Default::default()
+            },
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: wgpu::TextureFormat::Depth32Float,
+                depth_write_enabled: false,
+                depth_compare: wgpu::CompareFunction::Always,
+                stencil: Default::default(),
+                bias: Default::default(),
+            }),
+            multisample: Default::default(),
+            multiview: None,
+            cache: None,
+        });
+
+        let trail_vbuf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("trail_vbuf"),
+            size: (MAX_TRAIL_VERTS * std::mem::size_of::<TrailVertex>()) as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        // Depth texture
+        let (depth_texture, depth_view) = Self::create_depth(
+            &device, size.width, size.height
+        );
+
+        Renderer {
+            surface_config,
+            device,
+            queue,
+            wgpu_surface,
+            surface_pipeline,
+            surface_vbuf,
+            surface_ibuf,
+            surface_index_count,
+            trail_pipeline,
+            trail_vbuf,
+            trail_vbuf_capacity: MAX_TRAIL_VERTS,
+            uniform_buf,
+            bind_group,
+            camera,
+            depth_texture,
+            depth_view,
+        }
+    }
+
+    fn create_depth(device: &wgpu::Device, w: u32, h: u32) -> (wgpu::Texture, wgpu::TextureView) {
+        let tex = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("depth"),
+            size: wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Depth32Float,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+        let view = tex.create_view(&Default::default());
+        (tex, view)
+    }
+
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.surface_config.width = width;
+        self.surface_config.height = height;
+        self.wgpu_surface.configure(&self.device, &self.surface_config);
+        self.camera.aspect = width as f32 / height as f32;
+        let (dt, dv) = Self::create_depth(&self.device, width, height);
+        self.depth_texture = dt;
+        self.depth_view = dv;
+    }
+
+    pub fn render(&mut self, trail_verts: &[TrailVertex], trail_segment_lengths: &[usize]) {
+        // Update uniforms
+        let uniforms = Uniforms { view_proj: self.camera.view_proj().to_cols_array_2d() };
+        self.queue.write_buffer(&self.uniform_buf, 0, bytemuck::bytes_of(&uniforms));
+
+        // Upload trail vertices
+        if !trail_verts.is_empty() {
+            let to_write = trail_verts.len().min(self.trail_vbuf_capacity);
+            self.queue.write_buffer(
+                &self.trail_vbuf, 0,
+                bytemuck::cast_slice(&trail_verts[..to_write]),
+            );
+        }
+
+        let frame = match self.wgpu_surface.get_current_texture() {
+            Ok(f) => f,
+            Err(e) => { log::warn!("Surface error: {e}"); return; }
+        };
+        let view = frame.texture.create_view(&Default::default());
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+
+        {
+            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: None,
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color { r: 0.02, g: 0.02, b: 0.05, a: 1.0 }),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &self.depth_view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: wgpu::StoreOp::Store,
+                    }),
+                    stencil_ops: None,
+                }),
+                ..Default::default()
+            });
+
+            // Draw surface wireframe
+            rpass.set_pipeline(&self.surface_pipeline);
+            rpass.set_bind_group(0, &self.bind_group, &[]);
+            rpass.set_vertex_buffer(0, self.surface_vbuf.slice(..));
+            rpass.set_index_buffer(self.surface_ibuf.slice(..), wgpu::IndexFormat::Uint32);
+            rpass.draw_indexed(0..self.surface_index_count, 0, 0..1);
+
+            // Draw trails
+            rpass.set_pipeline(&self.trail_pipeline);
+            rpass.set_bind_group(0, &self.bind_group, &[]);
+            rpass.set_vertex_buffer(0, self.trail_vbuf.slice(..));
+
+            let mut offset = 0u32;
+            for &len in trail_segment_lengths {
+                if len >= 2 {
+                    let end = (offset + len as u32).min(self.trail_vbuf_capacity as u32);
+                    rpass.draw(offset..end, 0..1);
+                }
+                offset += len as u32;
+                if offset as usize >= self.trail_vbuf_capacity { break; }
+            }
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+        frame.present();
+    }
+}

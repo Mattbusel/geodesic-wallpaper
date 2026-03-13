@@ -1,0 +1,7 @@
+surface = "torus"
+num_geodesics = 30
+trail_length = 300
+rotation_speed = 0.001047  # radians/sec ≈ 1 rev per 600s
+color_palette = ["#4488FF", "#88DDFF", "#FFD700", "#88FF88", "#FF88CC"]
+torus_R = 2.0
+torus_r = 0.7

@@ -1,0 +1,32 @@
+[package]
+name = "geodesic-wallpaper"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "geodesic-wallpaper"
+path = "src/main.rs"
+
+[dependencies]
+wgpu = "22"
+winit = { version = "0.30", features = ["rwh_06"] }
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader",
+] }
+bytemuck = { version = "1", features = ["derive"] }
+glam = "0.29"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+notify = "6"
+rand = "0.8"
+log = "0.4"
+env_logger = "0.11"
+pollster = "0.3"
+tokio = { version = "1", features = ["rt", "time"] }
+
+[profile.release]
+opt-level = 3
+lto = true

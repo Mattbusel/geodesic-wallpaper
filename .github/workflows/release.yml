@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows .exe
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build release binary
+        run: cargo build --release --target x86_64-pc-windows-msvc
+
+      - name: Copy config alongside exe
+        run: |
+          mkdir dist
+          copy target\x86_64-pc-windows-msvc\release\geodesic-wallpaper.exe dist\
+          copy config.toml dist\
+
+      - name: Zip release
+        run: |
+          Compress-Archive -Path dist\* -DestinationPath geodesic-wallpaper-windows.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Geodesic Wallpaper ${{ github.ref_name }}"
+          body: |
+            ## Geodesic Flow — Live Desktop Wallpaper ${{ github.ref_name }}
+
+            ### Download
+            - **`geodesic-wallpaper-windows.zip`** — extract and run `geodesic-wallpaper.exe`
+
+            ### What's included
+            - `geodesic-wallpaper.exe` — the wallpaper application
+            - `config.toml` — edit this to change surface, colors, trail length, etc.
+
+            ### Requirements
+            - Windows 10 or 11
+            - Any modern GPU (DirectX 12 / Vulkan supported)
+
+            See the [README](https://github.com/${{ github.repository }}#readme) for full configuration docs.
+          files: geodesic-wallpaper-windows.zip
+          draft: false
+          prerelease: false
