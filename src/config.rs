@@ -18,6 +18,10 @@ pub struct Config {
     pub torus_R: f32,
     #[serde(default = "default_torus_r_small")]
     pub torus_r: f32,
+    /// Integration timestep per frame.  0.04 overshoots torus geodesics at
+    /// 30 fps — default 0.016 keeps trajectories numerically stable.
+    #[serde(default = "default_time_step")]
+    pub time_step: f32,
 }
 
 fn default_surface() -> String { "torus".into() }
@@ -29,6 +33,7 @@ fn default_color_palette() -> Vec<String> {
 }
 fn default_torus_r_big() -> f32 { 2.0 }
 fn default_torus_r_small() -> f32 { 0.7 }
+fn default_time_step() -> f32 { 0.016 }
 
 impl Default for Config {
     fn default() -> Self {
@@ -40,6 +45,7 @@ impl Default for Config {
             color_palette: default_color_palette(),
             torus_R: default_torus_r_big(),
             torus_r: default_torus_r_small(),
+            time_step: default_time_step(),
         }
     }
 }

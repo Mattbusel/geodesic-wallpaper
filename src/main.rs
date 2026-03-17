@@ -96,7 +96,11 @@ fn main() {
         trails.push(TrailBuffer::new(cfg.trail_length, colors[ci]));
     }
 
-    let dt = 0.04f32;
+    // Read dt from config (default 0.016).  The old hardcoded 0.04 caused
+    // geodesics on a torus (small_r=0.7) to overshoot the tube circumference
+    // in under 4 seconds, producing discontinuous jumps between Christoffel
+    // evaluations and visually drifting trajectories.
+    let dt = cfg.time_step;
     let target_frame = std::time::Duration::from_millis(33);
     let mut last_frame = std::time::Instant::now();
 

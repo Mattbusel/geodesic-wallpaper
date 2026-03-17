@@ -65,6 +65,22 @@ impl Geodesic {
         let (u_w, v_w) = surface.wrap(self.u, self.v);
         self.u = u_w;
         self.v = v_w;
+
+        // Renormalize velocity to unit metric speed after each RK4 step.
+        // Without this, floating-point error accumulates over hundreds of
+        // frames: on a sphere the geodesic constraint g_ij du^i du^j = const
+        // is not preserved by the integrator alone, so trails shrink or
+        // stretch unnaturally over a ~300-frame lifetime.
+        let g = surface.metric(self.u, self.v);
+        let speed_sq = g[0][0] * self.du * self.du
+            + 2.0 * g[0][1] * self.du * self.dv
+            + g[1][1] * self.dv * self.dv;
+        if speed_sq > 1e-12 {
+            let inv_speed = 1.0 / speed_sq.sqrt();
+            self.du *= inv_speed;
+            self.dv *= inv_speed;
+        }
+
         self.age += 1;
 
         if self.age >= self.max_age {
