@@ -1,8 +1,8 @@
 //! Entry point for geodesic-wallpaper.
 //!
-//! Initialises logging, loads configuration, spawns the hot-reload watcher,
-//! creates the Win32 wallpaper window, builds the wgpu renderer, and runs the
-//! main message/render loop.
+//! Initialises logging and tracing, loads configuration, spawns the hot-reload
+//! watcher, creates the Win32 wallpaper window, builds the wgpu renderer, and
+//! runs the main message/render loop.
 
 use geodesic_wallpaper::config::{Config, SharedConfig};
 use geodesic_wallpaper::error::GeodesicError;
@@ -21,7 +21,11 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 /// Construct the surface implementation selected in `cfg`.
+///
+/// Unrecognised surface names fall back to the torus.
+#[tracing::instrument(skip(cfg), fields(surface = %cfg.surface))]
 fn build_surface(cfg: &Config) -> Box<dyn Surface> {
+    tracing::info!(surface = %cfg.surface, "building surface");
     match cfg.surface.as_str() {
         "sphere" => Box::new(Sphere::new(2.5)),
         "saddle" => Box::new(Saddle::new(2.0)),
@@ -47,9 +51,16 @@ fn screen_size() -> (i32, i32) {
 }
 
 fn main() {
-    env_logger::builder().filter_level(log::LevelFilter::Info).init();
+    // Initialise tracing-subscriber with env-filter so RUST_LOG controls verbosity.
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .init();
 
     if let Err(e) = run() {
+        tracing::error!("Fatal error: {e}");
         eprintln!("Error: {e}");
         std::process::exit(1);
     }
@@ -59,9 +70,16 @@ fn main() {
 ///
 /// Separated from `main` so that `?` propagation can be used throughout
 /// and the error message is printed cleanly without a Rust backtrace dump.
+#[tracing::instrument]
 fn run() -> Result<(), GeodesicError> {
     let config_path = PathBuf::from("config.toml");
     let cfg = Config::load(&config_path);
+    tracing::info!(
+        surface = %cfg.surface,
+        num_geodesics = cfg.num_geodesics,
+        trail_length = cfg.trail_length,
+        "configuration loaded"
+    );
     let shared_cfg: SharedConfig = Arc::new(RwLock::new(cfg.clone()));
 
     // Spawn hot-reload watcher thread.
@@ -74,7 +92,7 @@ fn run() -> Result<(), GeodesicError> {
             let mut watcher = match recommended_watcher(move |res| { let _ = tx.send(res); }) {
                 Ok(w) => w,
                 Err(e) => {
-                    log::warn!("Failed to start config watcher: {e}");
+                    tracing::warn!("Failed to start config watcher: {e}");
                     return;
                 }
             };
@@ -85,7 +103,7 @@ fn run() -> Result<(), GeodesicError> {
                     let new_cfg = Config::load(&path);
                     if let Ok(mut w) = shared.write() {
                         *w = new_cfg;
-                        log::info!("Config reloaded");
+                        tracing::info!("config reloaded from disk");
                     }
                 }
             }
@@ -93,12 +111,18 @@ fn run() -> Result<(), GeodesicError> {
     }
 
     let (sw, sh) = screen_size();
+    tracing::info!(width = sw, height = sh, "detected screen resolution");
     let hwnd = wallpaper::create_wallpaper_hwnd(sw, sh)
         .ok_or_else(|| GeodesicError::window("Failed to create wallpaper window"))?;
 
     let surf = build_surface(&cfg);
     let colors = parse_colors(&cfg);
     let (mesh_verts, mesh_indices) = surf.mesh_vertices(40, 40);
+    tracing::info!(
+        verts = mesh_verts.len(),
+        indices = mesh_indices.len(),
+        "surface mesh generated"
+    );
 
     let mut renderer = pollster::block_on(Renderer::new(
         hwnd,
@@ -118,14 +142,13 @@ fn run() -> Result<(), GeodesicError> {
         geodesics.push(Geodesic::new(u, v, du, dv, cfg.trail_length, ci));
         trails.push(TrailBuffer::new(cfg.trail_length, colors[ci]));
     }
+    tracing::info!(count = cfg.num_geodesics, "geodesics spawned");
 
-    // Read dt from config (default 0.016).  The old hardcoded 0.04 caused
-    // geodesics on a torus (small_r=0.7) to overshoot the tube circumference
-    // in under 4 seconds, producing discontinuous jumps between Christoffel
-    // evaluations and visually drifting trajectories.
     let dt = cfg.time_step;
     let target_frame = std::time::Duration::from_millis(33);
     let mut last_frame = std::time::Instant::now();
+
+    tracing::info!("entering render loop");
 
     // Raw Win32 message loop.
     loop {
@@ -134,6 +157,7 @@ fn run() -> Result<(), GeodesicError> {
             let mut msg = MSG::default();
             while PeekMessageW(&mut msg, None, 0, 0, PM_REMOVE).as_bool() {
                 if msg.message == 0x0012 { // WM_QUIT
+                    tracing::info!("WM_QUIT received, exiting");
                     return Ok(());
                 }
                 let _ = TranslateMessage(&msg);

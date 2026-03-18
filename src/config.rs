@@ -127,7 +127,7 @@ impl Config {
     pub fn load(path: &Path) -> Self {
         match std::fs::read_to_string(path) {
             Ok(s) => toml::from_str(&s).unwrap_or_else(|e| {
-                log::warn!("Config parse error: {e}, using defaults");
+                tracing::warn!("Config parse error: {e}, using defaults");
                 Config::default()
             }),
             Err(_) => Config::default(),

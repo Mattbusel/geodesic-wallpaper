@@ -2,30 +2,35 @@ name: CI
 
 on:
   push:
+    branches: [master, main]
   pull_request:
+    branches: [master, main]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # Run cargo check, clippy, and fmt on both Linux and Windows.
-  # Full compilation with wgpu requires a GPU / display; --check and --no-run
-  # keep CI headless while still catching type errors and lint violations.
-  check:
-    name: Check (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-
+  fmt:
+    name: cargo fmt --check
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Rust stable with rustfmt and clippy
+      - name: Install Rust stable with rustfmt
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          components: rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
 
+  clippy:
+    name: cargo clippy -- -D warnings
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable with clippy
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
@@ -33,18 +38,78 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-check-
-
-      # cargo check catches type errors without linking or running the binary.
-      # --all-targets includes lib, bins, tests, and examples.
-      - name: cargo check --all-targets
-        run: cargo check --all-targets
-
-      # Deny all clippy warnings.
-      - name: cargo clippy -- -D warnings
+          key: windows-cargo-clippy-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: windows-cargo-clippy-
+      - name: Run clippy
         run: cargo clippy --all-targets -- -D warnings
 
-      # Verify that all source files are formatted correctly.
-      - name: cargo fmt --check
-        run: cargo fmt --all -- --check
+  test:
+    name: cargo test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: windows-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: windows-cargo-test-
+      - name: Run lib tests
+        run: cargo test --lib
+
+  doc:
+    name: cargo doc --no-deps
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: windows-cargo-doc-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: windows-cargo-doc-
+      # Build rustdoc for all public items and treat warnings as errors.
+      # Full rendering tests require a physical display/GPU (Win32 + wgpu) and
+      # are intentionally skipped on headless CI runners; only pure-math and
+      # ring-buffer unit tests in src/ and tests/ run under `cargo test`.
+      - name: cargo doc --no-deps
+        run: cargo doc --no-deps
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+
+  build:
+    name: cargo build --release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: windows-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: windows-cargo-build-
+      - name: Build release binary
+        run: cargo build --release --target x86_64-pc-windows-msvc
+      - name: Upload release binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: geodesic-wallpaper-windows
+          path: target/x86_64-pc-windows-msvc/release/geodesic-wallpaper.exe
+          if-no-files-found: error

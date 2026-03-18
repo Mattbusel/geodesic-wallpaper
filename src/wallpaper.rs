@@ -3,13 +3,13 @@
 //! but above the desktop background — reliable on Windows 10/11.
 //! All unsafe isolated here.
 
-use windows::Win32::Foundation::{HWND, WPARAM, LPARAM, BOOL, LRESULT};
+use windows::Win32::Foundation::{HWND, WPARAM, LPARAM, LRESULT};
 use windows::Win32::UI::WindowsAndMessaging::{
     SetWindowPos, ShowWindow,
     CreateWindowExW, RegisterClassExW, DefWindowProcW, PostQuitMessage,
     WNDCLASSEXW, CS_HREDRAW, CS_VREDRAW,
     WS_POPUP, WS_VISIBLE, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
-    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
+    SWP_NOACTIVATE, SWP_NOZORDER,
     HWND_BOTTOM, SW_SHOW,
     WM_DESTROY, WM_WINDOWPOSCHANGING,
     WINDOWPOS,

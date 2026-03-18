@@ -249,4 +249,52 @@ mod tests {
         // Position will be finite even with a tiny scale.
         assert!(p.x.is_finite());
     }
+
+    /// The outward unit normal must have length 1 at a grid of sample points.
+    #[test]
+    fn test_saddle_normal_unit_length() {
+        let s = Saddle::new(2.0);
+        for ui in 0..5 {
+            for vi in 0..5 {
+                let u = -1.6 + ui as f32 * 0.8;
+                let v = -1.6 + vi as f32 * 0.8;
+                let n = s.normal(u, v);
+                assert!((n.length() - 1.0).abs() < 1e-5,
+                    "normal not unit at u={u:.2} v={v:.2}: |n|={}", n.length());
+            }
+        }
+    }
+
+    /// The metric must be positive definite at every sampled point.
+    #[test]
+    fn test_saddle_metric_positive_definite() {
+        let s = Saddle::new(2.0);
+        for ui in 0..5 {
+            for vi in 0..5 {
+                let u = -1.6 + ui as f32 * 0.8;
+                let v = -1.6 + vi as f32 * 0.8;
+                let g = s.metric(u, v);
+                assert!(g[0][0] > 0.0, "g_00 <= 0 at u={u:.2} v={v:.2}");
+                assert!(g[1][1] > 0.0, "g_11 <= 0 at u={u:.2} v={v:.2}");
+                let det = g[0][0] * g[1][1] - g[0][1] * g[0][1];
+                assert!(det > 0.0, "det(g) <= 0 at u={u:.2} v={v:.2}: det={det}");
+            }
+        }
+    }
+
+    /// At a non-origin point the Christoffel symbols should be non-zero and
+    /// still satisfy torsion-free symmetry Γ^k_ij = Γ^k_ji.
+    #[test]
+    fn test_saddle_christoffel_nonzero_and_symmetric_off_origin() {
+        let s = Saddle::new(2.0);
+        let g = s.christoffel(1.0, 0.5);
+        // At least one symbol should be non-zero away from origin.
+        let any_nonzero = (0..2).any(|k| (0..2).any(|i| (0..2).any(|j| g[k][i][j].abs() > 1e-6)));
+        assert!(any_nonzero, "all Christoffel symbols zero at non-origin point");
+        // Still must be symmetric.
+        for k in 0..2 {
+            assert!((g[k][0][1] - g[k][1][0]).abs() < 1e-5,
+                "Γ^{k}_01 != Γ^{k}_10 at (1.0, 0.5)");
+        }
+    }
 }

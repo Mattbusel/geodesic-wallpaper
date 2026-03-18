@@ -44,12 +44,14 @@ impl Torus {
     }
 
     /// Second partial derivative `∂²φ/∂u²` at `(u, v)`.
+    #[allow(dead_code)]
     fn d2_du2(&self, u: f32, v: f32) -> Vec3 {
         let r = self.big_r + self.small_r * v.cos();
         Vec3::new(-r * u.cos(), -r * u.sin(), 0.0)
     }
 
     /// Second partial derivative `∂²φ/∂v²` at `(u, v)`.
+    #[allow(dead_code)]
     fn d2_dv2(&self, u: f32, v: f32) -> Vec3 {
         Vec3::new(
             -self.small_r * v.cos() * u.cos(),
@@ -59,6 +61,7 @@ impl Torus {
     }
 
     /// Mixed second partial derivative `∂²φ/∂u∂v` at `(u, v)`.
+    #[allow(dead_code)]
     fn d2_dudv(&self, u: f32, v: f32) -> Vec3 {
         Vec3::new(
             self.small_r * v.sin() * u.sin(),
@@ -96,7 +99,7 @@ impl Surface for Torus {
         [[e1.dot(e1), e1.dot(e2)], [e1.dot(e2), e2.dot(e2)]]
     }
 
-    fn christoffel(&self, u: f32, v: f32) -> [[[f32; 2]; 2]; 2] {
+    fn christoffel(&self, _u: f32, v: f32) -> [[[f32; 2]; 2]; 2] {
         // Γ^k_ij = (1/2) g^{kl} (∂_i g_{lj} + ∂_j g_{li} - ∂_l g_{ij})
         // For torus, g_01 = 0 everywhere (orthogonal parameterization)
         // g_00 = (R + r cos v)^2,  g_11 = r^2
@@ -104,7 +107,7 @@ impl Surface for Torus {
         // ∂_u g_11 = 0,  ∂_v g_11 = 0
         let f = self.big_r + self.small_r * v.cos();
         let df_dv = -self.small_r * v.sin();
-        let g00 = f * f;
+        let _g00 = f * f;
         let g11 = self.small_r * self.small_r;
 
         // Non-zero Christoffels for orthogonal parameterization:
@@ -329,5 +332,40 @@ mod tests {
             }
         }
         assert_eq!(count, 8, "expected 8 Christoffel components, got {count}");
+    }
+
+    /// The outward unit normal must have length 1 at every sampled point on
+    /// the torus.  This verifies that both `d_du` and `d_dv` are implemented
+    /// correctly and that their cross product is non-zero everywhere.
+    #[test]
+    fn test_torus_normal_unit_length() {
+        let t = Torus::new(2.0, 0.7);
+        for ui in 0..8u32 {
+            for vi in 0..8u32 {
+                let u = ui as f32 * TAU / 8.0;
+                let v = vi as f32 * TAU / 8.0;
+                let n = t.normal(u, v);
+                assert!((n.length() - 1.0).abs() < 1e-5,
+                    "normal not unit at u={u:.3} v={v:.3}: |n|={}", n.length());
+            }
+        }
+    }
+
+    /// The Christoffel symbols must satisfy torsion-free symmetry Γ^k_ij = Γ^k_ji
+    /// at a representative grid of parameter values.
+    #[test]
+    fn test_torus_christoffel_symmetry_grid() {
+        let t = Torus::new(2.0, 0.7);
+        for ui in 0..6u32 {
+            for vi in 0..6u32 {
+                let u = ui as f32 * TAU / 6.0;
+                let v = vi as f32 * TAU / 6.0;
+                let g = t.christoffel(u, v);
+                for k in 0..2 {
+                    assert!((g[k][0][1] - g[k][1][0]).abs() < 1e-6,
+                        "Γ^{k}_01 != Γ^{k}_10 at u={u:.3} v={v:.3}");
+                }
+            }
+        }
     }
 }

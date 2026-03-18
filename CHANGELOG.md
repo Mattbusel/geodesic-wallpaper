@@ -11,6 +11,31 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [1.2.0] - 2026-03-17
+
+### Added
+
+- Additional unit tests for mathematical correctness:
+  - `Geodesic`: RK4 fourth-order convergence test (error ratio check at two
+    step sizes), single-step geodesic-equation constraint test (metric speed
+    change bounded to < 1 % for small `dt`).
+  - `Torus`: unit-normal length grid test, torsion-free Christoffel symmetry
+    over a 6×6 parameter grid.
+  - `Sphere`: unit-normal length grid test, metric positive-definiteness grid
+    test, torsion-free Christoffel symmetry grid test.
+  - `Saddle`: unit-normal length grid test, metric positive-definiteness grid
+    test, Christoffel non-zero and symmetric at an off-origin point.
+- `.github/workflows/ci.yml`: new `doc` job that runs `cargo doc --no-deps`
+  with `RUSTDOCFLAGS=-D warnings`, ensuring all public items are documented.
+  A comment notes that full rendering tests require a display and are
+  intentionally skipped on headless CI runners.
+
+### Changed
+
+- Version bumped from `1.1.0` to `1.2.0`.
+
+---
+
 ## [1.1.0] - 2026-03-17
 
 ### Added

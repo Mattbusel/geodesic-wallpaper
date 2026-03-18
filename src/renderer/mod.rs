@@ -349,7 +349,7 @@ impl Renderer {
 
         let frame = match self.wgpu_surface.get_current_texture() {
             Ok(f) => f,
-            Err(e) => { log::warn!("Surface err: {e}"); return; }
+            Err(e) => { tracing::warn!("Surface err: {e}"); return; }
         };
         let view = frame.texture.create_view(&Default::default());
         let mut enc = self.device.create_command_encoder(&Default::default());

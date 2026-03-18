@@ -54,7 +54,7 @@ impl Surface for Sphere {
         [[e1.dot(e1), e1.dot(e2)], [e1.dot(e2), e2.dot(e2)]]
     }
 
-    fn christoffel(&self, u: f32, v: f32) -> [[[f32; 2]; 2]; 2] {
+    fn christoffel(&self, _u: f32, v: f32) -> [[[f32; 2]; 2]; 2] {
         // g_00 = r² sin²v, g_11 = r², g_01 = 0
         // Γ^0_01 = Γ^0_10 = cos(v)/sin(v)
         // Γ^1_00 = -sin(v)cos(v)
@@ -218,5 +218,59 @@ mod tests {
         // v should remain very close to π/2 (equator).
         assert!((geo.v - PI / 2.0).abs() < 0.05,
             "v drifted from equator: v = {}", geo.v);
+    }
+
+    /// The outward unit normal must have length 1 at every sampled point.
+    ///
+    /// For the sphere the normal equals the position vector (normalised), so
+    /// this also checks that `position` is consistent with `normal`.
+    #[test]
+    fn test_sphere_normal_unit_length() {
+        let s = Sphere::new(2.5);
+        for ui in 0..8u32 {
+            for vi in 1..8u32 { // skip poles where v=0 and v=PI
+                let u = ui as f32 * TAU / 8.0;
+                let v = vi as f32 * PI / 8.0;
+                let n = s.normal(u, v);
+                assert!((n.length() - 1.0).abs() < 1e-5,
+                    "normal not unit at u={u:.3} v={v:.3}: |n|={}", n.length());
+            }
+        }
+    }
+
+    /// The metric must be positive definite (both diagonal entries > 0 and
+    /// det > 0) at every sampled point away from the poles.
+    #[test]
+    fn test_sphere_metric_positive_definite() {
+        let s = Sphere::new(1.0);
+        for ui in 0..8u32 {
+            for vi in 1..8u32 {
+                let u = ui as f32 * TAU / 8.0;
+                let v = vi as f32 * PI / 8.0;
+                let g = s.metric(u, v);
+                assert!(g[0][0] > 0.0, "g_00 <= 0 at u={u:.3} v={v:.3}");
+                assert!(g[1][1] > 0.0, "g_11 <= 0 at u={u:.3} v={v:.3}");
+                let det = g[0][0] * g[1][1] - g[0][1] * g[0][1];
+                assert!(det > 0.0, "det(g) <= 0 at u={u:.3} v={v:.3}: det={det}");
+            }
+        }
+    }
+
+    /// Christoffel symbols must satisfy the torsion-free symmetry Γ^k_ij = Γ^k_ji
+    /// at every sampled point.
+    #[test]
+    fn test_sphere_christoffel_symmetry() {
+        let s = Sphere::new(1.0);
+        for ui in 0..6u32 {
+            for vi in 1..6u32 {
+                let u = ui as f32 * TAU / 6.0;
+                let v = vi as f32 * PI / 6.0;
+                let g = s.christoffel(u, v);
+                for k in 0..2 {
+                    assert!((g[k][0][1] - g[k][1][0]).abs() < 1e-6,
+                        "Γ^{k}_01 != Γ^{k}_10 at u={u:.3} v={v:.3}");
+                }
+            }
+        }
     }
 }
