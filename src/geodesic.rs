@@ -70,6 +70,7 @@ impl Geodesic {
     /// The coordinates are wrapped into the surface domain after each step.
     ///
     /// When `age` reaches `max_age` the geodesic is marked `alive = false`.
+    #[tracing::instrument(skip(self, surface), fields(u = self.u, v = self.v, age = self.age))]
     pub fn step(&mut self, surface: &dyn Surface, dt: f32) {
         let (u, v, du, dv) = (self.u, self.v, self.du, self.dv);
 
@@ -333,6 +334,72 @@ mod tests {
         }
     }
 
+    // ─── Property tests (proptest) ─────────────────────────────────────────────
+
+    proptest::proptest! {
+        /// For any starting position on the torus the metric speed after one
+        /// RK4 step must remain finite and non-negative.
+        #[test]
+        fn prop_rk4_speed_finite_on_torus(
+            u in 0.0f32..std::f32::consts::TAU,
+            v in 0.0f32..std::f32::consts::TAU,
+            du in -2.0f32..2.0f32,
+            dv in -2.0f32..2.0f32,
+        ) {
+            let torus = Torus::new(2.0, 0.7);
+            let mut geo = Geodesic::new(u, v, du, dv, 1000, 0);
+            geo.step(&torus, 0.016);
+            let g = torus.metric(geo.u, geo.v);
+            let speed_sq = g[0][0]*geo.du*geo.du + 2.0*g[0][1]*geo.du*geo.dv + g[1][1]*geo.dv*geo.dv;
+            proptest::prop_assert!(speed_sq.is_finite(), "speed_sq not finite: {speed_sq}");
+            proptest::prop_assert!(speed_sq >= 0.0, "speed_sq negative: {speed_sq}");
+        }
+
+        /// After velocity renormalisation the metric speed must be ≈ 1 for any
+        /// non-zero starting velocity on the torus.
+        #[test]
+        fn prop_rk4_speed_normalised_after_step(
+            u in 0.1f32..3.0f32,
+            v in 0.1f32..3.0f32,
+            angle in 0.0f32..std::f32::consts::TAU,
+        ) {
+            let torus = Torus::new(2.0, 0.7);
+            // Start with unit-speed velocity to guarantee the renorm guard fires.
+            let du = angle.cos();
+            let dv = angle.sin();
+            let mut geo = Geodesic::new(u, v, du, dv, 1000, 0);
+            geo.step(&torus, 0.016);
+            let g = torus.metric(geo.u, geo.v);
+            let speed_sq = g[0][0]*geo.du*geo.du + 2.0*g[0][1]*geo.du*geo.dv + g[1][1]*geo.dv*geo.dv;
+            // After renorm the metric speed should be very close to 1.
+            proptest::prop_assert!(
+                (speed_sq.sqrt() - 1.0).abs() < 0.05,
+                "speed not ~1 after renorm: {}", speed_sq.sqrt()
+            );
+        }
+
+        /// Energy (metric speed squared) conservation: after 50 steps on the
+        /// sphere starting from unit speed, the speed should still be ≈ 1.
+        #[test]
+        fn prop_sphere_speed_conserved_over_50_steps(
+            u in 0.0f32..std::f32::consts::TAU,
+            angle in 0.0f32..std::f32::consts::TAU,
+        ) {
+            let sphere = crate::surface::sphere::Sphere::new(1.0);
+            let v = std::f32::consts::PI / 2.0; // equator — avoids pole singularities
+            // Build a unit tangent vector in parameter space.
+            let du = angle.cos() * 0.5;
+            let dv = angle.sin() * 0.5;
+            let mut geo = Geodesic::new(u, v, du, dv, 10_000, 0);
+            for _ in 0..50 {
+                geo.step(&sphere, 0.016);
+            }
+            let g = sphere.metric(geo.u, geo.v);
+            let speed_sq = g[0][0]*geo.du*geo.du + 2.0*g[0][1]*geo.du*geo.dv + g[1][1]*geo.dv*geo.dv;
+            proptest::prop_assert!(speed_sq.is_finite(), "speed_sq not finite: {speed_sq}");
+        }
+    }
+
     /// Verify that the geodesic equation constraint `d/dt (g_ij du^i du^j) = 0`
     /// is approximately satisfied by checking that the metric speed after one
     /// RK4 step (before re-normalisation) does not deviate far from the initial
@@ -381,3 +448,4 @@ mod tests {
             "Metric speed changed too much in one RK4 step: before={s0:.6} after={s1:.6}");
     }
 }
+

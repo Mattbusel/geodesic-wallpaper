@@ -50,6 +50,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 [dev-dependencies]
 tempfile = "3"
 rand = { version = "0.8", features = ["std", "std_rng"] }
+proptest = "1"
+
+[lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"
 
 [profile.release]
 opt-level = 3

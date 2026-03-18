@@ -22,6 +22,7 @@ use std::sync::{Arc, RwLock};
 /// assert_eq!(cfg.num_geodesics, 30);
 /// ```
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[allow(non_snake_case)]
 pub struct Config {
     /// Surface to render: `"torus"`, `"sphere"`, or `"saddle"`.
     ///

@@ -20,6 +20,11 @@ struct Uniforms {
     view_proj: [[f32; 4]; 4],
 }
 
+/// wgpu renderer owning all GPU state for the geodesic wallpaper.
+///
+/// Owns two render pipelines: one for the surface wireframe and one for the
+/// geodesic trail lines. All GPU buffers are pre-allocated at construction
+/// time; no per-frame heap allocation occurs on the hot path.
 pub struct Renderer {
     pub surface_config: wgpu::SurfaceConfiguration,
     pub device: wgpu::Device,
@@ -293,6 +298,7 @@ impl Renderer {
 
         let (depth_texture, depth_view) = Self::make_depth(&device, width, height);
 
+        tracing::info!(width, height, "renderer initialised");
         Ok(Renderer {
             surface_config,
             device,
@@ -328,6 +334,9 @@ impl Renderer {
         (tex, view)
     }
 
+    /// Resize the swap-chain and depth texture to the new pixel dimensions.
+    ///
+    /// Must be called whenever the Win32 window receives a `WM_SIZE` message.
     pub fn resize(&mut self, width: u32, height: u32) {
         self.surface_config.width = width;
         self.surface_config.height = height;
@@ -338,6 +347,11 @@ impl Renderer {
         self.depth_view = dv;
     }
 
+    /// Record and submit a frame: surface wireframe + trail line strips.
+    ///
+    /// `trail_verts` is a flat concatenation of all trail vertex data;
+    /// `trail_segment_lengths` gives the number of vertices belonging to each
+    /// geodesic segment so the render pass can issue the correct draw calls.
     pub fn render(&mut self, trail_verts: &[TrailVertex], trail_segment_lengths: &[usize]) {
         let uniforms = Uniforms { view_proj: self.camera.view_proj().to_cols_array_2d() };
         self.queue.write_buffer(&self.uniform_buf, 0, bytemuck::bytes_of(&uniforms));
@@ -397,3 +411,4 @@ impl Renderer {
         frame.present();
     }
 }
+
