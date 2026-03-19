@@ -93,7 +93,7 @@ impl Surface for Catenoid {
         let du = angle.cos();
         let dv = angle.sin();
         let g = self.metric(u, v);
-        let speed_sq = g[0][0] * du * du + g[1][1] * dv * dv;
+        let speed_sq = g[0][0] * du * du + 2.0 * g[0][1] * du * dv + g[1][1] * dv * dv;
         if speed_sq > 1e-12 {
             let s = speed_sq.sqrt();
             (du / s, dv / s)

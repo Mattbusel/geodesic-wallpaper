@@ -439,13 +439,14 @@ impl Renderer {
             rp.set_bind_group(0, &self.bind_group, &[]);
             rp.set_vertex_buffer(0, self.trail_vbuf.slice(..));
             let mut offset = 0u32;
+            let capacity_u32 = self.trail_vbuf_capacity as u32;
             for &len in trail_segment_lengths {
                 if len >= 2 {
-                    let end = (offset + len as u32).min(self.trail_vbuf_capacity as u32);
+                    let end = offset.saturating_add(len as u32).min(capacity_u32);
                     rp.draw(offset..end, 0..1);
                 }
-                offset += len as u32;
-                if offset as usize >= self.trail_vbuf_capacity {
+                offset = offset.saturating_add(len as u32);
+                if offset >= capacity_u32 {
                     break;
                 }
             }
