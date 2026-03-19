@@ -226,7 +226,25 @@ fn main() {
 
     if let Err(e) = run() {
         tracing::error!("Fatal error: {e}");
-        eprintln!("Error: {e}");
+        // Show a visible error dialog so the user knows what went wrong.
+        unsafe {
+            use windows::core::PCWSTR;
+            use windows::Win32::UI::WindowsAndMessaging::{MB_ICONERROR, MB_OK};
+            let msg = format!("Geodesic Wallpaper encountered a fatal error:\n\n{e}\n\nCheck that your GPU drivers are up to date.")
+                .encode_utf16()
+                .chain(std::iter::once(0u16))
+                .collect::<Vec<u16>>();
+            let caption = "Geodesic Wallpaper — Error"
+                .encode_utf16()
+                .chain(std::iter::once(0u16))
+                .collect::<Vec<u16>>();
+            let _ = MessageBoxW(
+                None,
+                PCWSTR(msg.as_ptr()),
+                PCWSTR(caption.as_ptr()),
+                MB_ICONERROR | MB_OK,
+            );
+        }
         std::process::exit(1);
     }
 }
