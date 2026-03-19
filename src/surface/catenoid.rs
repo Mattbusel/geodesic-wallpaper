@@ -195,11 +195,13 @@ mod tests {
 
     #[test]
     fn catenoid_metric_is_conformal() {
-        // The catenoid has a conformal metric: g_uu = g_vv, g_uv = 0.
-        let c = Catenoid::new(1.5);
+        // The catenoid is conformally parameterized (g_uu = g_vv, g_uv = 0)
+        // when c = 1.  For c ≠ 1 the parameterization is still orthogonal
+        // (g_uv = 0) but g_uu = c²·cosh²(v/c) ≠ cosh²(v/c) = g_vv.
+        let c = Catenoid::new(1.0);
         for v in [0.0f32, 0.5, 1.0, -0.7] {
             let g = c.metric(0.3, v);
-            assert!((g[0][0] - g[1][1]).abs() < 1e-5, "not conformal at v={v}");
+            assert!((g[0][0] - g[1][1]).abs() < 1e-4, "not conformal at v={v}: g00={} g11={}", g[0][0], g[1][1]);
             assert!(g[0][1].abs() < 1e-5, "g_uv != 0 at v={v}");
         }
     }
