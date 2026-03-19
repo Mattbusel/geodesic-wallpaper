@@ -4,41 +4,142 @@
 //! watcher, creates the Win32 wallpaper window, builds the wgpu renderer, and
 //! runs the main message/render loop.
 
+use clap::Parser;
 use geodesic_wallpaper::config::{Config, SharedConfig};
 use geodesic_wallpaper::error::GeodesicError;
+use geodesic_wallpaper::events::KeyEvent;
 use geodesic_wallpaper::geodesic::Geodesic;
 use geodesic_wallpaper::renderer::Renderer;
-use geodesic_wallpaper::surface::{saddle::Saddle, sphere::Sphere, torus::Torus, Surface};
+use geodesic_wallpaper::surface::{
+    catenoid::Catenoid, helicoid::Helicoid, hyperboloid::Hyperboloid, saddle::Saddle,
+    sphere::Sphere, torus::Torus, Surface,
+};
 use geodesic_wallpaper::trail::TrailBuffer;
 use geodesic_wallpaper::wallpaper;
 
 use rand::rngs::StdRng;
 use rand::SeedableRng;
+use rayon::prelude::*;
+use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
+use std::time::Duration;
 use windows::Win32::UI::WindowsAndMessaging::{
     DispatchMessageW, PeekMessageW, TranslateMessage, MSG, PM_REMOVE,
 };
+
+/// Command-line arguments.
+#[derive(Parser)]
+#[command(about = "Geodesic wallpaper")]
+struct Args {
+    /// Run headless, render N frames and save screenshot.
+    #[arg(long)]
+    headless: bool,
+    /// Output file path for headless screenshot.
+    #[arg(long, default_value = "screenshot.png")]
+    output: String,
+    /// Number of frames to simulate in headless mode.
+    #[arg(long, default_value_t = 300)]
+    frames: u32,
+}
+
+/// Surface names in cycle order.
+const SURFACE_CYCLE: &[&str] = &[
+    "torus",
+    "sphere",
+    "saddle",
+    "catenoid",
+    "helicoid",
+    "hyperboloid",
+];
 
 /// Construct the surface implementation selected in `cfg`.
 ///
 /// Unrecognised surface names fall back to the torus.
 #[tracing::instrument(skip(cfg), fields(surface = %cfg.surface))]
-fn build_surface(cfg: &Config) -> Box<dyn Surface> {
+fn build_surface(cfg: &Config) -> Arc<dyn Surface> {
     tracing::info!(surface = %cfg.surface, "building surface");
     match cfg.surface.as_str() {
-        "sphere" => Box::new(Sphere::new(2.5)),
-        "saddle" => Box::new(Saddle::new(2.0)),
-        _ => Box::new(Torus::new(cfg.torus_R, cfg.torus_r)),
+        "sphere" => Arc::new(Sphere::new(2.5)),
+        "saddle" => Arc::new(Saddle::new(2.0)),
+        "catenoid" => Arc::new(Catenoid::new(cfg.catenoid_c)),
+        "helicoid" => Arc::new(Helicoid::new(cfg.helicoid_c)),
+        "hyperboloid" => Arc::new(Hyperboloid::new(cfg.hyperboloid_a, cfg.hyperboloid_b)),
+        _ => Arc::new(Torus::new(cfg.torus_R, cfg.torus_r)),
+    }
+}
+
+/// Build a surface by name, ignoring config parameters (used for cycle).
+fn build_surface_by_name(name: &str) -> Arc<dyn Surface> {
+    match name {
+        "sphere" => Arc::new(Sphere::new(2.5)),
+        "saddle" => Arc::new(Saddle::new(2.0)),
+        "catenoid" => Arc::new(Catenoid::new(1.0)),
+        "helicoid" => Arc::new(Helicoid::new(1.0)),
+        "hyperboloid" => Arc::new(Hyperboloid::new(1.0, 1.0)),
+        _ => Arc::new(Torus::new(2.0, 0.7)),
     }
 }
 
 /// Convert the hex colour palette from config into `[f32; 4]` RGBA values.
 fn parse_colors(cfg: &Config) -> Vec<[f32; 4]> {
-    cfg.color_palette
+    cfg.effective_colors()
+}
+
+/// Rotate hue of a set of colours by `degrees` (0–360).
+fn rotate_hue(colors: &[[f32; 4]], degrees: f32) -> Vec<[f32; 4]> {
+    let shift = degrees / 360.0;
+    colors
         .iter()
-        .map(|s| Config::parse_color(s))
+        .map(|&c| {
+            let hsv = rgb_to_hsv(c);
+            let h = (hsv[0] + shift).rem_euclid(1.0);
+            hsv_to_rgb([h, hsv[1], hsv[2]])
+        })
         .collect()
+}
+
+fn rgb_to_hsv(c: [f32; 4]) -> [f32; 3] {
+    let (r, g, b) = (c[0], c[1], c[2]);
+    let max = r.max(g).max(b);
+    let min = r.min(g).min(b);
+    let delta = max - min;
+    let v = max;
+    let s = if max < 1e-6 { 0.0 } else { delta / max };
+    let h = if delta < 1e-6 {
+        0.0
+    } else if max == r {
+        ((g - b) / delta).rem_euclid(6.0) / 6.0
+    } else if max == g {
+        ((b - r) / delta + 2.0) / 6.0
+    } else {
+        ((r - g) / delta + 4.0) / 6.0
+    };
+    [h, s, v]
+}
+
+fn hsv_to_rgb(hsv: [f32; 3]) -> [f32; 4] {
+    let (h, s, v) = (hsv[0], hsv[1], hsv[2]);
+    let i = (h * 6.0).floor() as i32;
+    let f = h * 6.0 - i as f32;
+    let p = v * (1.0 - s);
+    let q = v * (1.0 - f * s);
+    let t = v * (1.0 - (1.0 - f) * s);
+    let (r, g, b) = match i % 6 {
+        0 => (v, t, p),
+        1 => (q, v, p),
+        2 => (p, v, t),
+        3 => (p, q, v),
+        4 => (t, p, v),
+        _ => (v, p, q),
+    };
+    [r, g, b, 1.0]
+}
+
+/// Parse a CSS hex colour string to `(r, g, b)` in `f64` linear range 0–1.
+fn parse_bg_color(hex: &str) -> (f64, f64, f64) {
+    let c = Config::parse_color(hex);
+    (c[0] as f64, c[1] as f64, c[2] as f64)
 }
 
 /// Query the primary monitor resolution via Win32.
@@ -66,11 +167,127 @@ fn main() {
         )
         .init();
 
+    let args = Args::parse();
+
+    if args.headless {
+        let config_path = PathBuf::from("config.toml");
+        let cfg = Config::load(&config_path).resolve_profile();
+        if let Err(e) = run_headless(&args, &cfg) {
+            tracing::error!("Headless render failed: {e}");
+            eprintln!("Error: {e}");
+            std::process::exit(1);
+        }
+        return;
+    }
+
     if let Err(e) = run() {
         tracing::error!("Fatal error: {e}");
         eprintln!("Error: {e}");
         std::process::exit(1);
     }
+}
+
+/// Headless render path: simulate N frames and save the last frame as a PNG.
+fn run_headless(args: &Args, cfg: &Config) -> Result<(), GeodesicError> {
+    tracing::info!(frames = args.frames, output = %args.output, "starting headless render");
+
+    let surf = build_surface(cfg);
+    let (mesh_verts, mesh_indices) = surf.mesh_vertices(40, 40);
+
+    let width = 1920u32;
+    let height = 1080u32;
+
+    let (mut renderer, offscreen_tex) = pollster::block_on(Renderer::new_headless(
+        width,
+        height,
+        &mesh_verts,
+        &mesh_indices,
+    ))?;
+
+    // Apply config settings.
+    {
+        let (br, bg, bb) = parse_bg_color(&cfg.background_color);
+        renderer.set_background(br, bg, bb);
+    }
+    renderer.light_dir = cfg.light_dir;
+
+    let mut rng = match cfg.seed {
+        Some(s) => StdRng::seed_from_u64(s),
+        None => StdRng::seed_from_u64(42),
+    };
+
+    let colors = parse_colors(cfg);
+    let mut geodesics: Vec<Geodesic> = Vec::new();
+    let mut trails: Vec<TrailBuffer> = Vec::new();
+    for i in 0..cfg.num_geodesics {
+        let (u, v) = surf.random_position(&mut rng);
+        let (du, dv) = surf.random_tangent(u, v, &mut rng);
+        let ci = i % colors.len().max(1);
+        geodesics.push(Geodesic::new(u, v, du, dv, cfg.trail_length, ci));
+        trails.push(TrailBuffer::new(cfg.trail_length, colors[ci]));
+    }
+
+    let dt = cfg.time_step;
+
+    // Simulate frames.
+    for _frame in 0..args.frames {
+        renderer.camera.orbit(cfg.rotation_speed * dt);
+
+        let surf_ref = &*surf;
+        geodesics
+            .iter_mut()
+            .zip(trails.iter_mut())
+            .for_each(|(geo, trail)| {
+                if !geo.alive { return; }
+                let pos = surf_ref.position(geo.u, geo.v);
+                trail.push([pos.x, pos.y, pos.z]);
+                geo.step(surf_ref, dt);
+            });
+
+        // Respawn dead geodesics.
+        for (i, geo) in geodesics.iter_mut().enumerate() {
+            if !geo.alive {
+                let (u, v) = surf.random_position(&mut rng);
+                let (du, dv) = surf.random_tangent(u, v, &mut rng);
+                let ci = i % colors.len().max(1);
+                *geo = Geodesic::new(u, v, du, dv, cfg.trail_length, ci);
+                trails[i].clear();
+                trails[i].color = colors[ci];
+            }
+        }
+    }
+
+    // Collect trail vertices for the final frame render.
+    let mut all_verts = Vec::new();
+    let mut seg_lens = Vec::new();
+    for (trail_idx, trail) in trails.iter().enumerate() {
+        let ci = geodesics[trail_idx].color_idx % colors.len().max(1);
+        let [dr, dg, db, _] = colors[ci];
+        let mut v = trail.ordered_vertices();
+        for vert in &mut v {
+            vert.color[0] = dr;
+            vert.color[1] = dg;
+            vert.color[2] = db;
+        }
+        seg_lens.push(v.len());
+        all_verts.extend(v);
+    }
+
+    // Render to offscreen texture and read back pixels.
+    let pixels = renderer.render_to_texture(&offscreen_tex, &all_verts, &seg_lens)?;
+
+    // Save as PNG.
+    image::save_buffer(
+        &args.output,
+        &pixels,
+        width,
+        height,
+        image::ColorType::Rgba8,
+    )
+    .map_err(|e| GeodesicError::render(format!("image save failed: {e}")))?;
+
+    tracing::info!(path = %args.output, "screenshot saved");
+    Ok(())
 }
 
 /// Application body returning a typed error on failure.
@@ -80,7 +297,7 @@ fn main() {
 #[tracing::instrument]
 fn run() -> Result<(), GeodesicError> {
     let config_path = PathBuf::from("config.toml");
-    let cfg = Config::load(&config_path);
+    let cfg = Config::load(&config_path).resolve_profile();
     tracing::info!(
         surface = %cfg.surface,
         num_geodesics = cfg.num_geodesics,
@@ -88,6 +305,9 @@ fn run() -> Result<(), GeodesicError> {
         "configuration loaded"
     );
     let shared_cfg: SharedConfig = Arc::new(RwLock::new(cfg.clone()));
+
+    // Channel for config-reload notifications (used for flash effect).
+    let (reload_tx, reload_rx) = std::sync::mpsc::channel::<()>();
 
     // Spawn hot-reload watcher thread.
     {
@@ -109,14 +329,31 @@ fn run() -> Result<(), GeodesicError> {
             loop {
                 if rx.recv().is_ok() {
                     std::thread::sleep(std::time::Duration::from_millis(100));
-                    let new_cfg = Config::load(&path);
+                    let new_cfg = Config::load(&path).resolve_profile();
                     if let Ok(mut w) = shared.write() {
                         *w = new_cfg;
                         tracing::info!("config reloaded from disk");
                     }
+                    let _ = reload_tx.send(());
                 }
             }
         });
+    }
+
+    // Set up key event channel.
+    let (key_tx, key_rx) = std::sync::mpsc::channel::<KeyEvent>();
+    wallpaper::set_key_sender(key_tx);
+
+    // Log monitor enumeration for multi-monitor awareness (General-6).
+    // Full multi-monitor rendering (one wgpu surface per monitor) is reserved for a
+    // future update; for now we enumerate monitors and log the count.
+    let monitors = wallpaper::enumerate_monitors();
+    tracing::info!(
+        monitor_count = monitors.len(),
+        "detected monitors (multi-monitor rendering is a future feature)"
+    );
+    for (i, (x, y, w, h)) in monitors.iter().enumerate() {
+        tracing::info!(idx = i, x, y, width = w, height = h, "monitor");
     }
 
     let (sw, sh) = screen_size();
@@ -124,8 +361,8 @@ fn run() -> Result<(), GeodesicError> {
     let hwnd = wallpaper::create_wallpaper_hwnd(sw, sh)
         .ok_or_else(|| GeodesicError::window("Failed to create wallpaper window"))?;
 
-    let surf = build_surface(&cfg);
-    let colors = parse_colors(&cfg);
+    let mut surf = build_surface(&cfg);
+    let mut colors = parse_colors(&cfg);
     let (mesh_verts, mesh_indices) = surf.mesh_vertices(40, 40);
     tracing::info!(
         verts = mesh_verts.len(),
@@ -141,7 +378,21 @@ fn run() -> Result<(), GeodesicError> {
         &mesh_indices,
     ))?;
 
-    let mut rng = StdRng::from_entropy();
+    // Apply initial background color from config.
+    {
+        let (br, bg, bb) = parse_bg_color(&cfg.background_color);
+        renderer.set_background(br, bg, bb);
+    }
+
+    // Set initial light direction.
+    renderer.light_dir = cfg.light_dir;
+
+    // Phase 3: seeded RNG.
+    let mut rng = match cfg.seed {
+        Some(s) => StdRng::seed_from_u64(s),
+        None => StdRng::from_entropy(),
+    };
+
     let mut geodesics: Vec<Geodesic> = Vec::new();
     let mut trails: Vec<TrailBuffer> = Vec::new();
 
@@ -155,8 +406,26 @@ fn run() -> Result<(), GeodesicError> {
     tracing::info!(count = cfg.num_geodesics, "geodesics spawned");
 
     let dt = cfg.time_step;
-    let target_frame = std::time::Duration::from_millis(33);
+    let target_frame = Duration::from_millis(33);
     let mut last_frame = std::time::Instant::now();
+
+    // Timing and animation state.
+    let mut elapsed_secs: f32 = 0.0;
+    let mut reload_flash_timer: f32 = 0.0;
+
+    // FPS tracking.
+    let mut frame_times: VecDeque<Duration> = VecDeque::with_capacity(60);
+    let mut fps_log_timer: f32 = 0.0;
+
+    // Surface cycle index.
+    let mut surface_idx: usize = SURFACE_CYCLE
+        .iter()
+        .position(|&s| s == cfg.surface.as_str())
+        .unwrap_or(0);
+
+    // Preset cycling state (General-4).
+    let mut preset_timer: f32 = 0.0;
+    let mut preset_idx: usize = 0;
 
     tracing::info!("entering render loop");
 
@@ -178,47 +447,209 @@ fn run() -> Result<(), GeodesicError> {
 
         // Frame rate limit.
         let now = std::time::Instant::now();
-        if now.duration_since(last_frame) < target_frame {
-            std::thread::sleep(std::time::Duration::from_millis(1));
+        let frame_dt = now.duration_since(last_frame);
+        if frame_dt < target_frame {
+            std::thread::sleep(Duration::from_millis(1));
             continue;
         }
         last_frame = std::time::Instant::now();
+        let frame_dt_secs = frame_dt.as_secs_f32();
 
-        // Orbit camera.
-        let rot = shared_cfg
-            .read()
-            .map(|c| c.rotation_speed)
-            .unwrap_or(0.001047);
-        renderer.camera.orbit(rot * dt);
+        // Track elapsed time.
+        elapsed_secs += frame_dt_secs;
+        renderer.elapsed_secs = elapsed_secs;
 
-        // Step geodesics.
-        for (i, geo) in geodesics.iter_mut().enumerate() {
-            if !geo.alive {
-                continue;
+        // Track FPS.
+        frame_times.push_back(frame_dt);
+        if frame_times.len() > 60 {
+            frame_times.pop_front();
+        }
+        fps_log_timer += frame_dt_secs;
+        if fps_log_timer >= 5.0 {
+            fps_log_timer = 0.0;
+            if !frame_times.is_empty() {
+                let avg_ms: f32 = frame_times.iter().map(|d| d.as_secs_f32() * 1000.0).sum::<f32>()
+                    / frame_times.len() as f32;
+                let fps = 1000.0 / avg_ms;
+                if renderer.show_fps_hud {
+                    tracing::info!(fps = fps as u32, frame_ms = avg_ms as u32, "FPS");
+                }
             }
-            let pos = surf.position(geo.u, geo.v);
-            trails[i].push([pos.x, pos.y, pos.z]);
-            geo.step(surf.as_ref(), dt);
         }
 
-        // Respawn dead geodesics.
+        // Preset cycling (General-4): advance active_profile on a timer.
+        {
+            let (cycle_secs, presets_len) = shared_cfg
+                .read()
+                .map(|c| (c.preset_cycle_secs, c.presets_order.len()))
+                .unwrap_or((None, 0));
+            if let Some(secs) = cycle_secs {
+                if presets_len > 0 {
+                    preset_timer += frame_dt_secs;
+                    if preset_timer >= secs {
+                        preset_timer = 0.0;
+                        preset_idx = (preset_idx + 1) % presets_len;
+                        if let Ok(mut w) = shared_cfg.write() {
+                            let next_profile = w.presets_order.get(preset_idx).cloned();
+                            w.active_profile = next_profile;
+                            let resolved = w.clone().resolve_profile();
+                            *w = resolved;
+                            tracing::info!(preset_idx, "advanced to next preset profile");
+                        }
+                    }
+                }
+            }
+        }
+
+        // Drain key events.
+        while let Ok(event) = key_rx.try_recv() {
+            match event {
+                KeyEvent::CycleSurface => {
+                    surface_idx = (surface_idx + 1) % SURFACE_CYCLE.len();
+                    let name = SURFACE_CYCLE[surface_idx];
+                    tracing::info!(surface = name, "cycling surface");
+                    surf = build_surface_by_name(name);
+                    let (mv, mi) = surf.mesh_vertices(40, 40);
+                    renderer.update_surface_mesh(&mv, &mi);
+                    // Respawn geodesics on the new surface.
+                    geodesics.clear();
+                    trails.clear();
+                    let tl = shared_cfg.read().map(|c| c.trail_length).unwrap_or(300);
+                    for i in 0..colors.len().max(1) {
+                        let (u, v) = surf.random_position(&mut rng);
+                        let (du, dv) = surf.random_tangent(u, v, &mut rng);
+                        let ci = i % colors.len().max(1);
+                        geodesics.push(Geodesic::new(u, v, du, dv, tl, ci));
+                        trails.push(TrailBuffer::new(tl, colors[ci]));
+                    }
+                }
+                KeyEvent::SpeedUp => {
+                    if let Ok(mut c) = shared_cfg.write() {
+                        c.rotation_speed *= 1.1;
+                    }
+                }
+                KeyEvent::SpeedDown => {
+                    if let Ok(mut c) = shared_cfg.write() {
+                        c.rotation_speed *= 0.9;
+                    }
+                }
+                KeyEvent::ResetGeodesics => {
+                    let tl = shared_cfg.read().map(|c| c.trail_length).unwrap_or(300);
+                    let ng = shared_cfg.read().map(|c| c.num_geodesics).unwrap_or(30);
+                    geodesics.clear();
+                    trails.clear();
+                    for i in 0..ng {
+                        let (u, v) = surf.random_position(&mut rng);
+                        let (du, dv) = surf.random_tangent(u, v, &mut rng);
+                        let ci = i % colors.len().max(1);
+                        geodesics.push(Geodesic::new(u, v, du, dv, tl, ci));
+                        trails.push(TrailBuffer::new(tl, colors[ci]));
+                    }
+                    tracing::info!("geodesics reset");
+                }
+                KeyEvent::ToggleFpsHud => {
+                    renderer.toggle_fps_hud();
+                    tracing::info!(show_fps_hud = renderer.show_fps_hud, "toggled FPS HUD");
+                }
+            }
+        }
+
+        // Check for config reload flash.
+        if reload_rx.try_recv().is_ok() {
+            reload_flash_timer = 0.5;
+        }
+
+        // Read current config snapshot.
+        let (rot, bg_color_str, cycle_enabled, cycle_speed, light_dir_cfg) =
+            shared_cfg.read().map(|c| {
+                (
+                    c.rotation_speed,
+                    c.background_color.clone(),
+                    c.color_cycle_enabled,
+                    c.color_cycle_speed,
+                    c.light_dir,
+                )
+            }).unwrap_or((0.001047, "#050510".into(), false, 0.0, [1.0, 1.0, 1.0]));
+
+        // Update light direction.
+        renderer.light_dir = light_dir_cfg;
+
+        // Compute base background color.
+        let (base_r, base_g, base_b) = parse_bg_color(&bg_color_str);
+
+        // Apply reload flash or normal background.
+        if reload_flash_timer > 0.0 {
+            reload_flash_timer -= frame_dt_secs;
+            let t = (reload_flash_timer / 0.5).min(1.0).max(0.0);
+            let flash_r = base_r * (1.0 - t as f64) + 0.3 * t as f64;
+            let flash_g = base_g * (1.0 - t as f64) + 0.3 * t as f64;
+            let flash_b = base_b * (1.0 - t as f64) + 0.8 * t as f64;
+            renderer.set_background(flash_r, flash_g, flash_b);
+        } else {
+            renderer.set_background(base_r, base_g, base_b);
+        }
+
+        // Orbit camera.
+        renderer.camera.orbit(rot * dt);
+
+        // Update effective colors (may change due to gradient or hue cycle).
+        colors = if let Ok(c) = shared_cfg.read() {
+            c.effective_colors()
+        } else {
+            colors.clone()
+        };
+
+        // Apply hue rotation if enabled.
+        let display_colors = if cycle_enabled && cycle_speed > 0.0 {
+            let degrees = elapsed_secs * cycle_speed * 360.0 % 360.0;
+            rotate_hue(&colors, degrees)
+        } else {
+            colors.clone()
+        };
+
+        // Phase 4: step geodesics in parallel using rayon.
+        {
+            let surf_ref = &*surf;
+            geodesics
+                .par_iter_mut()
+                .zip(trails.par_iter_mut())
+                .for_each(|(geo, trail)| {
+                    if !geo.alive {
+                        return;
+                    }
+                    let pos = surf_ref.position(geo.u, geo.v);
+                    trail.push([pos.x, pos.y, pos.z]);
+                    geo.step(surf_ref, dt);
+                });
+        }
+
+        // Respawn dead geodesics sequentially (needs mutable rng).
         for (i, geo) in geodesics.iter_mut().enumerate() {
             if !geo.alive {
                 let (u, v) = surf.random_position(&mut rng);
                 let (du, dv) = surf.random_tangent(u, v, &mut rng);
                 let tl = shared_cfg.read().map(|c| c.trail_length).unwrap_or(300);
-                let ci = i % colors.len().max(1);
+                let ci = i % display_colors.len().max(1);
                 *geo = Geodesic::new(u, v, du, dv, tl, ci);
                 trails[i].clear();
-                trails[i].color = colors[ci];
+                trails[i].color = display_colors[ci];
             }
         }
 
-        // Collect trail vertices.
+        // Collect trail vertices, applying display colors.
         let mut all_verts = Vec::new();
         let mut seg_lens = Vec::new();
-        for trail in &trails {
-            let v = trail.ordered_vertices();
+        for (trail_idx, trail) in trails.iter().enumerate() {
+            let ci = geodesics[trail_idx].color_idx % display_colors.len().max(1);
+            let [dr, dg, db, _] = display_colors[ci];
+            let mut v = trail.ordered_vertices();
+            // Override the RGB with the display (possibly hue-rotated) color,
+            // while preserving the alpha computed by ordered_vertices.
+            for vert in &mut v {
+                vert.color[0] = dr;
+                vert.color[1] = dg;
+                vert.color[2] = db;
+            }
             seg_lens.push(v.len());
             all_verts.extend(v);
         }
