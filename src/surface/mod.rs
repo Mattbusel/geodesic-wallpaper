@@ -6,6 +6,8 @@
 
 pub mod catenoid;
 pub mod enneper;
+pub mod helicoid;
+pub mod hyperboloid;
 pub mod saddle;
 pub mod sphere;
 pub mod torus;
