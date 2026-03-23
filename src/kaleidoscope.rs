@@ -162,6 +162,208 @@ impl KaleidoscopeAnimator {
 }
 
 // ---------------------------------------------------------------------------
+// Round 27: KaleidoscopeRenderer with extended config
+// ---------------------------------------------------------------------------
+
+/// Extended configuration for the new renderer API.
+#[derive(Debug, Clone)]
+pub struct KaleidoscopeConfig2 {
+    pub n_fold: u32,
+    pub rotation_offset: f64,
+    pub zoom: f64,
+    pub center: (f64, f64),
+    pub color_rotation: f64,
+}
+
+impl Default for KaleidoscopeConfig2 {
+    fn default() -> Self {
+        KaleidoscopeConfig2 {
+            n_fold: 6,
+            rotation_offset: 0.0,
+            zoom: 1.0,
+            center: (0.0, 0.0),
+            color_rotation: 0.0,
+        }
+    }
+}
+
+/// Kaleidoscope renderer using the extended config.
+pub struct KaleidoscopeRenderer;
+
+impl KaleidoscopeRenderer {
+    /// Map any point `(x, y)` to the fundamental domain via angle folding.
+    pub fn map_to_sector(x: f64, y: f64, config: &KaleidoscopeConfig2) -> (f64, f64) {
+        let n = config.n_fold.max(1) as f64;
+        let sector_angle = PI / n;
+
+        // Translate by center
+        let cx = x - config.center.0;
+        let cy = y - config.center.1;
+
+        let r = (cx * cx + cy * cy).sqrt() / config.zoom.max(0.001);
+        let mut theta = cy.atan2(cx) - config.rotation_offset;
+        theta = theta.rem_euclid(2.0 * PI);
+
+        // Fold into [0, sector_angle]
+        let sector_idx = (theta / sector_angle).floor() as u32;
+        if sector_idx % 2 == 1 {
+            theta = sector_angle * (sector_idx as f64 + 1.0)
+                - (theta - sector_angle * sector_idx as f64);
+        } else {
+            theta -= sector_angle * sector_idx as f64;
+        }
+        theta = theta.clamp(0.0, sector_angle);
+
+        (r * theta.cos(), r * theta.sin())
+    }
+
+    /// Render source image with kaleidoscope folding.
+    pub fn render(
+        source: &Vec<Vec<[u8; 3]>>,
+        config: &KaleidoscopeConfig2,
+        width: u32,
+        height: u32,
+    ) -> Vec<Vec<[u8; 3]>> {
+        let w = width as usize;
+        let h = height as usize;
+        let src_h = source.len().max(1);
+        let src_w = source.first().map(|r| r.len()).unwrap_or(1).max(1);
+        let cx = width as f64 / 2.0;
+        let cy = height as f64 / 2.0;
+
+        let mut out = vec![vec![[0u8; 3]; w]; h];
+
+        for row in 0..h {
+            for col in 0..w {
+                let x = (col as f64 - cx) / cx;
+                let y = (row as f64 - cy) / cy;
+                let (tx, ty) = Self::map_to_sector(x, y, config);
+                let sc = Self::sample_bilinear(source, tx * cx + cx, ty * cy + cy);
+                let col_out = Self::rotate_color(sc, config.color_rotation);
+                out[row][col] = col_out;
+                let _ = (src_h, src_w);
+            }
+        }
+        out
+    }
+
+    /// Render a kaleidoscope from a procedural function.
+    pub fn render_pattern(
+        f: impl Fn(f64, f64) -> [u8; 3],
+        config: &KaleidoscopeConfig2,
+        width: u32,
+        height: u32,
+    ) -> Vec<Vec<[u8; 3]>> {
+        let w = width as usize;
+        let h = height as usize;
+        let cx = width as f64 / 2.0;
+        let cy = height as f64 / 2.0;
+
+        let mut out = vec![vec![[0u8; 3]; w]; h];
+        for row in 0..h {
+            for col in 0..w {
+                let x = (col as f64 - cx) / cx;
+                let y = (row as f64 - cy) / cy;
+                let (tx, ty) = Self::map_to_sector(x, y, config);
+                let color = f(tx, ty);
+                out[row][col] = Self::rotate_color(color, config.color_rotation);
+            }
+        }
+        out
+    }
+
+    /// Bilinear sample from source at floating-point pixel coords.
+    pub fn sample_bilinear(source: &Vec<Vec<[u8; 3]>>, x: f64, y: f64) -> [u8; 3] {
+        let h = source.len();
+        if h == 0 { return [0, 0, 0]; }
+        let w = source[0].len();
+        if w == 0 { return [0, 0, 0]; }
+
+        let x = x.clamp(0.0, (w - 1) as f64);
+        let y = y.clamp(0.0, (h - 1) as f64);
+
+        let i0 = (x as usize).min(w - 1);
+        let j0 = (y as usize).min(h - 1);
+        let i1 = (i0 + 1).min(w - 1);
+        let j1 = (j0 + 1).min(h - 1);
+        let sf = x - i0 as f64;
+        let tf = y - j0 as f64;
+
+        let lerp = |a: u8, b: u8, t: f64| -> u8 {
+            (a as f64 * (1.0 - t) + b as f64 * t).round().clamp(0.0, 255.0) as u8
+        };
+
+        let top    = [lerp(source[j0][i0][0], source[j0][i1][0], sf),
+                      lerp(source[j0][i0][1], source[j0][i1][1], sf),
+                      lerp(source[j0][i0][2], source[j0][i1][2], sf)];
+        let bottom = [lerp(source[j1][i0][0], source[j1][i1][0], sf),
+                      lerp(source[j1][i0][1], source[j1][i1][1], sf),
+                      lerp(source[j1][i0][2], source[j1][i1][2], sf)];
+        [lerp(top[0], bottom[0], tf),
+         lerp(top[1], bottom[1], tf),
+         lerp(top[2], bottom[2], tf)]
+    }
+
+    /// Rotate hue of `color` by `angle` (in [0, 1] turns).
+    pub fn rotate_color(color: [u8; 3], angle: f64) -> [u8; 3] {
+        let (h, s, v) = Self::rgb_to_hsv(color[0], color[1], color[2]);
+        let new_h = (h + angle).rem_euclid(1.0);
+        Self::hsv_to_rgb(new_h, s, v)
+    }
+
+    /// Convert HSV (each in [0, 1]) to RGB `[u8; 3]`.
+    pub fn hsv_to_rgb(h: f64, s: f64, v: f64) -> [u8; 3] {
+        let h6 = h.rem_euclid(1.0) * 6.0;
+        let i = h6.floor() as u32;
+        let f = h6 - h6.floor();
+        let p = v * (1.0 - s);
+        let q = v * (1.0 - s * f);
+        let t = v * (1.0 - s * (1.0 - f));
+        let (r, g, b) = match i {
+            0 => (v, t, p),
+            1 => (q, v, p),
+            2 => (p, v, t),
+            3 => (p, q, v),
+            4 => (t, p, v),
+            _ => (v, p, q),
+        };
+        [(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]
+    }
+
+    /// Convert RGB `u8` components to HSV (each in [0, 1]).
+    pub fn rgb_to_hsv(r: u8, g: u8, b: u8) -> (f64, f64, f64) {
+        let r = r as f64 / 255.0;
+        let g = g as f64 / 255.0;
+        let b = b as f64 / 255.0;
+        let max = r.max(g).max(b);
+        let min = r.min(g).min(b);
+        let delta = max - min;
+
+        let v = max;
+        let s = if max < 1e-9 { 0.0 } else { delta / max };
+        let h = if delta < 1e-9 {
+            0.0
+        } else if (max - r).abs() < 1e-9 {
+            ((g - b) / delta).rem_euclid(6.0) / 6.0
+        } else if (max - g).abs() < 1e-9 {
+            ((b - r) / delta + 2.0) / 6.0
+        } else {
+            ((r - g) / delta + 4.0) / 6.0
+        };
+        (h, s, v)
+    }
+
+    /// Advance rotation and return a modified config for animation.
+    pub fn animated_frame(config: &mut KaleidoscopeConfig2, frame: u32, fps: f64) -> KaleidoscopeConfig2 {
+        let t = frame as f64 / fps.max(1.0);
+        let mut c = config.clone();
+        c.rotation_offset = config.rotation_offset + t * 0.1;
+        c.color_rotation = config.color_rotation + t * 0.02;
+        c
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
