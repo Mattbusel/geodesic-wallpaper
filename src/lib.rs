@@ -44,3 +44,5 @@ pub mod mesh;
 pub mod dithering;
 pub mod flow_field;
 pub mod wave_interference;
+pub mod cellular_automata_2d;
+pub mod projection;
