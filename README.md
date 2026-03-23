@@ -310,11 +310,66 @@ All surfaces implement the `Surface` trait: `position()`, `normal()`, `metric()`
 
 ## Gallery mode
 
-Gallery mode cycles through all surfaces automatically with a smooth cross-fade transition.
+Gallery mode cycles through all fourteen built-in surfaces automatically with a smooth cross-fade transition. It acts as a mathematical screensaver, showing each surface for a configurable interval before smoothly transitioning to the next.
+
+### Enable in `config.toml`
 
 ```toml
 gallery_mode       = true
-gallery_duration_s = 30
+gallery_duration_s = 30   # seconds per surface (default 30, minimum 1)
+```
+
+### CLI flag
+
+```powershell
+.\geodesic-wallpaper.exe --gallery
+```
+
+### Keyboard controls (gallery mode)
+
+| Key | Action |
+|-----|--------|
+| `G` | Toggle gallery mode on / off |
+| `RIGHT` / `SPACE` | Skip to next surface immediately |
+| `LEFT` | Skip to previous surface |
+
+### Transition
+
+Each surface change is accompanied by a brief cross-fade (0.75 s fade-out, 0.75 s fade-in). The caller reads `GalleryMode::transition_alpha()` each frame and multiplies scene opacity accordingly.
+
+### Surface cycle order
+
+```
+torus → sphere → saddle → enneper → catenoid → helicoid →
+hyperboloid → hyperbolic_paraboloid → ellipsoid → (wraps)
+```
+
+### Use from code
+
+```rust
+use geodesic_wallpaper::gallery::GalleryMode;
+
+// Create, enabled from the start, 45 seconds per surface.
+let mut gallery = GalleryMode::new(true, 45);
+
+// In the render loop:
+let surface_changed = gallery.update();
+let alpha = gallery.transition_alpha();  // multiply scene opacity by this
+if surface_changed {
+    let name = gallery.current_surface();
+    println!("Now showing: {name}");
+    // switch the renderer to this surface
+}
+```
+
+### `GalleryConfig` struct
+
+```rust
+pub struct GalleryConfig {
+    pub surfaces: Vec<SurfaceKind>,   // subset to cycle (default: all 14)
+    pub interval_secs: f32,           // seconds per surface
+    pub transition_secs: f32,         // fade half-duration
+}
 ```
 
 ---
@@ -365,19 +420,126 @@ Press **Shift+R** to record. Frames are saved as PNGs and assembled into `geodes
 
 ---
 
+## Geodesic field visualization
+
+Instead of rendering a fixed set of individual geodesic trails, the **geodesic field** mode fills the entire parameter domain `(u, v)` with a dense grid of small coloured arrows — one per grid cell — each pointing in the geodesic direction and coloured by the long-term fate of that geodesic.
+
+### Basin classification
+
+Each grid cell seeds a geodesic and integrates it for `fate_steps` RK4 steps. The final state determines the colour:
+
+| Fate | Condition | Arrow colour |
+|------|-----------|-------------|
+| `Bounded` | Stays within `escape_radius` for all steps | Blue |
+| `Escaping` | Exceeds `escape_radius` | Red |
+| `Looping` | Returns within `loop_epsilon` of start | Green |
+
+The resulting image reveals the **basin structure** of geodesic flow: which starting directions lead to bounded wandering, which ones escape the parameterisation domain, and which form closed loops.
+
+### `FieldConfig`
+
+```rust
+pub struct FieldConfig {
+    pub grid_n: usize,          // grid cells per axis (default 40, total = 40²= 1600)
+    pub u_range: [f64; 2],      // parameter u range (default [-π, π])
+    pub v_range: [f64; 2],      // parameter v range (default [-π, π])
+    pub fate_steps: usize,       // integration steps per cell (default 200)
+    pub fate_dt: f64,            // RK4 timestep for fate integration (default 0.04)
+    pub escape_radius: f64,      // escape threshold (default 8.0)
+    pub loop_epsilon: f64,       // loop detection radius (default 0.3)
+    pub arrow_length: f32,       // arrow display length (default 0.04)
+    pub arrow_alpha: f32,        // arrow opacity (default 0.7)
+}
+```
+
+### Usage
+
+```rust
+use geodesic_wallpaper::field::{FieldConfig, FieldRenderer};
+
+let cfg = FieldConfig { grid_n: 60, ..Default::default() };
+let renderer = FieldRenderer::new(cfg);
+
+// Provide your RK4 geodesic step function.
+let field = renderer.compute(|u, v, du, dv| {
+    // one step of the geodesic ODE on your surface
+    (new_u, new_v, new_du, new_dv)
+});
+
+println!("{} arrows, {} bounded, {} escaping, {} looping",
+    field.arrows.len(),
+    field.fate_counts[0], field.fate_counts[1], field.fate_counts[2]);
+
+// Upload field.arrows as an instanced vertex buffer for GPU rendering.
+```
+
+The computation is parallelised with rayon across all `grid_n²` cells, so a 60×60 grid (3 600 cells × 200 steps) completes in well under a second on a modern CPU.
+
+### `FlowArrow` GPU instance layout
+
+Each `FlowArrow` is `repr(C)` and implements `bytemuck::Pod`:
+
+```rust
+pub struct FlowArrow {
+    pub origin:    [f32; 2],   // (u, v) base position
+    pub direction: [f32; 2],   // normalised direction vector
+    pub length:    f32,        // display length
+    pub color:     [f32; 4],   // RGBA
+    pub fate:      u32,        // 0=Bounded 1=Escaping 2=Looping
+}
+```
+
+---
+
+## Mathematical background
+
+### Geodesic equations
+
+On a Riemannian surface with metric `g_{ij}` a geodesic `γ(t)` satisfies:
+
+```
+d²uⁱ/dt² + Γⁱⱼₖ (duʲ/dt)(duᵏ/dt) = 0
+```
+
+where `Γⁱⱼₖ = ½ gⁱˡ (∂ⱼgₗₖ + ∂ₖgₗⱼ − ∂ₗgⱼₖ)` are the Christoffel symbols of the second kind. All fourteen built-in surfaces provide analytic `christoffel()` implementations so that the RK4 integrator never approximates these symbols numerically.
+
+### Curvature comparison
+
+| Surface | Gaussian curvature K | Geodesic character |
+|---------|---------------------|-------------------|
+| Sphere | K = +1/R² (constant) | Great circles — all geodesics are closed |
+| Torus | Mixed (positive outer, negative inner) | Depends on winding ratio: rational = periodic, irrational = dense (ergodic) |
+| Saddle / flat | K = 0 | Straight lines in parameter space |
+| Catenoid / helicoid | K < 0 (minimal) | Geodesics spiral and diverge |
+| Pseudosphere | K = −1 (constant) | Maximal divergence — model of the hyperbolic plane |
+| Hyperboloid | K < 0 | Asymptotic geodesics along the rulings |
+
+### Gauss-Bonnet theorem
+
+For any compact surface `Σ` without boundary:
+
+```
+∬_Σ K dA = 2π χ(Σ)
+```
+
+where `χ` is the Euler characteristic. This connects the local curvature of each built-in surface to its global topology (sphere: χ=2, torus: χ=0, Klein bottle: χ=0, RP²: χ=1).
+
+---
+
 ## Architecture
 
 | Module | Responsibility |
 |--------|----------------|
 | `config` | Load and hot-reload `config.toml`; parse CSS hex colours |
 | `error` | Typed error enum covering all subsystems |
-| `surface` | `Surface` trait + 12 implementations |
+| `surface` | `Surface` trait + 14 implementations |
 | `geodesic` | RK4 integrator for the geodesic ODE |
+| `field` | Dense geodesic field (basin visualization, `FlowArrow` instances) |
 | `interactive` | Mouse event handling; geodesic shooting |
 | `trail` | Fixed-capacity ring buffer with quadratic alpha fade |
 | `renderer` | wgpu render pipelines (surface wireframe + trail lines) |
 | `wallpaper` | Win32 borderless window pinned below all app windows |
-| `gallery` | Auto-cycle through surfaces in gallery mode |
+| `gallery` | Auto-cycle through surfaces in gallery mode with cross-fade |
 | `parameter_tuner` | Runtime keyboard-driven parameter adjustment |
 | `recorder` | Phase portrait PNG/GIF recording |
 | `multi_monitor` | Per-monitor surface assignment and configuration |
