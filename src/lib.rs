@@ -52,3 +52,5 @@ pub mod kaleidoscope;
 pub mod particle_system;
 pub mod islamic_patterns;
 pub mod quilts;
+pub mod mosaic;
+pub mod typography;
