@@ -78,3 +78,5 @@ pub mod animation_engine;
 pub mod color_theory;
 pub mod pathfinding_art;
 pub mod fractal_geometry;
+pub mod topology_art;
+pub mod hyperbolic_tiling;
