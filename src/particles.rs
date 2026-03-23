@@ -153,9 +153,9 @@ impl ParticleSystem {
         p.trail = TrailBuffer::new(self.config.trail_length, color, 2.0);
         p.alive = true;
 
-        // Record initial position.
+        // Record initial position using the existing push([f32; 3]) signature.
         let pos3 = surface.position(u, v);
-        p.trail.push(pos3.into(), color);
+        p.trail.push([pos3.x, pos3.y, pos3.z]);
     }
 
     fn next_color(&mut self) -> [f32; 4] {
@@ -176,8 +176,7 @@ impl ParticleSystem {
                 continue;
             }
             let pos3 = surface.position(p.geo.u, p.geo.v);
-            let color = p.trail.color;
-            p.trail.push(pos3.into(), color);
+            p.trail.push([pos3.x, pos3.y, pos3.z]);
         }
     }
 
