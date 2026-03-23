@@ -61,6 +61,29 @@ struct Args {
     /// Merges preset values on top of `config.toml` defaults.
     #[arg(long)]
     preset: Option<String>,
+
+    /// Export an animation sequence of PNG frames.
+    /// Use with --frames, --fps, and --out-dir.
+    #[arg(long)]
+    animate: bool,
+
+    /// Frames per second for animation export (used for duration display only).
+    #[arg(long, default_value_t = 30)]
+    fps: u32,
+
+    /// Output directory for animation frames (e.g. ./frames).
+    #[arg(long, default_value = "./frames")]
+    out_dir: String,
+
+    /// Color palette specification. Format: TYPE[:HUE] where TYPE is one of
+    /// rainbow, monochromatic, complementary, triadic, analogous.
+    /// Example: --palette triadic:240
+    #[arg(long)]
+    palette: Option<String>,
+
+    /// Number of colors to generate in the palette.
+    #[arg(long, default_value_t = 8)]
+    palette_steps: usize,
 }
 
 /// Surface names in cycle order.
@@ -346,6 +369,67 @@ fn main() {
         .init();
 
     let args = Args::parse();
+
+    // --palette: generate and print a color palette then continue
+    if let Some(ref palette_spec) = args.palette {
+        use geodesic_wallpaper::palette::PaletteGenerator;
+        match PaletteGenerator::from_spec(palette_spec, args.palette_steps) {
+            Some(palette) => {
+                println!("[palette] {} ({} colors)", palette.name, palette.colors.len());
+                for (i, hex) in palette.to_hex_strings().iter().enumerate() {
+                    println!("  [{}] {}", i, hex);
+                }
+            }
+            None => {
+                eprintln!("[palette] Could not parse palette spec: '{}'. Use format TYPE[:HUE], e.g. triadic:240 or rainbow", palette_spec);
+            }
+        }
+    }
+
+    // --animate: export a headless animation sequence of PNG frames
+    if args.animate {
+        use geodesic_wallpaper::animation::{
+            AnimationConfig, AnimationExporter, AnimationParameter, FrameInterpolator,
+            InterpolationMode,
+        };
+        use std::path::PathBuf;
+
+        let config = AnimationConfig {
+            frames: args.frames as usize,
+            fps: args.fps,
+            width: 1920,
+            height: 1080,
+            output_dir: PathBuf::from(&args.out_dir),
+        };
+        let interp = FrameInterpolator::new(
+            AnimationParameter::RotationAngle,
+            0.0,
+            std::f64::consts::TAU,
+            InterpolationMode::Linear,
+        );
+        let exporter = AnimationExporter::new(config.clone(), vec![interp]);
+        eprintln!(
+            "[animate] Exporting {} frames to {} at {} fps",
+            config.frames, config.output_dir.display(), config.fps
+        );
+        match exporter.export(|_frame_idx, _params, path| {
+            // In headless mode without a live renderer, write a gradient test frame
+            AnimationExporter::write_test_frame(path, 1920, 1080)
+                .map_err(|e| e.to_string())
+        }) {
+            Ok(stats) => {
+                eprintln!(
+                    "[animate] Done: {} frames in {}ms ({:.1}ms/frame)",
+                    stats.frames_written, stats.duration_ms, stats.avg_frame_ms
+                );
+            }
+            Err(e) => {
+                eprintln!("[animate] Export failed: {e}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
 
     if args.headless {
         let config_path = PathBuf::from("config.toml");

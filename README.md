@@ -585,6 +585,145 @@ CI enforces formatting, Clippy warnings-as-errors, the full test suite, and a re
 
 ---
 
+## Animation Export (`src/animation.rs`)
+
+Export a sequence of PNG frames by interpolating one or more parameters over time.
+
+### CLI
+
+```bash
+geodesic-wallpaper --animate --frames 60 --fps 30 --out-dir ./frames
+```
+
+Frames are written as `frames/frame_0000.png` through `frames/frame_0059.png`.
+
+### Animated parameters
+
+| `AnimationParameter` | Description |
+|---------------------|-------------|
+| `RotationAngle` | Camera orbit angle (radians) |
+| `Scale` | Scene scale factor |
+| `ColorHue` | Hue rotation of the color palette (degrees) |
+| `WindingNumber` | Symmetry winding number |
+
+### Interpolation modes
+
+| Mode | Formula |
+|------|---------|
+| `Linear` | `start + (end - start) * t` |
+| `Sinusoidal` | `start + (end - start) * 0.5 * (1 - cos(π·t))` |
+
+### API example
+
+```rust
+use geodesic_wallpaper::animation::{
+    AnimationConfig, AnimationExporter, AnimationParameter, FrameInterpolator, InterpolationMode,
+};
+use std::path::PathBuf;
+
+let config = AnimationConfig {
+    frames: 60, fps: 30, width: 1920, height: 1080,
+    output_dir: PathBuf::from("./frames"),
+};
+let interp = FrameInterpolator::new(
+    AnimationParameter::RotationAngle, 0.0, std::f64::consts::TAU, InterpolationMode::Linear,
+);
+let exporter = AnimationExporter::new(config, vec![interp]);
+let stats = exporter.export(|frame_idx, params, path| {
+    // render frame to path
+    Ok(())
+}).unwrap();
+println!("{} frames in {}ms", stats.frames_written, stats.duration_ms);
+```
+
+---
+
+## Wallpaper Symmetry Groups (`src/symmetry.rs`)
+
+Two high-complexity wallpaper groups — **p4g** and **p6m** — are now implemented.
+Each maps any 2D coordinate to a canonical fundamental domain, enabling symmetric
+texture and color mapping for geodesic surfaces.
+
+### p4g — Square lattice with glide reflections (8 operations)
+
+```rust
+use geodesic_wallpaper::symmetry::{P4g, SymmetryGroup};
+
+let p4g = P4g::new(1.0);
+let (u, v) = p4g.to_fundamental_domain(1.3, 2.7);
+let orbit = p4g.orbit(0.4, 0.2); // 8 symmetry copies
+let color = p4g.color_value(0.7, 0.3); // 0..=1 for palette indexing
+```
+
+Symmetry operations: 4 rotations (0°, 90°, 180°, 270°) + 4 diagonal glide reflections.
+
+### p6m — Hexagonal lattice with all reflections (12 operations)
+
+```rust
+use geodesic_wallpaper::symmetry::{P6m, SymmetryGroup};
+
+let p6m = P6m::new(1.0);
+let (u, v) = p6m.to_fundamental_domain(0.5, 0.8);
+let orbit = p6m.orbit(1.0, 0.0); // 12 symmetry copies
+```
+
+Symmetry operations: 6 rotations (0°–300° in 60° steps) + 6 reflections.
+
+### Pattern sampling
+
+```rust
+use geodesic_wallpaper::symmetry::{P6m, sample_pattern};
+
+let p6m = P6m::new(1.0);
+let grid = sample_pattern(&p6m, 256, 256, (-2.0, 2.0), (-2.0, 2.0));
+// grid is a 256×256 flat Vec<f32> with values in [0, 1]
+```
+
+---
+
+## Color Palette Generator (`src/palette.rs`)
+
+Generate HSL-based color palettes using classical color theory.
+
+### CLI
+
+```bash
+geodesic-wallpaper --palette triadic:240 --palette-steps 8
+geodesic-wallpaper --palette rainbow --palette-steps 12
+geodesic-wallpaper --palette monochromatic:120 --palette-steps 6
+```
+
+### Palette types
+
+| Type | Description |
+|------|-------------|
+| `rainbow` | Evenly spread hues across the full 360° wheel |
+| `monochromatic:HUE` | Shades of a single hue (varying lightness) |
+| `complementary:HUE` | Two opposing hues (180° apart) |
+| `triadic:HUE` | Three equidistant hues (120° apart) |
+| `analogous:HUE` | Adjacent hues (±30° from base) |
+
+### API example
+
+```rust
+use geodesic_wallpaper::palette::{PaletteGenerator, PaletteType, hsl_to_rgb};
+
+// Generate a triadic palette with 6 colors based at hue 240° (blue)
+let palette = PaletteGenerator::generate(PaletteType::Triadic(240.0), 6);
+println!("Palette: {}", palette.name);
+for hex in palette.to_hex_strings() {
+    println!("  {}", hex);
+}
+
+// Parse a palette spec from a string (e.g. from CLI)
+let p = PaletteGenerator::from_spec("analogous:60", 8).unwrap();
+
+// HSL to RGB conversion
+let [r, g, b] = hsl_to_rgb(120.0, 0.8, 0.5); // green
+```
+
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.

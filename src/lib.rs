@@ -1,5 +1,6 @@
 //! Library façade exposing all public modules for integration tests and `cargo doc`.
 
+pub mod animation;
 pub mod audio_reactive;
 pub mod config;
 pub mod error;
@@ -14,12 +15,14 @@ pub mod lod;
 pub mod lua_surface;
 pub mod morph;
 pub mod multi_monitor;
+pub mod palette;
 pub mod parameter_tuner;
 pub mod particles;
 pub mod recorder;
 pub mod renderer;
 pub mod scene_presets;
 pub mod surface;
+pub mod symmetry;
 pub mod trail;
 pub mod tray;
 pub mod wallpaper;
