@@ -350,3 +350,303 @@ mod tests {
         }
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Standalone Gray-Scott simulation types (GrayScottParams / GrayScottGrid)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Parameters for the standalone Gray-Scott simulation grid.
+#[derive(Debug, Clone)]
+pub struct GrayScottParams {
+    /// Feed rate F.
+    pub feed_rate: f64,
+    /// Kill rate K.
+    pub kill_rate: f64,
+    /// Diffusion coefficient for U.
+    pub du: f64,
+    /// Diffusion coefficient for V.
+    pub dv: f64,
+    /// Time step for Euler integration.
+    pub dt: f64,
+}
+
+impl GrayScottParams {
+    /// Spots preset: `f=0.035, k=0.065`.
+    pub fn spots() -> Self {
+        Self { feed_rate: 0.035, kill_rate: 0.065, du: 0.2, dv: 0.1, dt: 1.0 }
+    }
+    /// Stripes preset: `f=0.035, k=0.060`.
+    pub fn stripes() -> Self {
+        Self { feed_rate: 0.035, kill_rate: 0.060, du: 0.2, dv: 0.1, dt: 1.0 }
+    }
+    /// Maze preset: `f=0.029, k=0.057`.
+    pub fn maze() -> Self {
+        Self { feed_rate: 0.029, kill_rate: 0.057, du: 0.2, dv: 0.1, dt: 1.0 }
+    }
+    /// Bubbles preset: `f=0.013, k=0.053`.
+    pub fn bubbles() -> Self {
+        Self { feed_rate: 0.013, kill_rate: 0.053, du: 0.2, dv: 0.1, dt: 1.0 }
+    }
+}
+
+/// A flat 2D Gray-Scott reaction-diffusion grid.
+///
+/// Initialises with `u=1.0` everywhere and `v=0.0` with small random seeds
+/// near the centre (using a deterministic LCG).
+pub struct GrayScottGrid {
+    /// Grid width in cells.
+    pub width: usize,
+    /// Grid height in cells.
+    pub height: usize,
+    /// U concentration field (length = width * height).
+    pub u: Vec<f64>,
+    /// V concentration field (length = width * height).
+    pub v: Vec<f64>,
+    /// Simulation parameters.
+    pub params: GrayScottParams,
+    // Scratch buffers.
+    u_buf: Vec<f64>,
+    v_buf: Vec<f64>,
+}
+
+impl GrayScottGrid {
+    /// Create a new grid initialised to `u=1, v=0` with random seeds.
+    pub fn new(width: usize, height: usize, params: GrayScottParams) -> Self {
+        let n = width * height;
+        let mut u = vec![1.0_f64; n];
+        let mut v = vec![0.0_f64; n];
+
+        // Seed small random patches near the centre using LCG.
+        let cx = width / 2;
+        let cy = height / 2;
+        let radius = (width.min(height) / 8).max(2);
+        let mut rng: u64 = 12345678901234567;
+        for dy in 0..=radius * 2 {
+            for dx in 0..=radius * 2 {
+                rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                let frac = (rng >> 33) as f64 / u32::MAX as f64;
+                let x = cx.saturating_sub(radius) + dx;
+                let y = cy.saturating_sub(radius) + dy;
+                if x < width && y < height && frac < 0.3 {
+                    let idx = y * width + x;
+                    v[idx] = 0.25;
+                    u[idx] = 0.5;
+                }
+            }
+        }
+
+        Self {
+            width,
+            height,
+            u_buf: u.clone(),
+            v_buf: v.clone(),
+            u,
+            v,
+            params,
+        }
+    }
+
+    /// Perform one Euler integration step with periodic boundary conditions.
+    ///
+    /// Equations:
+    /// - `du/dt = Du*∇²u - u*v² + f*(1-u)`
+    /// - `dv/dt = Dv*∇²v + u*v² - (f+k)*v`
+    pub fn step(&mut self) {
+        let w = self.width;
+        let h = self.height;
+        let p = &self.params;
+
+        for y in 0..h {
+            for x in 0..w {
+                let idx = y * w + x;
+                let uc = self.u[idx];
+                let vc = self.v[idx];
+
+                // 5-point Laplacian with periodic boundary conditions.
+                let ul = self.u[y * w + (x + w - 1) % w];
+                let ur = self.u[y * w + (x + 1) % w];
+                let uu = self.u[((y + h - 1) % h) * w + x];
+                let ud = self.u[((y + 1) % h) * w + x];
+                let vl = self.v[y * w + (x + w - 1) % w];
+                let vr = self.v[y * w + (x + 1) % w];
+                let vu = self.v[((y + h - 1) % h) * w + x];
+                let vd = self.v[((y + 1) % h) * w + x];
+
+                let lap_u = ul + ur + uu + ud - 4.0 * uc;
+                let lap_v = vl + vr + vu + vd - 4.0 * vc;
+
+                let uvv = uc * vc * vc;
+                let du = p.du * lap_u - uvv + p.feed_rate * (1.0 - uc);
+                let dv = p.dv * lap_v + uvv - (p.feed_rate + p.kill_rate) * vc;
+
+                self.u_buf[idx] = (uc + p.dt * du).clamp(0.0, 1.0);
+                self.v_buf[idx] = (vc + p.dt * dv).clamp(0.0, 1.0);
+            }
+        }
+
+        std::mem::swap(&mut self.u, &mut self.u_buf);
+        std::mem::swap(&mut self.v, &mut self.v_buf);
+    }
+
+    /// Run `steps` iterations.
+    pub fn run(&mut self, steps: usize) {
+        for _ in 0..steps {
+            self.step();
+        }
+    }
+
+    /// Map V field to grayscale bytes (0-255).
+    ///
+    /// V is typically in 0..0.4; values are scaled by 2.5 and clamped.
+    pub fn to_grayscale(&self) -> Vec<u8> {
+        self.v.iter().map(|&v| {
+            (v * 2.5 * 255.0).clamp(0.0, 255.0) as u8
+        }).collect()
+    }
+
+    /// Map V field to RGB bytes using the given colormap (width*height*3 bytes).
+    pub fn to_rgb(&self, colormap: GrayScottColormap) -> Vec<u8> {
+        let mut out = Vec::with_capacity(self.width * self.height * 3);
+        for &v in &self.v {
+            let t = (v * 2.5).clamp(0.0, 1.0);
+            let (r, g, b) = colormap.apply(t);
+            out.push(r);
+            out.push(g);
+            out.push(b);
+        }
+        out
+    }
+}
+
+// ── GrayScottColormap ─────────────────────────────────────────────────────────
+
+/// Colormap for rendering the V concentration field.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GrayScottColormap {
+    /// Black → white.
+    Grayscale,
+    /// Black → red → yellow → white.
+    Fire,
+    /// Black → blue → cyan → white.
+    Ice,
+    /// Magenta → orange → yellow.
+    Plasma,
+}
+
+impl GrayScottColormap {
+    /// Map `t ∈ [0, 1]` to an RGB colour.
+    pub fn apply(&self, t: f64) -> (u8, u8, u8) {
+        let t = t.clamp(0.0, 1.0);
+        match self {
+            GrayScottColormap::Grayscale => {
+                let v = (t * 255.0) as u8;
+                (v, v, v)
+            }
+            GrayScottColormap::Fire => {
+                // black → red → yellow → white
+                if t < 0.333 {
+                    let s = t / 0.333;
+                    ((s * 255.0) as u8, 0, 0)
+                } else if t < 0.666 {
+                    let s = (t - 0.333) / 0.333;
+                    (255, (s * 255.0) as u8, 0)
+                } else {
+                    let s = (t - 0.666) / 0.334;
+                    (255, 255, (s * 255.0) as u8)
+                }
+            }
+            GrayScottColormap::Ice => {
+                // black → blue → cyan → white
+                if t < 0.333 {
+                    let s = t / 0.333;
+                    (0, 0, (s * 255.0) as u8)
+                } else if t < 0.666 {
+                    let s = (t - 0.333) / 0.333;
+                    (0, (s * 255.0) as u8, 255)
+                } else {
+                    let s = (t - 0.666) / 0.334;
+                    ((s * 255.0) as u8, 255, 255)
+                }
+            }
+            GrayScottColormap::Plasma => {
+                // magenta → orange → yellow
+                if t < 0.5 {
+                    let s = t / 0.5;
+                    (255, (s * 165.0) as u8, (255.0 * (1.0 - s)) as u8)
+                } else {
+                    let s = (t - 0.5) / 0.5;
+                    (255, (165.0 + s * 90.0) as u8, 0)
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod gray_scott_grid_tests {
+    use super::*;
+
+    #[test]
+    fn grid_step_no_panic_on_boundary() {
+        let mut grid = GrayScottGrid::new(16, 16, GrayScottParams::spots());
+        grid.run(10);
+        // All values must remain in [0, 1].
+        assert!(grid.u.iter().all(|&v| v >= 0.0 && v <= 1.0));
+        assert!(grid.v.iter().all(|&v| v >= 0.0 && v <= 1.0));
+    }
+
+    #[test]
+    fn to_grayscale_correct_length() {
+        let grid = GrayScottGrid::new(8, 8, GrayScottParams::maze());
+        assert_eq!(grid.to_grayscale().len(), 64);
+    }
+
+    #[test]
+    fn to_rgb_correct_length() {
+        let grid = GrayScottGrid::new(8, 8, GrayScottParams::bubbles());
+        assert_eq!(grid.to_rgb(GrayScottColormap::Fire).len(), 64 * 3);
+    }
+
+    #[test]
+    fn colormap_endpoints() {
+        for cm in [
+            GrayScottColormap::Grayscale,
+            GrayScottColormap::Fire,
+            GrayScottColormap::Ice,
+            GrayScottColormap::Plasma,
+        ] {
+            let _ = cm.apply(0.0);
+            let _ = cm.apply(1.0);
+            let _ = cm.apply(0.5);
+        }
+    }
+
+    #[test]
+    fn all_presets_grid() {
+        for params in [
+            GrayScottParams::spots(),
+            GrayScottParams::stripes(),
+            GrayScottParams::maze(),
+            GrayScottParams::bubbles(),
+        ] {
+            let mut g = GrayScottGrid::new(16, 16, params);
+            g.run(5);
+        }
+    }
+
+    #[test]
+    fn mass_conservation_approximate() {
+        // Total u + v should stay approximately conserved (not exact due to
+        // feed/kill terms, but shouldn't diverge wildly over a few steps).
+        let mut grid = GrayScottGrid::new(16, 16, GrayScottParams::spots());
+        let initial_sum: f64 = grid.u.iter().sum::<f64>() + grid.v.iter().sum::<f64>();
+        grid.run(20);
+        let final_sum: f64 = grid.u.iter().sum::<f64>() + grid.v.iter().sum::<f64>();
+        // Sum should remain within 50% of initial (very loose check).
+        assert!(
+            (final_sum - initial_sum).abs() / initial_sum < 0.5,
+            "sum changed too much: initial={:.2}, final={:.2}",
+            initial_sum, final_sum
+        );
+    }
+}
