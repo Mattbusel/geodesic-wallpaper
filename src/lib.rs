@@ -4,6 +4,7 @@ pub mod audio_reactive;
 pub mod config;
 pub mod error;
 pub mod events;
+pub mod field;
 pub mod finance_driver;
 pub mod gallery;
 pub mod geodesic;

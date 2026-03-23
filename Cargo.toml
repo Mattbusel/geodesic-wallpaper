@@ -52,6 +52,10 @@ clap = { version = "4", features = ["derive"] }
 image = { version = "0.25", default-features = false, features = ["png", "gif"] }
 mlua  = { version = "0.10", optional = true, features = ["lua54", "vendored"] }
 
+# Audio-reactive mode: WASAPI loopback capture + FFT analysis
+cpal = "0.15"
+rustfft = "6"
+
 [features]
 ## Enable Lua-scriptable custom surfaces via the `mlua` crate.
 lua = ["dep:mlua"]

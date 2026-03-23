@@ -215,19 +215,9 @@ fn default_palette() -> Vec<[f32; 4]> {
     ]
 }
 
-// ── TrailBuffer push helper (add [f32;3] → Vec3 conversion) ──────────────────
-
-impl TrailBuffer {
-    /// Push a position supplied as `[f32; 3]` (convenience for particle system).
-    pub fn push(&mut self, position: [f32; 3], color: [f32; 4]) {
-        let vertex = TrailVertex { position, color };
-        self.vertices[self.head] = vertex;
-        self.head = (self.head + 1) % self.capacity;
-        if self.count < self.capacity {
-            self.count += 1;
-        }
-    }
-}
+// No TrailBuffer extension needed — the particle system uses the existing
+// TrailBuffer::push([f32; 3]) method defined in crate::trail.
+// Colour is set at TrailBuffer construction time via the `color` field.
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
