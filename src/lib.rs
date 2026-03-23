@@ -29,3 +29,5 @@ pub mod wallpaper;
 pub mod reaction_diffusion;
 pub mod flow;
 pub mod timelapse;
+pub mod gradient;
+pub mod preview;

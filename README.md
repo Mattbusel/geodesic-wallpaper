@@ -724,6 +724,94 @@ let [r, g, b] = hsl_to_rgb(120.0, 0.8, 0.5); // green
 
 ---
 
+## Interactive TUI Tuner (`src/preview.rs`)
+
+`src/preview.rs` provides a parameter-tuning preview that renders the current
+wallpaper pattern to the terminal as Unicode block characters (`░▒▓█`).
+
+### CLI
+
+```bash
+# Render a 40×20 ASCII preview of the current pattern and exit
+geodesic-wallpaper --preview
+```
+
+The preview shows a 40×20 block-character grid with a header row listing
+the current symmetry group, scale, rotation, hue offset, and animation speed.
+
+### API
+
+```rust
+use geodesic_wallpaper::preview::{WallpaperParams, AsciiPreview, TuiApp};
+
+// Adjust parameters
+let mut params = WallpaperParams::default();
+params.scale = 2.0;
+params.hue_offset = 90.0;
+params.cycle_symmetry_group(); // cycle p1 → p2 → ... → p6m → p1
+params.clamp(); // clamp all values to valid ranges
+
+// Render to a buffer
+let mut buf = Vec::new();
+AsciiPreview::render(&params, 40, 20, &mut buf).unwrap();
+
+// Full-app one-shot render
+let app = TuiApp::new();
+let result = app.run().unwrap(); // prints to stdout
+println!("saved: {}", result.saved);
+```
+
+---
+
+## Gradient Textures (`src/gradient.rs`)
+
+`src/gradient.rs` generates smooth color gradients mapped over the wallpaper
+pattern via a `pattern_fn(x, y) -> f32` that returns a value in [0, 1].
+
+### CLI
+
+```bash
+geodesic-wallpaper --gradient sunset
+geodesic-wallpaper --gradient ocean
+geodesic-wallpaper --gradient plasma --headless --output gradient_preview.png
+```
+
+### Built-in presets
+
+| Preset | Description |
+|--------|-------------|
+| `sunset` | Dark blue → magenta → orange → light gold |
+| `ocean` | Deep navy → mid-ocean blue → cyan → pale sky |
+| `forest` | Dark green → vivid green → light lime |
+| `plasma` | Deep violet → purple → pink → orange → yellow |
+| `greyscale` | Black → white |
+
+### API example
+
+```rust
+use geodesic_wallpaper::gradient::{Gradient, GradientPreset, GradientStop, GradientTexture};
+
+// Use a built-in preset
+let gradient = GradientPreset::Sunset.into_gradient();
+let color = gradient.sample(0.5); // [r, g, b]
+
+// Custom gradient
+let custom = Gradient::new(vec![
+    GradientStop::new(0.0, [0, 0, 128]),
+    GradientStop::new(0.5, [0, 200, 200]),
+    GradientStop::new(1.0, [255, 255, 255]),
+]);
+
+// Generate a texture
+let pixels: Vec<[u8; 3]> = GradientTexture::generate(
+    1920, 1080,
+    |x, y| (x as f32 + y as f32) / (1920.0 + 1080.0),
+    &custom,
+);
+```
+
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.

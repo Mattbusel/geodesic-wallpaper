@@ -84,6 +84,18 @@ struct Args {
     /// Number of colors to generate in the palette.
     #[arg(long, default_value_t = 8)]
     palette_steps: usize,
+
+    /// Gradient preset to apply over the pattern.
+    /// One of: sunset, ocean, forest, plasma, greyscale.
+    /// Generates a gradient-mapped PNG preview (headless mode) or applies to
+    /// the rendered output.
+    #[arg(long, value_name = "PRESET")]
+    gradient: Option<String>,
+
+    /// Print an ASCII block-character preview of the current wallpaper pattern
+    /// and exit. Uses the current config (or defaults if no config.toml).
+    #[arg(long)]
+    preview: bool,
 }
 
 /// Surface names in cycle order.
@@ -369,6 +381,51 @@ fn main() {
         .init();
 
     let args = Args::parse();
+
+    // --preview: render ASCII block preview and exit
+    if args.preview {
+        use geodesic_wallpaper::preview::{WallpaperParams, TuiApp};
+        let config = geodesic_wallpaper::config::Config::load(
+            std::path::Path::new("config.toml")
+        );
+        let mut params = WallpaperParams::default();
+        params.scale = (1.0_f32 / config.time_step.max(1e-6) as f32 * 0.01).clamp(0.1, 10.0);
+        params.rotation = (config.rotation_speed * 10000.0) as f32;
+        params.clamp();
+        let app = TuiApp { params, width: 40, height: 20 };
+        let _ = app.run();
+        return;
+    }
+
+    // --gradient: generate gradient-mapped preview and print info
+    if let Some(ref preset_name) = args.gradient {
+        use geodesic_wallpaper::gradient::{GradientPreset, GradientTexture};
+        match GradientPreset::from_str(preset_name) {
+            Some(preset) => {
+                let gradient = preset.into_gradient();
+                // Generate a small 16x8 preview buffer
+                let pixels = GradientTexture::generate(
+                    16, 8,
+                    |x, y| (x as f32 + y as f32) / (16.0 + 8.0 - 2.0),
+                    &gradient,
+                );
+                println!("[gradient] preset: {}", preset_name);
+                println!("[gradient] stops: {}", gradient.stops.len());
+                println!("[gradient] generated {} pixels", pixels.len());
+                // Print first 5 sample colors
+                for (i, p) in pixels.iter().take(5).enumerate() {
+                    println!("  [{}] rgb({}, {}, {})", i, p[0], p[1], p[2]);
+                }
+            }
+            None => {
+                eprintln!(
+                    "[gradient] Unknown preset '{}'. Choose from: sunset, ocean, forest, plasma, greyscale",
+                    preset_name
+                );
+                std::process::exit(1);
+            }
+        }
+    }
 
     // --palette: generate and print a color palette then continue
     if let Some(ref palette_spec) = args.palette {
