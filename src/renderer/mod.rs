@@ -980,4 +980,145 @@ impl Renderer {
         self.queue.submit(std::iter::once(enc.finish()));
         frame.present();
     }
+
+    /// Capture the current scene as a PNG-ready RGBA pixel buffer.
+    ///
+    /// Creates a temporary offscreen texture, re-renders the last scene state
+    /// into it at the given `width` × `height`, then reads the pixels back from
+    /// the GPU.  The texture format is `Bgra8UnormSrgb`; pixels are converted
+    /// to RGBA before being returned.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`GeodesicError`] if texture creation, rendering, or pixel
+    /// readback fails.
+    pub fn capture_screenshot(
+        &mut self,
+        width: u32,
+        height: u32,
+    ) -> Result<Vec<u8>, GeodesicError> {
+        // Create a temporary RGBA offscreen texture with COPY_SRC usage.
+        let tex = self.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("screenshot_tex"),
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Bgra8UnormSrgb,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        });
+
+        // Re-render the current scene into the offscreen texture.
+        let color_view = tex.create_view(&Default::default());
+        let mut enc = self.device.create_command_encoder(&Default::default());
+        {
+            let mut rp = enc.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("screenshot_render"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &color_view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(self.background_color),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: &self.depth_view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: wgpu::StoreOp::Store,
+                    }),
+                    stencil_ops: None,
+                }),
+                ..Default::default()
+            });
+            if self.show_wireframe {
+                rp.set_pipeline(&self.surface_pipeline);
+                rp.set_bind_group(0, &self.bind_group, &[]);
+                rp.set_vertex_buffer(0, self.surface_vbuf.slice(..));
+                rp.set_index_buffer(self.surface_ibuf.slice(..), wgpu::IndexFormat::Uint32);
+                rp.draw_indexed(0..self.surface_index_count, 0, 0..1);
+            }
+            rp.set_pipeline(&self.trail_pipeline);
+            rp.set_bind_group(0, &self.bind_group, &[]);
+            rp.set_vertex_buffer(0, self.trail_vbuf.slice(..));
+            // Draw all trail vertices as a single strip (no per-segment lengths needed).
+            let capacity_u32 = self.trail_vbuf_capacity as u32;
+            if capacity_u32 > 0 {
+                rp.draw(0..capacity_u32, 0..1);
+            }
+        }
+
+        // Copy texture → readback buffer.
+        let bytes_per_pixel = 4u32;
+        let unpadded_row = width * bytes_per_pixel;
+        let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
+        let padded_row = unpadded_row.div_ceil(align) * align;
+        let buf_size = (padded_row * height) as u64;
+
+        let readback_buf = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("screenshot_readback"),
+            size: buf_size,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+
+        enc.copy_texture_to_buffer(
+            wgpu::ImageCopyTexture {
+                texture: &tex,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::ImageCopyBuffer {
+                buffer: &readback_buf,
+                layout: wgpu::ImageDataLayout {
+                    offset: 0,
+                    bytes_per_row: Some(padded_row),
+                    rows_per_image: Some(height),
+                },
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+
+        self.queue.submit(std::iter::once(enc.finish()));
+
+        // Wait for GPU then map.
+        let slice = readback_buf.slice(..);
+        let (tx, rx) = std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read, move |r| {
+            let _ = tx.send(r);
+        });
+        self.device.poll(wgpu::Maintain::Wait);
+        rx.recv()
+            .map_err(|_| GeodesicError::render("screenshot map_async channel closed"))?
+            .map_err(|e| GeodesicError::render(format!("screenshot map_async failed: {e}")))?;
+
+        let data = slice.get_mapped_range();
+        let mut pixels: Vec<u8> = Vec::with_capacity((width * height * 4) as usize);
+        for row in 0..height {
+            let start = (row * padded_row) as usize;
+            let row_data = &data[start..start + unpadded_row as usize];
+            // BGRA → RGBA
+            for px in row_data.chunks_exact(4) {
+                pixels.push(px[2]); // R
+                pixels.push(px[1]); // G
+                pixels.push(px[0]); // B
+                pixels.push(px[3]); // A
+            }
+        }
+        drop(data);
+        readback_buf.unmap();
+
+        Ok(pixels)
+    }
 }

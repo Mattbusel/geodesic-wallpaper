@@ -144,11 +144,14 @@ unsafe extern "system" fn wnd_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM)
         if msg == WM_KEYDOWN {
             let vk = wp.0 as u32;
             let event = match vk {
-                0x53 => Some(KeyEvent::CycleSurface),     // S
-                0x52 => Some(KeyEvent::ResetGeodesics),   // R
-                0x46 => Some(KeyEvent::ToggleFpsHud),     // F
-                0xBB | 0x6B => Some(KeyEvent::SpeedUp),   // + / numpad +
-                0xBD | 0x6D => Some(KeyEvent::SpeedDown), // - / numpad -
+                0x5D | 0xDD => Some(KeyEvent::CycleSurface),     // ] — cycle forward
+                0x5B | 0xDB => Some(KeyEvent::CycleSurfaceBack), // [ — cycle backward
+                0x52 => Some(KeyEvent::ResetGeodesics),           // R
+                0x46 => Some(KeyEvent::ToggleFpsHud),             // F
+                0xBB | 0x6B => Some(KeyEvent::SpeedUp),           // + / numpad +
+                0xBD | 0x6D => Some(KeyEvent::SpeedDown),         // - / numpad -
+                0x20 => Some(KeyEvent::TogglePause),              // Space
+                0x50 => Some(KeyEvent::Screenshot),               // P
                 _ => None,
             };
             if let Some(ev) = event {

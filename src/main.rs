@@ -11,8 +11,19 @@ use geodesic_wallpaper::events::KeyEvent;
 use geodesic_wallpaper::geodesic::Geodesic;
 use geodesic_wallpaper::renderer::Renderer;
 use geodesic_wallpaper::surface::{
-    catenoid::Catenoid, enneper::Enneper, helicoid::Helicoid, hyperboloid::Hyperboloid,
-    saddle::Saddle, sphere::Sphere, torus::Torus, Surface,
+    boy_surface::BoySurface,
+    catenoid::Catenoid,
+    ellipsoid::Ellipsoid,
+    enneper::Enneper,
+    helicoid::Helicoid,
+    hyperboloid::Hyperboloid,
+    hyperbolic_paraboloid::HyperbolicParaboloid,
+    klein_bottle::KleinBottle,
+    saddle::Saddle,
+    sphere::Sphere,
+    torus::Torus,
+    torus_knot::TorusKnot,
+    Surface,
 };
 use geodesic_wallpaper::trail::TrailBuffer;
 use geodesic_wallpaper::tray;
@@ -43,6 +54,11 @@ struct Args {
     /// Number of frames to simulate in headless mode.
     #[arg(long, default_value_t = 300)]
     frames: u32,
+    /// Load a named preset from the `presets/` directory (e.g. `cosmic`, `ocean`).
+    ///
+    /// Merges preset values on top of `config.toml` defaults.
+    #[arg(long)]
+    preset: Option<String>,
 }
 
 /// Surface names in cycle order.
@@ -53,6 +69,11 @@ const SURFACE_CYCLE: &[&str] = &[
     "catenoid",
     "helicoid",
     "hyperboloid",
+    "hyperbolic_paraboloid",
+    "ellipsoid",
+    "klein_bottle",
+    "boy_surface",
+    "torus_knot",
 ];
 
 /// Construct the surface implementation selected in `cfg`.
@@ -68,6 +89,14 @@ fn build_surface(cfg: &Config) -> Arc<dyn Surface> {
         "catenoid" => Arc::new(Catenoid::new(cfg.catenoid_c)),
         "helicoid" => Arc::new(Helicoid::new(cfg.helicoid_c)),
         "hyperboloid" => Arc::new(Hyperboloid::new(cfg.hyperboloid_a, cfg.hyperboloid_b)),
+        "hyperbolic_paraboloid" => Arc::new(HyperbolicParaboloid::new(
+            cfg.hyperbolic_paraboloid_a,
+            cfg.hyperbolic_paraboloid_b,
+        )),
+        "ellipsoid" => Arc::new(Ellipsoid::new(cfg.ellipsoid_a, cfg.ellipsoid_b, cfg.ellipsoid_c)),
+        "klein_bottle" => Arc::new(KleinBottle::new(2.0, 0.4)),
+        "boy_surface" => Arc::new(BoySurface::new(1.0)),
+        "torus_knot" => Arc::new(TorusKnot::new(2, 3, 2.0, 0.8, 0.15)),
         _ => Arc::new(Torus::new(cfg.torus_R, cfg.torus_r)),
     }
 }
@@ -81,7 +110,87 @@ fn build_surface_by_name(name: &str) -> Arc<dyn Surface> {
         "catenoid" => Arc::new(Catenoid::new(1.0)),
         "helicoid" => Arc::new(Helicoid::new(1.0)),
         "hyperboloid" => Arc::new(Hyperboloid::new(1.0, 1.0)),
+        "hyperbolic_paraboloid" => Arc::new(HyperbolicParaboloid::new(1.0, 1.0)),
+        "ellipsoid" => Arc::new(Ellipsoid::new(2.0, 1.5, 1.0)),
+        "klein_bottle" => Arc::new(KleinBottle::new(2.0, 0.4)),
+        "boy_surface" => Arc::new(BoySurface::new(1.0)),
+        "torus_knot" => Arc::new(TorusKnot::new(2, 3, 2.0, 0.8, 0.15)),
         _ => Arc::new(Torus::new(2.0, 0.7)),
+    }
+}
+
+/// Load a preset TOML from `presets/<name>.toml` and merge it on top of `base`.
+///
+/// Missing files are silently ignored (returns `base` unchanged).  Parse errors
+/// are logged as warnings and also return `base` unchanged.
+fn load_preset(base: &Config, name: &str) -> Config {
+    let path = PathBuf::from(format!("presets/{name}.toml"));
+    let text = match std::fs::read_to_string(&path) {
+        Ok(t) => t,
+        Err(_) => {
+            tracing::warn!(preset = name, "preset file not found: {}", path.display());
+            return base.clone();
+        }
+    };
+    match toml::from_str::<Config>(&text) {
+        Ok(preset_cfg) => {
+            // Merge: preset fields win over defaults, base config wins for fields
+            // not present in the preset.  We achieve this by starting from `base`
+            // and overwriting only fields that differ from a fresh `Config::default()`.
+            let default = Config::default();
+            let mut out = base.clone();
+
+            macro_rules! merge {
+                ($field:ident) => {
+                    if preset_cfg.$field != default.$field {
+                        out.$field = preset_cfg.$field.clone();
+                    }
+                };
+            }
+
+            merge!(surface);
+            merge!(num_geodesics);
+            merge!(trail_length);
+            merge!(rotation_speed);
+            merge!(color_palette);
+            merge!(torus_R);
+            merge!(torus_r);
+            merge!(time_step);
+            merge!(camera_distance);
+            merge!(camera_elevation);
+            merge!(camera_fov);
+            merge!(camera_elevation_speed);
+            merge!(show_wireframe);
+            merge!(max_trail_verts);
+            merge!(trail_fade_power);
+            merge!(color_mode);
+            merge!(target_fps);
+            merge!(show_hud);
+            merge!(background_color);
+            merge!(trail_mode);
+            merge!(color_cycle_speed);
+            merge!(gradient_stops);
+            merge!(gradient_mode);
+            merge!(catenoid_c);
+            merge!(helicoid_c);
+            merge!(hyperboloid_a);
+            merge!(hyperboloid_b);
+            merge!(light_dir);
+            merge!(color_cycle_enabled);
+            merge!(hyperbolic_paraboloid_a);
+            merge!(hyperbolic_paraboloid_b);
+            merge!(ellipsoid_a);
+            merge!(ellipsoid_b);
+            merge!(ellipsoid_c);
+            merge!(monitor);
+
+            tracing::info!(preset = name, "preset loaded from {}", path.display());
+            out
+        }
+        Err(e) => {
+            tracing::warn!(preset = name, "failed to parse preset: {e}");
+            base.clone()
+        }
     }
 }
 
@@ -155,21 +264,38 @@ fn parse_bg_color(hex: &str) -> (f64, f64, f64) {
     (c[0] as f64, c[1] as f64, c[2] as f64)
 }
 
-/// Query the primary monitor resolution via Win32.
+/// Query monitor resolution according to the `monitor` config option.
+///
+/// - `"all"` — spans the virtual screen (all monitors combined).
+/// - `"primary"` (default) — primary monitor only.
+/// - `"0"`, `"1"`, `"2"`, … — specific monitor by index (0-based).
 ///
 /// Returns `(1920, 1080)` as a safe fallback if the system call fails.
-fn screen_size(multi_monitor: bool) -> (i32, i32) {
+fn screen_size(monitor: &str, monitors: &[(i32, i32, u32, u32)]) -> (i32, i32) {
     unsafe {
         use windows::Win32::UI::WindowsAndMessaging::{
             GetSystemMetrics, SM_CXSCREEN, SM_CXVIRTUALSCREEN, SM_CYSCREEN, SM_CYVIRTUALSCREEN,
         };
-        if multi_monitor {
+
+        // Span entire virtual screen.
+        if monitor == "all" {
             let w = GetSystemMetrics(SM_CXVIRTUALSCREEN);
             let h = GetSystemMetrics(SM_CYVIRTUALSCREEN);
             if w > 0 && h > 0 {
                 return (w, h);
             }
         }
+
+        // Specific monitor by numeric index.
+        if let Ok(idx) = monitor.parse::<usize>() {
+            if let Some(&(_x, _y, w, h)) = monitors.get(idx) {
+                if w > 0 && h > 0 {
+                    return (w as i32, h as i32);
+                }
+            }
+        }
+
+        // Primary (or fallback).
         let w = GetSystemMetrics(SM_CXSCREEN);
         let h = GetSystemMetrics(SM_CYSCREEN);
         if w > 0 && h > 0 {
@@ -215,7 +341,10 @@ fn main() {
 
     if args.headless {
         let config_path = PathBuf::from("config.toml");
-        let cfg = Config::load(&config_path).resolve_profile();
+        let mut cfg = Config::load(&config_path).resolve_profile();
+        if let Some(ref preset_name) = args.preset {
+            cfg = load_preset(&cfg, preset_name);
+        }
         if let Err(e) = run_headless(&args, &cfg) {
             tracing::error!("Headless render failed: {e}");
             eprintln!("Error: {e}");
@@ -224,7 +353,7 @@ fn main() {
         return;
     }
 
-    if let Err(e) = run() {
+    if let Err(e) = run(&args) {
         tracing::error!("Fatal error: {e}");
         // Show a visible error dialog so the user knows what went wrong.
         unsafe {
@@ -359,16 +488,21 @@ fn run_headless(args: &Args, cfg: &Config) -> Result<(), GeodesicError> {
 }
 
 /// Application body returning a typed error on failure.
-#[tracing::instrument]
-fn run() -> Result<(), GeodesicError> {
+#[tracing::instrument(skip(args))]
+fn run(args: &Args) -> Result<(), GeodesicError> {
     let config_path = PathBuf::from("config.toml");
-    let cfg = Config::load(&config_path).resolve_profile();
+    let base_cfg = Config::load(&config_path).resolve_profile();
+    let cfg = if let Some(ref preset_name) = args.preset {
+        load_preset(&base_cfg, preset_name)
+    } else {
+        base_cfg
+    };
     tracing::info!(
         surface = %cfg.surface,
         num_geodesics = cfg.num_geodesics,
         trail_length = cfg.trail_length,
         target_fps = cfg.target_fps,
-        multi_monitor = cfg.multi_monitor,
+        monitor = %cfg.monitor,
         "configuration loaded"
     );
 
@@ -383,11 +517,19 @@ fn run() -> Result<(), GeodesicError> {
     let (reload_tx, reload_rx) = std::sync::mpsc::channel::<()>();
 
     // Spawn hot-reload watcher thread.
+    //
+    // Safety: we use event-kind filtering to handle atomic-write patterns
+    // (temp file + rename).  Many editors write config atomically by writing
+    // a temp file and then renaming it into place.  We treat both
+    // `EventKind::Modify` and `EventKind::Create` (which covers the final
+    // rename step) as a reload trigger so we never read a partially-written
+    // file.  An extra 50 ms debounce lets the OS flush the inode before we
+    // `read_to_string` the canonical path.
     {
         let shared = shared_cfg.clone();
         let path = config_path.clone();
         std::thread::spawn(move || {
-            use notify::{recommended_watcher, RecursiveMode, Watcher};
+            use notify::{recommended_watcher, EventKind, RecursiveMode, Watcher};
             let (tx, rx) = std::sync::mpsc::channel();
             let mut watcher = match recommended_watcher(move |res| {
                 let _ = tx.send(res);
@@ -398,16 +540,58 @@ fn run() -> Result<(), GeodesicError> {
                     return;
                 }
             };
-            let _ = watcher.watch(&path, RecursiveMode::NonRecursive);
+            // Watch the parent directory so we also catch rename-into-place events
+            // (the rename target is our file but the event fires on the directory).
+            let watch_dir = path.parent().unwrap_or(&path);
+            let _ = watcher.watch(watch_dir, RecursiveMode::NonRecursive);
+            let mut last_reload = std::time::Instant::now()
+                .checked_sub(std::time::Duration::from_secs(10))
+                .unwrap_or(std::time::Instant::now());
             loop {
-                if rx.recv().is_ok() {
-                    std::thread::sleep(std::time::Duration::from_millis(100));
-                    let new_cfg = Config::load(&path).resolve_profile();
-                    if let Ok(mut w) = shared.write() {
-                        *w = new_cfg;
-                        tracing::info!("config reloaded from disk");
+                match rx.recv() {
+                    Err(_) => break, // channel closed — watcher dropped
+                    Ok(Ok(event)) => {
+                        // Accept Modify (data/metadata change) and Create (rename-into-place).
+                        let relevant = matches!(
+                            event.kind,
+                            EventKind::Modify(_) | EventKind::Create(_)
+                        );
+                        // Check the event concerns our config file.
+                        let for_our_file = event.paths.iter().any(|p| {
+                            p.file_name() == path.file_name()
+                        });
+                        if relevant && for_our_file {
+                            // Debounce: ignore if we reloaded very recently.
+                            if last_reload.elapsed() < std::time::Duration::from_millis(200) {
+                                continue;
+                            }
+                            // Brief wait for the OS to flush write buffers.
+                            std::thread::sleep(std::time::Duration::from_millis(50));
+                            // Verify file is fully readable before adopting new config.
+                            match std::fs::read_to_string(&path) {
+                                Ok(text) => match toml::from_str::<Config>(&text) {
+                                    Ok(new_cfg) => {
+                                        let resolved = new_cfg.resolve_profile();
+                                        if let Ok(mut w) = shared.write() {
+                                            *w = resolved;
+                                            tracing::info!("config reloaded from disk (atomic-safe)");
+                                        }
+                                        let _ = reload_tx.send(());
+                                        last_reload = std::time::Instant::now();
+                                    }
+                                    Err(e) => {
+                                        tracing::warn!("config reload skipped — parse error: {e}");
+                                    }
+                                },
+                                Err(e) => {
+                                    tracing::warn!("config reload skipped — read error: {e}");
+                                }
+                            }
+                        }
                     }
-                    let _ = reload_tx.send(());
+                    Ok(Err(e)) => {
+                        tracing::warn!("file watcher error: {e}");
+                    }
                 }
             }
         });
@@ -420,17 +604,18 @@ fn run() -> Result<(), GeodesicError> {
     let (key_tx, key_rx) = std::sync::mpsc::channel::<KeyEvent>();
     wallpaper::set_key_sender(key_tx);
 
-    // Log monitor enumeration for multi-monitor awareness.
+    // Enumerate monitors and determine render resolution.
     let monitors = wallpaper::enumerate_monitors();
     tracing::info!(
         monitor_count = monitors.len(),
-        "detected monitors (multi-monitor rendering is a future feature)"
+        monitor_config = %cfg.monitor,
+        "detected monitors"
     );
     for (i, (x, y, w, h)) in monitors.iter().enumerate() {
         tracing::info!(idx = i, x, y, width = w, height = h, "monitor");
     }
 
-    let (sw, sh) = screen_size(cfg.multi_monitor);
+    let (sw, sh) = screen_size(&cfg.monitor, &monitors);
     tracing::info!(width = sw, height = sh, "detected screen resolution");
     let hwnd = wallpaper::create_wallpaper_hwnd(sw, sh)
         .ok_or_else(|| GeodesicError::window("Failed to create wallpaper window"))?;
@@ -697,18 +882,43 @@ fn run() -> Result<(), GeodesicError> {
 
         // Drain key events.
         while let Ok(event) = key_rx.try_recv() {
+            // Helper: respawn all geodesics on the current surface.
+            let respawn = |geodesics: &mut Vec<Geodesic>,
+                           trails: &mut Vec<TrailBuffer>,
+                           surf: &Arc<dyn Surface>,
+                           colors: &[[f32; 4]],
+                           rng: &mut StdRng,
+                           tl: usize,
+                           ng: usize,
+                           fp: f32,
+                           cm: &str| {
+                geodesics.clear();
+                trails.clear();
+                for i in 0..ng {
+                    let (u, v) = surf.random_position(rng);
+                    let (du, dv) = surf.random_tangent(u, v, rng);
+                    let ci = pick_color_idx(i, colors.len(), cm, rng);
+                    geodesics.push(Geodesic::new(u, v, du, dv, tl, ci));
+                    trails.push(TrailBuffer::new(tl, colors[ci], fp));
+                }
+            };
+
             match event {
-                KeyEvent::CycleSurface => {
-                    surface_idx = (surface_idx + 1) % SURFACE_CYCLE.len();
+                KeyEvent::CycleSurface | KeyEvent::CycleSurfaceBack => {
+                    let forward = matches!(event, KeyEvent::CycleSurface);
+                    if forward {
+                        surface_idx = (surface_idx + 1) % SURFACE_CYCLE.len();
+                    } else {
+                        surface_idx = surface_idx
+                            .checked_sub(1)
+                            .unwrap_or(SURFACE_CYCLE.len() - 1);
+                    }
                     let name = SURFACE_CYCLE[surface_idx];
-                    tracing::info!(surface = name, "cycling surface");
+                    tracing::info!(surface = name, forward, "cycling surface");
                     surf = build_surface_by_name(name);
                     current_surface_name = name.to_string();
                     let (mv, mi) = surf.mesh_vertices(40, 40);
                     renderer.update_surface_mesh(&mv, &mi);
-                    // Respawn geodesics on the new surface.
-                    geodesics.clear();
-                    trails.clear();
                     let (tl, ng, fp, cm) = shared_cfg
                         .read()
                         .map(|c| {
@@ -720,22 +930,28 @@ fn run() -> Result<(), GeodesicError> {
                             )
                         })
                         .unwrap_or((300, 30, 2.0, "cycle".into()));
-                    for i in 0..ng {
-                        let (u, v) = surf.random_position(&mut rng);
-                        let (du, dv) = surf.random_tangent(u, v, &mut rng);
-                        let ci = pick_color_idx(i, colors.len(), &cm, &mut rng);
-                        geodesics.push(Geodesic::new(u, v, du, dv, tl, ci));
-                        trails.push(TrailBuffer::new(tl, colors[ci], fp));
-                    }
+                    respawn(
+                        &mut geodesics,
+                        &mut trails,
+                        &surf,
+                        &colors,
+                        &mut rng,
+                        tl,
+                        ng,
+                        fp,
+                        &cm,
+                    );
                 }
                 KeyEvent::SpeedUp => {
                     if let Ok(mut c) = shared_cfg.write() {
                         c.rotation_speed *= 1.1;
+                        tracing::info!(rotation_speed = c.rotation_speed, "speed increased");
                     }
                 }
                 KeyEvent::SpeedDown => {
                     if let Ok(mut c) = shared_cfg.write() {
                         c.rotation_speed *= 0.9;
+                        tracing::info!(rotation_speed = c.rotation_speed, "speed decreased");
                     }
                 }
                 KeyEvent::ResetGeodesics => {
@@ -750,21 +966,60 @@ fn run() -> Result<(), GeodesicError> {
                             )
                         })
                         .unwrap_or((300, 30, 2.0, "cycle".into()));
-                    geodesics.clear();
-                    trails.clear();
-                    for i in 0..ng {
-                        let (u, v) = surf.random_position(&mut rng);
-                        let (du, dv) = surf.random_tangent(u, v, &mut rng);
-                        let ci = pick_color_idx(i, colors.len(), &cm, &mut rng);
-                        geodesics.push(Geodesic::new(u, v, du, dv, tl, ci));
-                        trails.push(TrailBuffer::new(tl, colors[ci], fp));
-                    }
+                    respawn(
+                        &mut geodesics,
+                        &mut trails,
+                        &surf,
+                        &colors,
+                        &mut rng,
+                        tl,
+                        ng,
+                        fp,
+                        &cm,
+                    );
                     tracing::info!("geodesics reset");
                 }
                 KeyEvent::ToggleFpsHud => {
                     renderer.toggle_fps_hud();
                     tracing::info!(show_fps_hud = renderer.show_fps_hud, "toggled FPS HUD");
                 }
+                KeyEvent::TogglePause => {
+                    tray_state.toggle_pause();
+                    tracing::info!(paused = tray_state.is_paused(), "toggled pause via keyboard");
+                }
+                KeyEvent::Screenshot => {
+                    // Save the current frame to a timestamped PNG file.
+                    let ts = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0);
+                    let path = format!("geodesic_screenshot_{ts}.png");
+                    match renderer.capture_screenshot(sw as u32, sh as u32) {
+                        Ok(pixels) => {
+                            match image::save_buffer(
+                                &path,
+                                &pixels,
+                                sw as u32,
+                                sh as u32,
+                                image::ColorType::Rgba8,
+                            ) {
+                                Ok(()) => tracing::info!(path, "screenshot saved"),
+                                Err(e) => tracing::warn!(path, "screenshot save failed: {e}"),
+                            }
+                        }
+                        Err(e) => tracing::warn!("screenshot capture failed: {e}"),
+                    }
+                }
+                // These variants are defined in events.rs for future extension
+                // but not yet handled in this main loop — ignore them.
+                KeyEvent::TunerPrevParam
+                | KeyEvent::TunerNextParam
+                | KeyEvent::TunerDecrease
+                | KeyEvent::TunerIncrease
+                | KeyEvent::ToggleRecording
+                | KeyEvent::ToggleGallery
+                | KeyEvent::GalleryPrev
+                | KeyEvent::GalleryNext => {}
             }
         }
 

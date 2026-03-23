@@ -203,6 +203,147 @@ initialization, so the per-frame allocation pressure is zero.
 
 ---
 
+## Lua Custom Surfaces
+
+When built with the optional `lua` feature flag, you can define entirely custom
+Riemannian surfaces by providing a Lua script.
+
+### Enable the feature
+
+```powershell
+cargo build --release --features lua
+```
+
+### Write a Lua script
+
+Create a file such as `my_surface.lua`:
+
+```lua
+-- Metric tensor components at parameter position (u, v).
+-- All four components are required.
+function metric(u, v)
+  return {
+    g_uu = 1.0,
+    g_uv = 0.0,
+    g_vu = 0.0,
+    g_vv = math.sin(u)^2,
+  }
+end
+
+-- Optional: return Christoffel symbols directly.
+-- If absent they are derived numerically via finite differences.
+function christoffel(u, v)
+  return {
+    g000=0.0, g001=0.0, g010=0.0, g011=0.0,
+    g100=0.0, g101=0.0, g110=0.0, g111=0.0,
+  }
+end
+```
+
+### Point config.toml at the script
+
+```toml
+surface    = "lua"
+lua_script = "my_surface.lua"
+```
+
+The script is hot-reloaded whenever `config.toml` changes. If the Lua script
+produces an error or a degenerate metric, the surface automatically falls back
+to the default torus and a warning is printed to the console.
+
+---
+
+## Live Parameter Tuning
+
+Individual parameters can be adjusted while the wallpaper is running using
+keyboard shortcuts.  Declare tunable parameters in the `[tuning]` section of
+`config.toml`:
+
+```toml
+[tuning]
+[[tuning.parameters]]
+name    = "rotation_speed"
+min     = 0.0
+max     = 0.1
+current = 0.001047
+step    = 0.0001
+
+[[tuning.parameters]]
+name    = "trail_fade_power"
+min     = 0.5
+max     = 5.0
+current = 2.0
+step    = 0.1
+```
+
+### Keyboard shortcuts
+
+| Key | Action |
+|-----|--------|
+| `[` | Select previous parameter |
+| `]` | Select next parameter |
+| `-` | Decrease selected value by one step |
+| `=` | Increase selected value by one step |
+
+The current parameter name and value are shown as an overlay on the wallpaper.
+When the application exits, updated values are written back to `config.toml` so
+they persist across restarts.
+
+---
+
+## Phase Portrait Recording
+
+Press **Shift+R** to start recording the geodesic animation. A sequence of PNG
+frames is saved to a temporary directory.  When recording stops (either because
+the time limit was reached or you press Shift+R again), the frames are assembled
+into a GIF and saved to `geodesic-recording.gif` in the current directory.
+
+Default settings: 10 seconds at 30 fps (300 frames). The window title shows
+recording status: `[REC 3s / 10s  90 frames]`.
+
+The recorder API is also available programmatically:
+
+```rust
+use geodesic_wallpaper::recorder::PhasePortraitRecorder;
+use std::path::PathBuf;
+
+let mut rec = PhasePortraitRecorder::new(1920, 1080, 30, 10,
+    PathBuf::from("my-recording.gif"));
+rec.start()?;
+// push RGBA frames from the render loop…
+rec.push_frame(&rgba_bytes)?;
+let output_path = rec.finish()?;
+```
+
+---
+
+## Gallery Mode
+
+Gallery mode cycles through all available mathematical surfaces automatically,
+displaying each one for a configurable duration with a smooth cross-fade
+transition between surfaces.
+
+### Enable via config.toml
+
+```toml
+gallery_mode       = true
+gallery_duration_s = 30     # seconds per surface (default: 30)
+```
+
+### Keyboard shortcuts
+
+| Key | Action |
+|-----|--------|
+| `G` | Toggle gallery mode on/off |
+| `LEFT` | Skip to the previous surface |
+| `RIGHT` | Skip to the next surface |
+
+While gallery mode is active, the fade-out/fade-in transition takes
+approximately 0.75 seconds each way, giving a 1.5-second crossfade between
+surfaces.
+
+---
+
 ## Contributing
 
 1. Fork the repository.

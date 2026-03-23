@@ -1,0 +1,31 @@
+# matrix.toml — Digital rain aesthetic on a catenoid surface.
+#
+# Monochrome green palette, fast short trails, many geodesics.
+
+surface         = "catenoid"
+num_geodesics   = 80
+trail_length    = 150
+rotation_speed  = 0.002
+time_step       = 0.018
+target_fps      = 30
+background_color = "#000800"
+
+color_palette = [
+    "#003300",   # very dark green
+    "#006600",   # dark green
+    "#00AA00",   # medium green
+    "#00DD00",   # bright green
+    "#88FF88",   # pale green
+]
+
+color_mode          = "random"
+trail_fade_power    = 4.0
+show_wireframe      = true
+color_cycle_enabled = false
+
+camera_distance        = 6.0
+camera_elevation       = 0.4
+camera_fov             = 0.85
+camera_elevation_speed = 0.0
+
+catenoid_c = 1.0

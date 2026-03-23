@@ -4,13 +4,18 @@
 //! metric tensor, Christoffel symbols, and helpers needed by the RK4 integrator
 //! and the mesh renderer.
 
+pub mod boy_surface;
 pub mod catenoid;
+pub mod ellipsoid;
 pub mod enneper;
 pub mod helicoid;
 pub mod hyperboloid;
+pub mod hyperbolic_paraboloid;
+pub mod klein_bottle;
 pub mod saddle;
 pub mod sphere;
 pub mod torus;
+pub mod torus_knot;
 
 use glam::Vec3;
 

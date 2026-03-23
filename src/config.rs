@@ -248,6 +248,76 @@ pub struct Config {
     /// Default: `false`.
     #[serde(default = "default_color_cycle_enabled")]
     pub color_cycle_enabled: bool,
+
+    // ── Hyperbolic paraboloid (saddle+) ────────────────────────────────────
+    /// Semi-axis `a` for the hyperbolic paraboloid surface `z = u²/a² - v²/b²`.
+    ///
+    /// Default: `1.0`.
+    #[serde(default = "default_hp_a")]
+    pub hyperbolic_paraboloid_a: f32,
+
+    /// Semi-axis `b` for the hyperbolic paraboloid surface `z = u²/a² - v²/b²`.
+    ///
+    /// Default: `1.0`.
+    #[serde(default = "default_hp_b")]
+    pub hyperbolic_paraboloid_b: f32,
+
+    // ── Ellipsoid ──────────────────────────────────────────────────────────
+    /// Semi-axis along x for the ellipsoid surface `x²/a² + y²/b² + z²/c² = 1`.
+    ///
+    /// Default: `2.0`.
+    #[serde(default = "default_ellipsoid_a")]
+    pub ellipsoid_a: f32,
+
+    /// Semi-axis along y for the ellipsoid surface.
+    ///
+    /// Default: `1.5`.
+    #[serde(default = "default_ellipsoid_b")]
+    pub ellipsoid_b: f32,
+
+    /// Semi-axis along z for the ellipsoid surface.
+    ///
+    /// Default: `1.0`.
+    #[serde(default = "default_ellipsoid_c")]
+    pub ellipsoid_c: f32,
+
+    // ── Display / multi-monitor ────────────────────────────────────────────
+    /// Which monitor(s) to render on.
+    ///
+    /// - `"all"` — span the virtual screen across all monitors.
+    /// - `"primary"` (default) — primary monitor only.
+    /// - `"0"`, `"1"`, `"2"`, … — specific monitor index (0-based).
+    #[serde(default = "default_monitor")]
+    pub monitor: String,
+
+    // ── Gallery mode ───────────────────────────────────────────────────────
+    /// Automatically cycle through all surfaces in gallery mode.
+    ///
+    /// Default: `false`.
+    #[serde(default = "default_gallery_mode")]
+    pub gallery_mode: bool,
+
+    /// How many seconds each surface is displayed in gallery mode.
+    ///
+    /// Default: `30`.
+    #[serde(default = "default_gallery_duration_s")]
+    pub gallery_duration_s: u32,
+
+    // ── Lua custom surface ─────────────────────────────────────────────────
+    /// Path to a Lua script that defines `metric(u,v)` (and optionally
+    /// `christoffel(u,v)`).  Used when `surface = "lua"`.
+    ///
+    /// Requires the `lua` feature flag to be enabled at compile time.
+    /// Default: `None`.
+    #[serde(default)]
+    pub lua_script: Option<String>,
+
+    // ── Live parameter tuning ──────────────────────────────────────────────
+    /// Tunable parameters exposed via keyboard shortcuts at runtime.
+    ///
+    /// See [`crate::parameter_tuner::TuningConfig`] for the schema.
+    #[serde(default)]
+    pub tuning: crate::parameter_tuner::TuningConfig,
 }
 
 // ─── Default helpers ──────────────────────────────────────────────────────────
@@ -348,6 +418,30 @@ fn default_light_dir() -> [f32; 3] {
 fn default_color_cycle_enabled() -> bool {
     false
 }
+fn default_hp_a() -> f32 {
+    1.0
+}
+fn default_hp_b() -> f32 {
+    1.0
+}
+fn default_ellipsoid_a() -> f32 {
+    2.0
+}
+fn default_ellipsoid_b() -> f32 {
+    1.5
+}
+fn default_ellipsoid_c() -> f32 {
+    1.0
+}
+fn default_monitor() -> String {
+    "primary".into()
+}
+fn default_gallery_mode() -> bool {
+    false
+}
+fn default_gallery_duration_s() -> u32 {
+    30
+}
 
 // ─── PartialConfig ────────────────────────────────────────────────────────────
 
@@ -394,6 +488,15 @@ pub struct PartialConfig {
     pub hyperboloid_b: Option<f32>,
     pub light_dir: Option<[f32; 3]>,
     pub color_cycle_enabled: Option<bool>,
+    pub hyperbolic_paraboloid_a: Option<f32>,
+    pub hyperbolic_paraboloid_b: Option<f32>,
+    pub ellipsoid_a: Option<f32>,
+    pub ellipsoid_b: Option<f32>,
+    pub ellipsoid_c: Option<f32>,
+    pub monitor: Option<String>,
+    pub gallery_mode: Option<bool>,
+    pub gallery_duration_s: Option<u32>,
+    pub lua_script: Option<String>,
 }
 
 // ─── impl Default / Config ────────────────────────────────────────────────────
@@ -437,6 +540,16 @@ impl Default for Config {
             hyperboloid_b: default_hyperboloid_b(),
             light_dir: default_light_dir(),
             color_cycle_enabled: default_color_cycle_enabled(),
+            hyperbolic_paraboloid_a: default_hp_a(),
+            hyperbolic_paraboloid_b: default_hp_b(),
+            ellipsoid_a: default_ellipsoid_a(),
+            ellipsoid_b: default_ellipsoid_b(),
+            ellipsoid_c: default_ellipsoid_c(),
+            monitor: default_monitor(),
+            gallery_mode: default_gallery_mode(),
+            gallery_duration_s: default_gallery_duration_s(),
+            lua_script: None,
+            tuning: crate::parameter_tuner::TuningConfig::default(),
         }
     }
 }
@@ -561,6 +674,8 @@ impl Config {
             "catenoid",
             "helicoid",
             "hyperboloid",
+            "hyperbolic_paraboloid",
+            "ellipsoid",
         ];
         if !known_surfaces.contains(&self.surface.as_str()) {
             warnings.push(format!(
@@ -848,6 +963,33 @@ impl Config {
         }
         if let Some(v) = profile.color_cycle_enabled {
             out.color_cycle_enabled = v;
+        }
+        if let Some(v) = profile.hyperbolic_paraboloid_a {
+            out.hyperbolic_paraboloid_a = v;
+        }
+        if let Some(v) = profile.hyperbolic_paraboloid_b {
+            out.hyperbolic_paraboloid_b = v;
+        }
+        if let Some(v) = profile.ellipsoid_a {
+            out.ellipsoid_a = v;
+        }
+        if let Some(v) = profile.ellipsoid_b {
+            out.ellipsoid_b = v;
+        }
+        if let Some(v) = profile.ellipsoid_c {
+            out.ellipsoid_c = v;
+        }
+        if let Some(v) = profile.monitor {
+            out.monitor = v;
+        }
+        if let Some(v) = profile.gallery_mode {
+            out.gallery_mode = v;
+        }
+        if let Some(v) = profile.gallery_duration_s {
+            out.gallery_duration_s = v;
+        }
+        if let Some(v) = profile.lua_script {
+            out.lua_script = Some(v);
         }
         out
     }

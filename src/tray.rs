@@ -59,6 +59,13 @@ impl TrayState {
     pub fn quit_requested(&self) -> bool {
         self.quit_requested.load(Ordering::Relaxed)
     }
+
+    /// Toggle the paused state and return the new value.
+    pub fn toggle_pause(&self) -> bool {
+        let was_paused = self.paused.load(Ordering::Relaxed);
+        self.paused.store(!was_paused, Ordering::Relaxed);
+        !was_paused
+    }
 }
 
 impl Default for TrayState {
