@@ -48,3 +48,5 @@ pub mod cellular_automata_2d;
 pub mod projection;
 pub mod mandelbrot;
 pub mod terrain;
+pub mod kaleidoscope;
+pub mod particle_system;
