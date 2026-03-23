@@ -68,3 +68,5 @@ pub mod cellular_automata;
 pub mod interference;
 pub mod noise_field;
 pub mod symmetry_art;
+pub mod flow_field_render;
+pub mod projection_art;
