@@ -40,3 +40,5 @@ pub mod colorspace;
 pub mod export;
 pub mod l_system;
 pub mod metamorphosis;
+pub mod mesh;
+pub mod dithering;
