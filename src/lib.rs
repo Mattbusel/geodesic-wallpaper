@@ -38,3 +38,5 @@ pub mod composer;
 pub mod noise;
 pub mod colorspace;
 pub mod export;
+pub mod l_system;
+pub mod metamorphosis;
