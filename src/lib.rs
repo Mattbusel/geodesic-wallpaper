@@ -42,3 +42,5 @@ pub mod l_system;
 pub mod metamorphosis;
 pub mod mesh;
 pub mod dithering;
+pub mod flow_field;
+pub mod wave_interference;
