@@ -23,3 +23,6 @@ pub mod surface;
 pub mod trail;
 pub mod tray;
 pub mod wallpaper;
+pub mod reaction_diffusion;
+pub mod flow;
+pub mod timelapse;

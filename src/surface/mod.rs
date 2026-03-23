@@ -13,6 +13,7 @@ pub mod hyperboloid;
 pub mod hyperbolic_paraboloid;
 pub mod klein_bottle;
 pub mod procedural;
+pub mod user_defined;
 pub mod pseudosphere;
 pub mod saddle;
 pub mod sphere;
