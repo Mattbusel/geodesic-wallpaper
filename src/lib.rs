@@ -80,3 +80,5 @@ pub mod pathfinding_art;
 pub mod fractal_geometry;
 pub mod topology_art;
 pub mod hyperbolic_tiling;
+pub mod cellular_noise;
+pub mod wave_function_collapse;
