@@ -13,7 +13,6 @@
 
 #![allow(dead_code)]
 
-use glam::Vec3;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
