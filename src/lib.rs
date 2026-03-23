@@ -39,6 +39,7 @@ pub mod noise;
 pub mod colorspace;
 pub mod export;
 pub mod l_system;
+pub mod strange_attractor;
 pub mod metamorphosis;
 pub mod mesh;
 pub mod dithering;
