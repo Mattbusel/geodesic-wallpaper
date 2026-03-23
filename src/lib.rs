@@ -54,3 +54,5 @@ pub mod islamic_patterns;
 pub mod quilts;
 pub mod mosaic;
 pub mod typography;
+pub mod spirograph;
+pub mod escher;
