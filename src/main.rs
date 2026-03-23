@@ -19,10 +19,12 @@ use geodesic_wallpaper::surface::{
     hyperboloid::Hyperboloid,
     hyperbolic_paraboloid::HyperbolicParaboloid,
     klein_bottle::KleinBottle,
+    pseudosphere::Pseudosphere,
     saddle::Saddle,
     sphere::Sphere,
     torus::Torus,
     torus_knot::TorusKnot,
+    trefoil::TrefoilTube,
     Surface,
 };
 use geodesic_wallpaper::trail::TrailBuffer;
@@ -74,6 +76,8 @@ const SURFACE_CYCLE: &[&str] = &[
     "klein_bottle",
     "boy_surface",
     "torus_knot",
+    "pseudosphere",
+    "trefoil",
 ];
 
 /// Construct the surface implementation selected in `cfg`.
@@ -97,6 +101,8 @@ fn build_surface(cfg: &Config) -> Arc<dyn Surface> {
         "klein_bottle" => Arc::new(KleinBottle::new(2.0, 0.4)),
         "boy_surface" => Arc::new(BoySurface::new(1.0)),
         "torus_knot" => Arc::new(TorusKnot::new(2, 3, 2.0, 0.8, 0.15)),
+        "pseudosphere" => Arc::new(Pseudosphere::new(1.5, 3.0)),
+        "trefoil" => Arc::new(TrefoilTube::new(0.25, 0.8)),
         _ => Arc::new(Torus::new(cfg.torus_R, cfg.torus_r)),
     }
 }
@@ -115,6 +121,8 @@ fn build_surface_by_name(name: &str) -> Arc<dyn Surface> {
         "klein_bottle" => Arc::new(KleinBottle::new(2.0, 0.4)),
         "boy_surface" => Arc::new(BoySurface::new(1.0)),
         "torus_knot" => Arc::new(TorusKnot::new(2, 3, 2.0, 0.8, 0.15)),
+        "pseudosphere" => Arc::new(Pseudosphere::new(1.5, 3.0)),
+        "trefoil" => Arc::new(TrefoilTube::new(0.25, 0.8)),
         _ => Arc::new(Torus::new(2.0, 0.7)),
     }
 }

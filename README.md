@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Rust 1.75+](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
 
-**geodesic-wallpaper** is a real-time animated desktop wallpaper for Windows that renders families of geodesic curves flowing across parameterised Riemannian surfaces. Curves are integrated with a fourth-order Runge-Kutta (RK4) scheme using analytically-computed Christoffel symbols for twelve built-in surfaces (torus, sphere, saddle, catenoid, helicoid, hyperboloid, hyperbolic paraboloid, ellipsoid, Enneper, Klein bottle, Boy surface, torus knot). The window sits below all application windows via a Win32 WM_WINDOWPOSCHANGING hook so desktop icons remain fully accessible. Optional modules let you drive the animation from live financial market data and assign a different surface to each physical monitor.
+**geodesic-wallpaper** is a real-time animated desktop wallpaper for Windows that renders families of geodesic curves flowing across parameterised Riemannian surfaces. Curves are integrated with a fourth-order Runge-Kutta (RK4) scheme using analytically-computed Christoffel symbols for **fourteen built-in surfaces** (torus, sphere, saddle, catenoid, helicoid, hyperboloid, hyperbolic paraboloid, ellipsoid, Enneper, Klein bottle, Boy surface, torus knot, **pseudosphere**, **trefoil tube**). The window sits below all application windows via a Win32 WM_WINDOWPOSCHANGING hook so desktop icons remain fully accessible. Optional modules let you drive the animation from live financial market data and assign a different surface to each physical monitor.
 
 ---
 
@@ -273,6 +273,8 @@ All surfaces implement the `Surface` trait: `position()`, `normal()`, `metric()`
 | Klein bottle | `"klein_bottle"` | Non-orientable | Figure-8 immersion in ℝ³ |
 | Boy's surface | `"boy_surface"` | Non-orientable | RP² with 3-fold symmetry (Apery form) |
 | Torus knot | `"torus_knot"` | Positive (tube) | Default T(2,3) trefoil |
+| **Pseudosphere** | `"pseudosphere"` | **Constant negative K = −1** | Tractricoid; geodesics diverge exponentially — the hyperbolic plane's classic model surface |
+| **Trefoil tube** | `"trefoil"` | Positive (tube) | Circular cross-section swept around the trefoil knot curve; geodesics precess across all three lobes |
 
 ---
 

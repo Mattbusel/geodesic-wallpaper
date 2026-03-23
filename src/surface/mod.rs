@@ -12,10 +12,12 @@ pub mod helicoid;
 pub mod hyperboloid;
 pub mod hyperbolic_paraboloid;
 pub mod klein_bottle;
+pub mod pseudosphere;
 pub mod saddle;
 pub mod sphere;
 pub mod torus;
 pub mod torus_knot;
+pub mod trefoil;
 
 use glam::Vec3;
 
