@@ -66,3 +66,5 @@ pub mod voronoi_art;
 pub mod fractal_tree;
 pub mod cellular_automata;
 pub mod interference;
+pub mod noise_field;
+pub mod symmetry_art;
