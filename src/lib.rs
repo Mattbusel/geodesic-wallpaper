@@ -64,3 +64,5 @@ pub mod lissajous;
 pub mod reaction_diffusion_v2;
 pub mod voronoi_art;
 pub mod fractal_tree;
+pub mod cellular_automata;
+pub mod interference;
