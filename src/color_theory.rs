@@ -32,7 +32,11 @@ pub struct Hsv {
 
 impl Hsv {
     pub fn new(h: f64, s: f64, v: f64) -> Self {
-        Self { h: h.rem_euclid(360.0), s: s.clamp(0.0, 1.0), v: v.clamp(0.0, 1.0) }
+        Self {
+            h: h.rem_euclid(360.0),
+            s: s.clamp(0.0, 1.0),
+            v: v.clamp(0.0, 1.0),
+        }
     }
 }
 
@@ -45,7 +49,11 @@ pub struct Hsl {
 
 impl Hsl {
     pub fn new(h: f64, s: f64, l: f64) -> Self {
-        Self { h: h.rem_euclid(360.0), s: s.clamp(0.0, 1.0), l: l.clamp(0.0, 1.0) }
+        Self {
+            h: h.rem_euclid(360.0),
+            s: s.clamp(0.0, 1.0),
+            l: l.clamp(0.0, 1.0),
+        }
     }
 }
 
@@ -227,7 +235,11 @@ impl ColorConversions {
     pub fn luminance(rgb: &Rgb) -> f64 {
         fn linearise(c: u8) -> f64 {
             let v = c as f64 / 255.0;
-            if v <= 0.04045 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
+            if v <= 0.04045 {
+                v / 12.92
+            } else {
+                ((v + 0.055) / 1.055).powf(2.4)
+            }
         }
         0.2126 * linearise(rgb.r) + 0.7152 * linearise(rgb.g) + 0.0722 * linearise(rgb.b)
     }
@@ -248,7 +260,11 @@ impl ColorConversions {
     fn rgb_to_xyz(rgb: Rgb) -> (f64, f64, f64) {
         fn linearise(c: u8) -> f64 {
             let v = c as f64 / 255.0;
-            if v <= 0.04045 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
+            if v <= 0.04045 {
+                v / 12.92
+            } else {
+                ((v + 0.055) / 1.055).powf(2.4)
+            }
         }
         let r = linearise(rgb.r);
         let g = linearise(rgb.g);
@@ -263,9 +279,9 @@ impl ColorConversions {
 
     fn xyz_to_rgb(x: f64, y: f64, z: f64) -> Rgb {
         // XYZ (D65) → sRGB matrix.
-        let r_lin =  x * 3.2404542 - y * 1.5371385 - z * 0.4985314;
+        let r_lin = x * 3.2404542 - y * 1.5371385 - z * 0.4985314;
         let g_lin = -x * 0.9692660 + y * 1.8760108 + z * 0.0415560;
-        let b_lin =  x * 0.0556434 - y * 0.2040259 + z * 1.0572252;
+        let b_lin = x * 0.0556434 - y * 0.2040259 + z * 1.0572252;
 
         fn gamma(v: f64) -> u8 {
             let v = v.clamp(0.0, 1.0);
@@ -534,7 +550,11 @@ mod tests {
 
     #[test]
     fn color_distance_same_is_zero() {
-        let lab = Lab { l: 50.0, a: 20.0, b: -10.0 };
+        let lab = Lab {
+            l: 50.0,
+            a: 20.0,
+            b: -10.0,
+        };
         assert!(ColorConversions::color_distance(&lab, &lab) < 1e-9);
     }
 

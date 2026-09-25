@@ -10,7 +10,8 @@ pub fn permutation_table(seed: u64) -> [u8; 512] {
     // LCG shuffle
     let mut state = seed.wrapping_add(1);
     let lcg = |s: u64| -> u64 {
-        s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407)
+        s.wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407)
     };
 
     for i in (1..256).rev() {
@@ -257,7 +258,10 @@ mod tests {
         let plain = field.sample(x, y);
         let warped = field.domain_warp(x, y, 1.0);
         // They should differ (warp changes the coordinates)
-        assert!((plain - warped).abs() > 1e-9, "domain warp should differ from plain sample");
+        assert!(
+            (plain - warped).abs() > 1e-9,
+            "domain warp should differ from plain sample"
+        );
     }
 
     #[test]
@@ -282,6 +286,9 @@ mod tests {
         for &v in first_half {
             seen[v as usize] = true;
         }
-        assert!(seen.iter().all(|&s| s), "first half should contain all 256 values");
+        assert!(
+            seen.iter().all(|&s| s),
+            "first half should contain all 256 values"
+        );
     }
 }

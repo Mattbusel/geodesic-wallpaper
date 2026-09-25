@@ -11,21 +11,10 @@ use geodesic_wallpaper::events::KeyEvent;
 use geodesic_wallpaper::geodesic::Geodesic;
 use geodesic_wallpaper::renderer::Renderer;
 use geodesic_wallpaper::surface::{
-    boy_surface::BoySurface,
-    catenoid::Catenoid,
-    ellipsoid::Ellipsoid,
-    enneper::Enneper,
-    helicoid::Helicoid,
-    hyperboloid::Hyperboloid,
-    hyperbolic_paraboloid::HyperbolicParaboloid,
-    klein_bottle::KleinBottle,
-    pseudosphere::Pseudosphere,
-    saddle::Saddle,
-    sphere::Sphere,
-    torus::Torus,
-    torus_knot::TorusKnot,
-    trefoil::TrefoilTube,
-    Surface,
+    boy_surface::BoySurface, catenoid::Catenoid, ellipsoid::Ellipsoid, enneper::Enneper,
+    helicoid::Helicoid, hyperbolic_paraboloid::HyperbolicParaboloid, hyperboloid::Hyperboloid,
+    klein_bottle::KleinBottle, pseudosphere::Pseudosphere, saddle::Saddle, sphere::Sphere,
+    torus::Torus, torus_knot::TorusKnot, trefoil::TrefoilTube, Surface,
 };
 use geodesic_wallpaper::trail::TrailBuffer;
 use geodesic_wallpaper::tray;
@@ -45,7 +34,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 /// Command-line arguments.
 #[derive(Parser)]
-#[command(about = "Geodesic wallpaper")]
+#[command(version, about = "Geodesic wallpaper")]
 struct Args {
     /// Run headless, render N frames and save screenshot.
     #[arg(long)]
@@ -158,7 +147,11 @@ fn build_surface(cfg: &Config) -> Arc<dyn Surface> {
             cfg.hyperbolic_paraboloid_a,
             cfg.hyperbolic_paraboloid_b,
         )),
-        "ellipsoid" => Arc::new(Ellipsoid::new(cfg.ellipsoid_a, cfg.ellipsoid_b, cfg.ellipsoid_c)),
+        "ellipsoid" => Arc::new(Ellipsoid::new(
+            cfg.ellipsoid_a,
+            cfg.ellipsoid_b,
+            cfg.ellipsoid_c,
+        )),
         "klein_bottle" => Arc::new(KleinBottle::new(2.0, 0.4)),
         "boy_surface" => Arc::new(BoySurface::new(1.0)),
         "torus_knot" => Arc::new(TorusKnot::new(2, 3, 2.0, 0.8, 0.15)),
@@ -410,15 +403,19 @@ fn main() {
 
     // --preview: render ASCII block preview and exit
     if args.preview {
-        use geodesic_wallpaper::preview::{WallpaperParams, TuiApp};
-        let config = geodesic_wallpaper::config::Config::load(
-            std::path::Path::new("config.toml")
-        );
-        let mut params = WallpaperParams::default();
-        params.scale = (1.0_f32 / config.time_step.max(1e-6) as f32 * 0.01).clamp(0.1, 10.0);
-        params.rotation = (config.rotation_speed * 10000.0) as f32;
+        use geodesic_wallpaper::preview::{TuiApp, WallpaperParams};
+        let config = geodesic_wallpaper::config::Config::load(std::path::Path::new("config.toml"));
+        let mut params = WallpaperParams {
+            scale: (1.0_f32 / config.time_step.max(1e-6) * 0.01).clamp(0.1, 10.0),
+            rotation: config.rotation_speed * 10000.0,
+            ..WallpaperParams::default()
+        };
         params.clamp();
-        let app = TuiApp { params, width: 40, height: 20 };
+        let app = TuiApp {
+            params,
+            width: 40,
+            height: 20,
+        };
         let _ = app.run();
         return;
     }
@@ -458,7 +455,10 @@ fn main() {
                 let neighbors = grid.neighbors(&cell);
                 println!(
                     "  cell({},{}) center=({:.1},{:.1}) neighbors={}",
-                    cell.col, cell.row, cell.center_x, cell.center_y,
+                    cell.col,
+                    cell.row,
+                    cell.center_x,
+                    cell.center_y,
                     neighbors.len()
                 );
             }
@@ -469,7 +469,10 @@ fn main() {
     if let Some(ref fractal_str) = args.fractal.clone() {
         use geodesic_wallpaper::fractal::{FractalOverlay, FractalRenderer, FractalType};
         let fractal = match fractal_str.as_str() {
-            "julia" => FractalType::Julia { c_re: -0.7, c_im: 0.27 },
+            "julia" => FractalType::Julia {
+                c_re: -0.7,
+                c_im: 0.27,
+            },
             "burning-ship" => FractalType::BurningShip,
             _ => FractalType::Mandelbrot,
         };
@@ -494,7 +497,10 @@ fn main() {
         // Print sample pixel
         if !blended.is_empty() {
             let p = blended[blended.len() / 2];
-            println!("[fractal] sample pixel (center): rgb({},{},{})", p[0], p[1], p[2]);
+            println!(
+                "[fractal] sample pixel (center): rgb({},{},{})",
+                p[0], p[1], p[2]
+            );
         }
     }
 
@@ -506,7 +512,8 @@ fn main() {
                 let gradient = preset.into_gradient();
                 // Generate a small 16x8 preview buffer
                 let pixels = GradientTexture::generate(
-                    16, 8,
+                    16,
+                    8,
                     |x, y| (x as f32 + y as f32) / (16.0 + 8.0 - 2.0),
                     &gradient,
                 );
@@ -533,7 +540,11 @@ fn main() {
         use geodesic_wallpaper::palette::PaletteGenerator;
         match PaletteGenerator::from_spec(palette_spec, args.palette_steps) {
             Some(palette) => {
-                println!("[palette] {} ({} colors)", palette.name, palette.colors.len());
+                println!(
+                    "[palette] {} ({} colors)",
+                    palette.name,
+                    palette.colors.len()
+                );
                 for (i, hex) in palette.to_hex_strings().iter().enumerate() {
                     println!("  [{}] {}", i, hex);
                 }
@@ -550,14 +561,17 @@ fn main() {
         let a = Rgb { r: 255, g: 0, b: 0 };
         let b = Rgb { r: 0, g: 0, b: 255 };
         let steps = 8usize;
-        println!("[colorspace] interpolating red → blue in {} space ({} steps)", args.colorspace, steps);
+        println!(
+            "[colorspace] interpolating red → blue in {} space ({} steps)",
+            args.colorspace, steps
+        );
         for i in 0..steps {
             let t = i as f32 / (steps - 1) as f32;
             let c = match args.colorspace.to_lowercase().as_str() {
                 "hsv" => ColorInterpolator::lerp_hsv(a, b, t),
                 "oklab" => ColorInterpolator::lerp_oklab(a, b, t),
                 "lab" => {
-                    use geodesic_wallpaper::colorspace::{rgb_to_lab, lab_to_rgb, Lab};
+                    use geodesic_wallpaper::colorspace::{lab_to_rgb, rgb_to_lab, Lab};
                     let la = rgb_to_lab(a);
                     let lb = rgb_to_lab(b);
                     let lm = Lab {
@@ -597,12 +611,13 @@ fn main() {
         let exporter = AnimationExporter::new(config.clone(), vec![interp]);
         eprintln!(
             "[animate] Exporting {} frames to {} at {} fps",
-            config.frames, config.output_dir.display(), config.fps
+            config.frames,
+            config.output_dir.display(),
+            config.fps
         );
         match exporter.export(|_frame_idx, _params, path| {
             // In headless mode without a live renderer, write a gradient test frame
-            AnimationExporter::write_test_frame(path, 1920, 1080)
-                .map_err(|e| e.to_string())
+            AnimationExporter::write_test_frame(path, 1920, 1080).map_err(|e| e.to_string())
         }) {
             Ok(stats) => {
                 eprintln!(
@@ -759,10 +774,7 @@ fn run_headless(args: &Args, cfg: &Config) -> Result<(), GeodesicError> {
     if use_custom_format {
         use geodesic_wallpaper::export::{ExportFormat, ImageExporter};
         // Convert RGBA pixels to RGB triplets
-        let rgb_pixels: Vec<[u8; 3]> = pixels
-            .chunks(4)
-            .map(|c| [c[0], c[1], c[2]])
-            .collect();
+        let rgb_pixels: Vec<[u8; 3]> = pixels.chunks(4).map(|c| [c[0], c[1], c[2]]).collect();
         let fmt = match out_format_str.as_str() {
             "ppm" => ExportFormat::Ppm,
             "bmp" => ExportFormat::Bmp,
@@ -865,14 +877,13 @@ fn run(args: &Args) -> Result<(), GeodesicError> {
                     Err(_) => break, // channel closed — watcher dropped
                     Ok(Ok(event)) => {
                         // Accept Modify (data/metadata change) and Create (rename-into-place).
-                        let relevant = matches!(
-                            event.kind,
-                            EventKind::Modify(_) | EventKind::Create(_)
-                        );
+                        let relevant =
+                            matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_));
                         // Check the event concerns our config file.
-                        let for_our_file = event.paths.iter().any(|p| {
-                            p.file_name() == path.file_name()
-                        });
+                        let for_our_file = event
+                            .paths
+                            .iter()
+                            .any(|p| p.file_name() == path.file_name());
                         if relevant && for_our_file {
                             // Debounce: ignore if we reloaded very recently.
                             if last_reload.elapsed() < std::time::Duration::from_millis(200) {
@@ -887,7 +898,9 @@ fn run(args: &Args) -> Result<(), GeodesicError> {
                                         let resolved = new_cfg.resolve_profile();
                                         if let Ok(mut w) = shared.write() {
                                             *w = resolved;
-                                            tracing::info!("config reloaded from disk (atomic-safe)");
+                                            tracing::info!(
+                                                "config reloaded from disk (atomic-safe)"
+                                            );
                                         }
                                         let _ = reload_tx.send(());
                                         last_reload = std::time::Instant::now();
@@ -1298,7 +1311,10 @@ fn run(args: &Args) -> Result<(), GeodesicError> {
                 }
                 KeyEvent::TogglePause => {
                     tray_state.toggle_pause();
-                    tracing::info!(paused = tray_state.is_paused(), "toggled pause via keyboard");
+                    tracing::info!(
+                        paused = tray_state.is_paused(),
+                        "toggled pause via keyboard"
+                    );
                 }
                 KeyEvent::Screenshot => {
                     // Save the current frame to a timestamped PNG file.

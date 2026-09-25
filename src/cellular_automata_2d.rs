@@ -95,11 +95,14 @@ struct Lcg {
 
 impl Lcg {
     fn new(seed: u64) -> Self {
-        Lcg { state: seed.wrapping_add(1) }
+        Lcg {
+            state: seed.wrapping_add(1),
+        }
     }
 
     fn next_f64(&mut self) -> f64 {
-        self.state = self.state
+        self.state = self
+            .state
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
         ((self.state >> 32) as f64) / (u32::MAX as f64 + 1.0)
@@ -209,9 +212,17 @@ impl CaGrid {
                 let n = self.neighbor_count(x, y);
                 let alive = self.get(x, y).is_alive();
                 let new_state = if alive {
-                    if rules.survives(n) { CellState::Alive } else { CellState::Dead }
+                    if rules.survives(n) {
+                        CellState::Alive
+                    } else {
+                        CellState::Dead
+                    }
                 } else {
-                    if rules.births(n) { CellState::Alive } else { CellState::Dead }
+                    if rules.births(n) {
+                        CellState::Alive
+                    } else {
+                        CellState::Dead
+                    }
                 };
                 next.set(x, y, new_state);
             }
@@ -249,7 +260,11 @@ impl CaGrid {
     pub fn to_rgb(&self, alive_color: (u8, u8, u8), dead_color: (u8, u8, u8)) -> Vec<u8> {
         let mut buf = Vec::with_capacity(self.width * self.height * 3);
         for &cell in &self.cells {
-            let (r, g, b) = if cell.is_alive() { alive_color } else { dead_color };
+            let (r, g, b) = if cell.is_alive() {
+                alive_color
+            } else {
+                dead_color
+            };
             buf.push(r);
             buf.push(g);
             buf.push(b);
@@ -331,7 +346,11 @@ mod tests {
         GliderLibrary::place_pattern(&mut grid, &GliderLibrary::block(), 1, 1);
         let rules = RuleSet::conway();
         let next = grid.step(&rules);
-        assert_eq!(grid.alive_count(), next.alive_count(), "Block should be stable");
+        assert_eq!(
+            grid.alive_count(),
+            next.alive_count(),
+            "Block should be stable"
+        );
         // Same positions alive
         for y in 0..6 {
             for x in 0..6 {
@@ -361,7 +380,8 @@ mod tests {
         assert_eq!(history[0].alive_count(), 5);
         assert_eq!(history[4].alive_count(), 5);
         // At least one cell differs between step 0 and step 4
-        let differs = (0..20).any(|y| (0..20).any(|x| history[0].get(x, y) != history[4].get(x, y)));
+        let differs =
+            (0..20).any(|y| (0..20).any(|x| history[0].get(x, y) != history[4].get(x, y)));
         assert!(differs, "Glider should have moved after 4 steps");
     }
 
@@ -427,7 +447,11 @@ mod tests {
     fn neighbor_count_corners() {
         let mut grid = CaGrid::new(3, 3, false);
         // Fill all cells alive
-        for y in 0..3 { for x in 0..3 { grid.set(x, y, CellState::Alive); } }
+        for y in 0..3 {
+            for x in 0..3 {
+                grid.set(x, y, CellState::Alive);
+            }
+        }
         // Corner cell (0,0): 3 alive neighbours (1,0), (0,1), (1,1)
         assert_eq!(grid.neighbor_count(0, 0), 3);
         // Centre cell (1,1): 8 alive neighbours

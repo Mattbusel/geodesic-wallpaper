@@ -79,8 +79,7 @@ impl ThreeChemGrid {
 
         for yi in 0..height {
             for xi in 0..width {
-                let in_center =
-                    (xi as i64 - cx as i64).abs() < rx as i64
+                let in_center = (xi as i64 - cx as i64).abs() < rx as i64
                     && (yi as i64 - cy as i64).abs() < ry as i64;
                 if in_center {
                     let idx = yi * width + xi;
@@ -91,7 +90,13 @@ impl ThreeChemGrid {
             }
         }
 
-        Self { width, height, u, v, w }
+        Self {
+            width,
+            height,
+            u,
+            v,
+            w,
+        }
     }
 
     /// Euler step for all three chemicals.
@@ -149,7 +154,7 @@ impl ThreeChemGrid {
                 let src_idx = sy * src_w + sx;
                 let dst_idx = (dy * dst_w + dx) * 3;
 
-                out[dst_idx]     = (self.u[src_idx].clamp(0.0, 1.0) * 255.0).round() as u8;
+                out[dst_idx] = (self.u[src_idx].clamp(0.0, 1.0) * 255.0).round() as u8;
                 out[dst_idx + 1] = (self.v[src_idx].clamp(0.0, 1.0) * 255.0).round() as u8;
                 out[dst_idx + 2] = (self.w[src_idx].clamp(0.0, 1.0) * 255.0).round() as u8;
             }
@@ -206,7 +211,12 @@ impl TwoChemGrid {
             }
         }
 
-        Self { width, height, u, v }
+        Self {
+            width,
+            height,
+            u,
+            v,
+        }
     }
 
     /// Single Euler step of the Gray-Scott equations.
@@ -254,11 +264,25 @@ mod tests {
     use super::*;
 
     fn default_turing_params() -> TuringParams {
-        TuringParams { du: 0.16, dv: 0.08, dw: 0.04, a: 0.06, b: 0.06, c: 0.1, dt: 1.0 }
+        TuringParams {
+            du: 0.16,
+            dv: 0.08,
+            dw: 0.04,
+            a: 0.06,
+            b: 0.06,
+            c: 0.1,
+            dt: 1.0,
+        }
     }
 
     fn default_gs_params() -> GrayScottParams {
-        GrayScottParams { f: 0.055, k: 0.062, du: 0.2097, dv: 0.105, dt: 1.0 }
+        GrayScottParams {
+            f: 0.055,
+            k: 0.062,
+            du: 0.2097,
+            dv: 0.105,
+            dt: 1.0,
+        }
     }
 
     #[test]
@@ -317,6 +341,11 @@ mod tests {
         g.step(&p);
         let after: f64 = g.u.iter().sum::<f64>() / g.u.len() as f64;
         // Allow up to 10% drift in one step.
-        assert!((before - after).abs() < 0.1, "u avg changed from {} to {}", before, after);
+        assert!(
+            (before - after).abs() < 0.1,
+            "u avg changed from {} to {}",
+            before,
+            after
+        );
     }
 }

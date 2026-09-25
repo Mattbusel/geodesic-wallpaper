@@ -129,8 +129,10 @@ pub fn hyperbolic_geodesic(
         let den2 = cadd((1.0, 0.0), cmul(conj(za), z));
         // Actually: 1 - conj(a)*z = (1.0,0) - conj(za)*z
         let _ = den; // suppress warning
-        let den_final = (1.0 - conj(za).0 * z.0 + conj(za).1 * z.1,
-                         -(conj(za).0 * z.1 + conj(za).1 * z.0));
+        let den_final = (
+            1.0 - conj(za).0 * z.0 + conj(za).1 * z.1,
+            -(conj(za).0 * z.1 + conj(za).1 * z.0),
+        );
         let _ = den2;
         cdiv(num, den_final)
     };
@@ -175,12 +177,7 @@ pub fn poincare_to_screen(p: &HyperbolicPoint, width: u32, height: u32) -> (u32,
 // ---------------------------------------------------------------------------
 
 /// Render a Poincaré disk with random geodesics. Returns an RGB pixel buffer.
-pub fn render_poincare_disk(
-    width: u32,
-    height: u32,
-    num_geodesics: usize,
-    seed: u64,
-) -> Vec<u8> {
+pub fn render_poincare_disk(width: u32, height: u32, num_geodesics: usize, seed: u64) -> Vec<u8> {
     let mut buf = vec![10u8; (width * height * 3) as usize];
 
     // Draw the boundary circle
@@ -203,7 +200,9 @@ pub fn render_poincare_disk(
     // LCG random generator
     let mut state = seed;
     let mut lcg = move || -> u64 {
-        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         state
     };
 
@@ -241,7 +240,7 @@ pub fn render_poincare_disk(
                 let (sx, sy) = poincare_to_screen(&hp, width, height);
                 if sx < width && sy < height {
                     let idx = ((sy * width + sx) * 3) as usize;
-                    buf[idx]     = color[0];
+                    buf[idx] = color[0];
                     buf[idx + 1] = color[1];
                     buf[idx + 2] = color[2];
                 }
@@ -296,7 +295,11 @@ pub fn apollonian_gasket(cx: f64, cy: f64, r: f64, depth: usize) -> Vec<Inversiv
         let angle = k as f64 * std::f64::consts::TAU / 3.0;
         let icx = cx + dist * angle.cos();
         let icy = cy + dist * angle.sin();
-        circles.push(InversiveCircle { cx: icx, cy: icy, r: inner_r });
+        circles.push(InversiveCircle {
+            cx: icx,
+            cy: icy,
+            r: inner_r,
+        });
         let children = apollonian_gasket(icx, icy, inner_r, depth - 1);
         circles.extend(children);
     }
@@ -349,7 +352,7 @@ pub fn render_apollonian(circles: &[InversiveCircle], width: u32, height: u32) -
                 let ix = px as u32;
                 let iy = py as u32;
                 let idx = ((iy * width + ix) * 3) as usize;
-                buf[idx]     = color[0];
+                buf[idx] = color[0];
                 buf[idx + 1] = color[1];
                 buf[idx + 2] = color[2];
             }
@@ -393,7 +396,11 @@ mod tests {
         let a = HyperbolicPoint::new(0.0, 0.0);
         let b = HyperbolicPoint::new(0.0, 0.0);
         let d = hyperbolic_distance(&a, &b);
-        assert!(d.abs() < 1e-10, "Distance from origin to itself should be 0, got {}", d);
+        assert!(
+            d.abs() < 1e-10,
+            "Distance from origin to itself should be 0, got {}",
+            d
+        );
     }
 
     #[test]
@@ -417,7 +424,11 @@ mod tests {
 
         // Result should stay in or near unit disk for valid disk isometry
         let r_sq = w.0 * w.0 + w.1 * w.1;
-        assert!(r_sq <= 1.1, "Result should be inside unit disk, r^2={}", r_sq);
+        assert!(
+            r_sq <= 1.1,
+            "Result should be inside unit disk, r^2={}",
+            r_sq
+        );
     }
 
     #[test]
@@ -433,22 +444,45 @@ mod tests {
         ];
         for p in &points {
             let (sx, sy) = poincare_to_screen(p, width, height);
-            assert!(sx < width, "sx={} out of bounds for p=({},{})", sx, p.x, p.y);
-            assert!(sy < height, "sy={} out of bounds for p=({},{})", sy, p.x, p.y);
+            assert!(
+                sx < width,
+                "sx={} out of bounds for p=({},{})",
+                sx,
+                p.x,
+                p.y
+            );
+            assert!(
+                sy < height,
+                "sy={} out of bounds for p=({},{})",
+                sy,
+                p.x,
+                p.y
+            );
         }
     }
 
     #[test]
     fn test_circle_inversion_center_is_infinity() {
-        let circle = InversiveCircle { cx: 0.0, cy: 0.0, r: 1.0 };
+        let circle = InversiveCircle {
+            cx: 0.0,
+            cy: 0.0,
+            r: 1.0,
+        };
         let (px, py) = circle_inversion(0.0, 0.0, &circle);
-        assert!(px.is_infinite() || py.is_infinite(), "Inversion of center should be infinity");
+        assert!(
+            px.is_infinite() || py.is_infinite(),
+            "Inversion of center should be infinity"
+        );
     }
 
     #[test]
     fn test_circle_inversion_on_circle() {
         // Point on the circle should map to itself
-        let circle = InversiveCircle { cx: 0.0, cy: 0.0, r: 2.0 };
+        let circle = InversiveCircle {
+            cx: 0.0,
+            cy: 0.0,
+            r: 2.0,
+        };
         let (px, py) = circle_inversion(2.0, 0.0, &circle);
         assert!((px - 2.0).abs() < 1e-10);
         assert!((py - 0.0).abs() < 1e-10);

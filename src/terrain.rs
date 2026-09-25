@@ -120,7 +120,11 @@ fn fbm(x: f64, y: f64, config: &TerrainConfig, perm: &[u8; 512]) -> f64 {
         frequency *= config.lacunarity;
     }
     // Normalise to [-1, 1].
-    if max_value > 0.0 { value / max_value } else { 0.0 }
+    if max_value > 0.0 {
+        value / max_value
+    } else {
+        0.0
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -144,8 +148,12 @@ pub fn generate_heightmap(config: &TerrainConfig) -> Vec<Vec<f64>> {
     let mut max_v = f64::MIN;
     for row in &raw {
         for &v in row {
-            if v < min_v { min_v = v; }
-            if v > max_v { max_v = v; }
+            if v < min_v {
+                min_v = v;
+            }
+            if v > max_v {
+                max_v = v;
+            }
         }
     }
     let range = max_v - min_v;
@@ -227,21 +235,37 @@ impl TerrainStats {
 
         for row in heightmap {
             for &h in row {
-                if h < min_v { min_v = h; }
-                if h > max_v { max_v = h; }
+                if h < min_v {
+                    min_v = h;
+                }
+                if h > max_v {
+                    max_v = h;
+                }
                 sum += h;
                 count += 1;
-                if h < 0.3 { water += 1; }
+                if h < 0.3 {
+                    water += 1;
+                }
             }
         }
 
         let (min_height, max_height, mean_height, water_fraction) = if count == 0 {
             (0.0, 0.0, 0.0, 0.0)
         } else {
-            (min_v, max_v, sum / count as f64, water as f64 / count as f64)
+            (
+                min_v,
+                max_v,
+                sum / count as f64,
+                water as f64 / count as f64,
+            )
         };
 
-        Self { min_height, max_height, mean_height, water_fraction }
+        Self {
+            min_height,
+            max_height,
+            mean_height,
+            water_fraction,
+        }
     }
 }
 
@@ -253,9 +277,13 @@ impl TerrainStats {
 /// its lowest neighbour, carrying sediment and depositing it there.
 pub fn erode(heightmap: &mut Vec<Vec<f64>>, iterations: u32) {
     let rows = heightmap.len();
-    if rows == 0 { return; }
+    if rows == 0 {
+        return;
+    }
     let cols = heightmap[0].len();
-    if cols == 0 { return; }
+    if cols == 0 {
+        return;
+    }
 
     // Erosion and deposition rates.
     const EROSION_RATE: f64 = 0.01;
@@ -313,7 +341,11 @@ mod tests {
     use super::*;
 
     fn small_config() -> TerrainConfig {
-        TerrainConfig { width: 16, height: 16, ..Default::default() }
+        TerrainConfig {
+            width: 16,
+            height: 16,
+            ..Default::default()
+        }
     }
 
     #[test]
@@ -347,8 +379,14 @@ mod tests {
 
     #[test]
     fn different_seeds_produce_different_maps() {
-        let cfg1 = TerrainConfig { seed: 1, ..small_config() };
-        let cfg2 = TerrainConfig { seed: 2, ..small_config() };
+        let cfg1 = TerrainConfig {
+            seed: 1,
+            ..small_config()
+        };
+        let cfg2 = TerrainConfig {
+            seed: 2,
+            ..small_config()
+        };
         let hm1 = generate_heightmap(&cfg1);
         let hm2 = generate_heightmap(&cfg2);
         assert_ne!(hm1[0][0].to_bits(), hm2[0][0].to_bits());

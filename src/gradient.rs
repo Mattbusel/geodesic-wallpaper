@@ -33,7 +33,10 @@ pub struct GradientStop {
 
 impl GradientStop {
     pub fn new(position: f32, color: [u8; 3]) -> Self {
-        Self { position: position.clamp(0.0, 1.0), color }
+        Self {
+            position: position.clamp(0.0, 1.0),
+            color,
+        }
     }
 }
 
@@ -49,7 +52,11 @@ pub struct Gradient {
 impl Gradient {
     /// Create a gradient from a list of stops. Stops are sorted by position.
     pub fn new(mut stops: Vec<GradientStop>) -> Self {
-        stops.sort_by(|a, b| a.position.partial_cmp(&b.position).unwrap_or(std::cmp::Ordering::Equal));
+        stops.sort_by(|a, b| {
+            a.position
+                .partial_cmp(&b.position)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         Self { stops }
     }
 
@@ -325,8 +332,14 @@ mod tests {
 
     #[test]
     fn test_preset_from_str_sunset() {
-        assert_eq!(GradientPreset::from_str("sunset"), Some(GradientPreset::Sunset));
-        assert_eq!(GradientPreset::from_str("Sunset"), Some(GradientPreset::Sunset));
+        assert_eq!(
+            GradientPreset::from_str("sunset"),
+            Some(GradientPreset::Sunset)
+        );
+        assert_eq!(
+            GradientPreset::from_str("Sunset"),
+            Some(GradientPreset::Sunset)
+        );
     }
 
     #[test]

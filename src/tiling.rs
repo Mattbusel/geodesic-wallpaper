@@ -73,7 +73,13 @@ impl TileGrid {
         let row = y as i32 / ts;
         let cx = (col * ts + ts / 2) as f32;
         let cy = (row * ts + ts / 2) as f32;
-        TileCell { col, row, center_x: cx, center_y: cy, shape: TileShape::Square }
+        TileCell {
+            col,
+            row,
+            center_x: cx,
+            center_y: cy,
+            shape: TileShape::Square,
+        }
     }
 
     fn square_neighbors(&self, cell: &TileCell) -> Vec<TileCell> {
@@ -110,7 +116,13 @@ impl TileGrid {
 
         let cx = col as f32 * w + row_offset + w / 2.0;
         let cy = row as f32 * h * 0.75 + h / 2.0;
-        TileCell { col, row, center_x: cx, center_y: cy, shape: TileShape::Hexagonal }
+        TileCell {
+            col,
+            row,
+            center_x: cx,
+            center_y: cy,
+            shape: TileShape::Hexagonal,
+        }
     }
 
     fn hex_neighbors(&self, cell: &TileCell) -> Vec<TileCell> {
@@ -133,7 +145,13 @@ impl TileGrid {
                 let row_offset = if row % 2 != 0 { w / 2.0 } else { 0.0 };
                 let cx = col as f32 * w + row_offset + w / 2.0;
                 let cy = row as f32 * h * 0.75 + h / 2.0;
-                TileCell { col, row, center_x: cx, center_y: cy, shape: TileShape::Hexagonal }
+                TileCell {
+                    col,
+                    row,
+                    center_x: cx,
+                    center_y: cy,
+                    shape: TileShape::Hexagonal,
+                }
             })
             .collect()
     }
@@ -148,7 +166,13 @@ impl TileGrid {
         let col = col_raw;
         let cx = (col * ts / 2 + ts / 4) as f32;
         let cy = (row * ts + ts / 2) as f32;
-        TileCell { col, row, center_x: cx, center_y: cy, shape: TileShape::Triangular }
+        TileCell {
+            col,
+            row,
+            center_x: cx,
+            center_y: cy,
+            shape: TileShape::Triangular,
+        }
     }
 
     fn tri_neighbors(&self, cell: &TileCell) -> Vec<TileCell> {
@@ -165,7 +189,13 @@ impl TileGrid {
                 let row = cell.row + dr;
                 let cx = (col * ts / 2 + ts / 4) as f32;
                 let cy = (row * ts + ts / 2) as f32;
-                TileCell { col, row, center_x: cx, center_y: cy, shape: TileShape::Triangular }
+                TileCell {
+                    col,
+                    row,
+                    center_x: cx,
+                    center_y: cy,
+                    shape: TileShape::Triangular,
+                }
             })
             .collect()
     }
@@ -187,7 +217,13 @@ impl TileGrid {
         let vc = (row * ts + ts / 2) as f32;
         let cx = (uc + vc) / 2.0;
         let cy = (uc - vc) / 2.0;
-        TileCell { col, row, center_x: cx, center_y: cy, shape: TileShape::Rhombic }
+        TileCell {
+            col,
+            row,
+            center_x: cx,
+            center_y: cy,
+            shape: TileShape::Rhombic,
+        }
     }
 
     fn rhombic_neighbors(&self, cell: &TileCell) -> Vec<TileCell> {
@@ -202,7 +238,13 @@ impl TileGrid {
                 let vc = (row * ts + ts / 2) as f32;
                 let cx = (uc + vc) / 2.0;
                 let cy = (uc - vc) / 2.0;
-                TileCell { col, row, center_x: cx, center_y: cy, shape: TileShape::Rhombic }
+                TileCell {
+                    col,
+                    row,
+                    center_x: cx,
+                    center_y: cy,
+                    shape: TileShape::Rhombic,
+                }
             })
             .collect()
     }
@@ -371,7 +413,13 @@ mod tests {
         let grid = TileGrid::new(TileShape::Square, 64, 64, 32);
         let pixels = TileRenderer::render(
             &grid,
-            |cell| [(cell.col as u8).wrapping_mul(64), (cell.row as u8).wrapping_mul(64), 0],
+            |cell| {
+                [
+                    (cell.col as u8).wrapping_mul(64),
+                    (cell.row as u8).wrapping_mul(64),
+                    0,
+                ]
+            },
             64,
             64,
         );
@@ -387,9 +435,18 @@ mod tests {
         let w = 64u32;
         let h = 64u32;
         let grid = TileGrid::new(TileShape::Square, w, h, 16);
-        let pixels = TileRenderer::render(&grid, |cell| {
-            [(cell.col.rem_euclid(256)) as u8, (cell.row.rem_euclid(256)) as u8, 0]
-        }, w, h);
+        let pixels = TileRenderer::render(
+            &grid,
+            |cell| {
+                [
+                    (cell.col.rem_euclid(256)) as u8,
+                    (cell.row.rem_euclid(256)) as u8,
+                    0,
+                ]
+            },
+            w,
+            h,
+        );
         assert_eq!(pixels.len(), (w * h) as usize);
     }
 

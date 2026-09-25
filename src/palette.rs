@@ -40,7 +40,10 @@ pub struct ColorPalette {
 impl ColorPalette {
     /// Create a new named palette.
     pub fn new(name: impl Into<String>, colors: Vec<[u8; 3]>) -> Self {
-        Self { name: name.into(), colors }
+        Self {
+            name: name.into(),
+            colors,
+        }
     }
 
     /// Convert all colors to CSS hex strings (e.g. `"#4488FF"`).
@@ -113,7 +116,11 @@ pub fn hsl_to_rgb(h: f32, s: f32, l: f32) -> [u8; 3] {
         return [v, v, v];
     }
 
-    let q = if l < 0.5 { l * (1.0 + s) } else { l + s - l * s };
+    let q = if l < 0.5 {
+        l * (1.0 + s)
+    } else {
+        l + s - l * s
+    };
     let p = 2.0 * l - q;
 
     let r = hue_to_rgb(p, q, h + 1.0 / 3.0);
@@ -296,23 +303,38 @@ mod tests {
 
     #[test]
     fn test_parse_triadic() {
-        assert_eq!(PaletteType::parse("triadic:240"), Some(PaletteType::Triadic(240.0)));
+        assert_eq!(
+            PaletteType::parse("triadic:240"),
+            Some(PaletteType::Triadic(240.0))
+        );
     }
 
     #[test]
     fn test_parse_monochromatic() {
-        assert_eq!(PaletteType::parse("monochromatic:120"), Some(PaletteType::Monochromatic(120.0)));
-        assert_eq!(PaletteType::parse("mono:60"), Some(PaletteType::Monochromatic(60.0)));
+        assert_eq!(
+            PaletteType::parse("monochromatic:120"),
+            Some(PaletteType::Monochromatic(120.0))
+        );
+        assert_eq!(
+            PaletteType::parse("mono:60"),
+            Some(PaletteType::Monochromatic(60.0))
+        );
     }
 
     #[test]
     fn test_parse_complementary() {
-        assert_eq!(PaletteType::parse("complementary:30"), Some(PaletteType::Complementary(30.0)));
+        assert_eq!(
+            PaletteType::parse("complementary:30"),
+            Some(PaletteType::Complementary(30.0))
+        );
     }
 
     #[test]
     fn test_parse_analogous() {
-        assert_eq!(PaletteType::parse("analogous:180"), Some(PaletteType::Analogous(180.0)));
+        assert_eq!(
+            PaletteType::parse("analogous:180"),
+            Some(PaletteType::Analogous(180.0))
+        );
     }
 
     #[test]

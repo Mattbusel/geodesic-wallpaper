@@ -61,16 +61,12 @@ impl LSystem {
 
     /// Dragon curve: axiom "F", rules F→F+G, G→F-G; angle=90°.
     pub fn dragon_curve() -> Self {
-        Self::new("F")
-            .rule('F', "F+G")
-            .rule('G', "F-G")
+        Self::new("F").rule('F', "F+G").rule('G', "F-G")
     }
 
     /// Sierpinski triangle: axiom "F-G-G", rules F→F-G+F+G-F, G→GG; angle=120°.
     pub fn sierpinski_triangle() -> Self {
-        Self::new("F-G-G")
-            .rule('F', "F-G+F+G-F")
-            .rule('G', "GG")
+        Self::new("F-G-G").rule('F', "F-G+F+G-F").rule('G', "GG")
     }
 
     /// Fractal plant: axiom "X", rules X→F+[[X]-X]-F[-FX]+X, F→FF; angle=25°.
@@ -124,11 +120,7 @@ impl TurtleRenderer {
     /// - `[` — push state.
     /// - `]` — pop state.
     /// - anything else — ignored.
-    pub fn render(
-        &self,
-        instructions: &str,
-        start: TurtleState,
-    ) -> Vec<(f64, f64, f64, f64)> {
+    pub fn render(&self, instructions: &str, start: TurtleState) -> Vec<(f64, f64, f64, f64)> {
         let mut state = start;
         let mut stack: Vec<TurtleState> = Vec::new();
         let mut segments: Vec<(f64, f64, f64, f64)> = Vec::new();
@@ -158,11 +150,7 @@ impl TurtleRenderer {
     }
 
     /// Translate and uniformly scale `segments` to fit within `(w, h)`.
-    pub fn normalize_segments(
-        segments: &mut Vec<(f64, f64, f64, f64)>,
-        w: usize,
-        h: usize,
-    ) {
+    pub fn normalize_segments(segments: &mut Vec<(f64, f64, f64, f64)>, w: usize, h: usize) {
         if segments.is_empty() {
             return;
         }
@@ -181,8 +169,7 @@ impl TurtleRenderer {
         let range_x = (max_x - min_x).max(1e-12);
         let range_y = (max_y - min_y).max(1e-12);
         let margin = 4.0;
-        let scale = ((w as f64 - margin * 2.0) / range_x)
-            .min((h as f64 - margin * 2.0) / range_y);
+        let scale = ((w as f64 - margin * 2.0) / range_x).min((h as f64 - margin * 2.0) / range_y);
 
         for seg in segments.iter_mut() {
             seg.0 = (seg.0 - min_x) * scale + margin;
@@ -211,7 +198,7 @@ pub fn to_pixels(
     let set_pixel = |buf: &mut Vec<u8>, x: i64, y: i64| {
         if x >= 0 && y >= 0 && (x as usize) < w && (y as usize) < h {
             let idx = ((y as usize) * w + (x as usize)) * 3;
-            buf[idx]     = color.0;
+            buf[idx] = color.0;
             buf[idx + 1] = color.1;
             buf[idx + 2] = color.2;
         }
@@ -280,7 +267,11 @@ mod tests {
             canvas_w: 512,
             canvas_h: 512,
         };
-        let start = TurtleState { x: 256.0, y: 10.0, angle_deg: 90.0 };
+        let start = TurtleState {
+            x: 256.0,
+            y: 10.0,
+            angle_deg: 90.0,
+        };
         let segments = renderer.render(&instructions, start);
         assert!(!segments.is_empty(), "plant should produce segments");
     }

@@ -4,8 +4,8 @@
 //! Sidewinder) and two solvers (A* and BFS).  Both an RGB pixel renderer and
 //! an ASCII renderer are provided.
 
-use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 
 // ---------------------------------------------------------------------------
 // Cell / Maze
@@ -28,7 +28,11 @@ pub struct Cell {
 
 impl Cell {
     fn new(x: u32, y: u32) -> Self {
-        Self { x, y, walls: [true; 4] }
+        Self {
+            x,
+            y,
+            walls: [true; 4],
+        }
     }
 }
 
@@ -46,7 +50,11 @@ impl Maze {
         let cells = (0..height)
             .map(|y| (0..width).map(|x| Cell::new(x, y)).collect())
             .collect();
-        Self { width, height, cells }
+        Self {
+            width,
+            height,
+            cells,
+        }
     }
 
     /// Remove the wall on `direction` of cell `(x, y)` and the matching
@@ -70,20 +78,36 @@ impl Maze {
     /// Return neighbours reachable from `(x, y)` (no wall between them).
     fn neighbours(&self, x: u32, y: u32) -> Vec<(u32, u32)> {
         let mut result = Vec::new();
-        if y > 0 && !self.has_wall(x, y, N) { result.push((x, y - 1)); }
-        if x + 1 < self.width && !self.has_wall(x, y, E) { result.push((x + 1, y)); }
-        if y + 1 < self.height && !self.has_wall(x, y, S) { result.push((x, y + 1)); }
-        if x > 0 && !self.has_wall(x, y, W) { result.push((x - 1, y)); }
+        if y > 0 && !self.has_wall(x, y, N) {
+            result.push((x, y - 1));
+        }
+        if x + 1 < self.width && !self.has_wall(x, y, E) {
+            result.push((x + 1, y));
+        }
+        if y + 1 < self.height && !self.has_wall(x, y, S) {
+            result.push((x, y + 1));
+        }
+        if x > 0 && !self.has_wall(x, y, W) {
+            result.push((x - 1, y));
+        }
         result
     }
 
     /// Return all four directional neighbours that exist (regardless of walls).
     fn all_neighbours(&self, x: u32, y: u32) -> Vec<(u32, u32, usize)> {
         let mut result = Vec::new();
-        if y > 0 { result.push((x, y - 1, N)); }
-        if x + 1 < self.width { result.push((x + 1, y, E)); }
-        if y + 1 < self.height { result.push((x, y + 1, S)); }
-        if x > 0 { result.push((x - 1, y, W)); }
+        if y > 0 {
+            result.push((x, y - 1, N));
+        }
+        if x + 1 < self.width {
+            result.push((x + 1, y, E));
+        }
+        if y + 1 < self.height {
+            result.push((x, y + 1, S));
+        }
+        if x > 0 {
+            result.push((x - 1, y, W));
+        }
         result
     }
 }
@@ -245,8 +269,11 @@ impl PathFinder {
 
         g_score.insert(start, 0.0);
         open.push(PathNode {
-            x: start.0, y: start.1,
-            g: 0.0, h: h(start.0, start.1), f: h(start.0, start.1),
+            x: start.0,
+            y: start.1,
+            g: 0.0,
+            h: h(start.0, start.1),
+            f: h(start.0, start.1),
         });
 
         while let Some(current) = open.pop() {
@@ -261,7 +288,10 @@ impl PathFinder {
                     g_score.insert((nx, ny), tentative_g);
                     let h_val = h(nx, ny);
                     open.push(PathNode {
-                        x: nx, y: ny, g: tentative_g, h: h_val,
+                        x: nx,
+                        y: ny,
+                        g: tentative_g,
+                        h: h_val,
                         f: tentative_g + h_val,
                     });
                 }
@@ -428,11 +458,7 @@ impl MazeRenderer {
 
     /// Render the maze to an ASCII string.
     pub fn render_ascii(maze: &Maze, path: Option<&[(u32, u32)]>) -> String {
-        let path_set: HashSet<(u32, u32)> = path
-            .unwrap_or(&[])
-            .iter()
-            .copied()
-            .collect();
+        let path_set: HashSet<(u32, u32)> = path.unwrap_or(&[]).iter().copied().collect();
 
         let mut lines = Vec::new();
         // Top border
@@ -443,7 +469,11 @@ impl MazeRenderer {
             // Row of cells
             let mut row = String::from("|");
             for x in 0..maze.width {
-                let symbol = if path_set.contains(&(x, y)) { " * " } else { "   " };
+                let symbol = if path_set.contains(&(x, y)) {
+                    " * "
+                } else {
+                    "   "
+                };
                 row.push_str(symbol);
                 if maze.has_wall(x, y, E) {
                     row.push('|');
@@ -472,7 +502,11 @@ impl MazeRenderer {
 
     /// Compute a rainbow gradient colour for position `idx` out of `total`.
     pub fn color_path(_path: &[(u32, u32)], total: usize, idx: usize) -> [u8; 3] {
-        let t = if total <= 1 { 0.0 } else { idx as f64 / (total - 1) as f64 };
+        let t = if total <= 1 {
+            0.0
+        } else {
+            idx as f64 / (total - 1) as f64
+        };
         // HSV→RGB where H goes 0→240° (red→blue through green)
         let hue = t * 240.0;
         let (r, g, b) = hsv_to_rgb(hue, 1.0, 1.0);
@@ -488,12 +522,19 @@ fn hsv_to_rgb(h: f64, s: f64, v: f64) -> (f64, f64, f64) {
     let c = v * s;
     let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
     let m = v - c;
-    let (r1, g1, b1) = if h < 60.0 { (c, x, 0.0) }
-        else if h < 120.0 { (x, c, 0.0) }
-        else if h < 180.0 { (0.0, c, x) }
-        else if h < 240.0 { (0.0, x, c) }
-        else if h < 300.0 { (x, 0.0, c) }
-        else { (c, 0.0, x) };
+    let (r1, g1, b1) = if h < 60.0 {
+        (c, x, 0.0)
+    } else if h < 120.0 {
+        (x, c, 0.0)
+    } else if h < 180.0 {
+        (0.0, c, x)
+    } else if h < 240.0 {
+        (0.0, x, c)
+    } else if h < 300.0 {
+        (x, 0.0, c)
+    } else {
+        (c, 0.0, x)
+    };
     (r1 + m, g1 + m, b1 + m)
 }
 
@@ -505,7 +546,10 @@ impl LcgRng {
         Self(seed.wrapping_add(1))
     }
     fn next(&mut self) -> u64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         self.0
     }
     fn next_usize(&mut self) -> usize {

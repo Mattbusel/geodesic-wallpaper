@@ -21,7 +21,10 @@ impl ColorPalette {
             colors.push(Self::sample_stops(&stops, t));
         }
 
-        ColorPalette { colors, name: String::new() }
+        ColorPalette {
+            colors,
+            name: String::new(),
+        }
     }
 
     fn sample_stops(stops: &[([u8; 3], f64)], t: f64) -> [u8; 3] {
@@ -39,7 +42,11 @@ impl ColorPalette {
             }
         }
         let range = hi.1 - lo.1;
-        let local_t = if range < 1e-9 { 0.0 } else { (t - lo.1) / range };
+        let local_t = if range < 1e-9 {
+            0.0
+        } else {
+            (t - lo.1) / range
+        };
         lerp_color(lo.0, hi.0, local_t.clamp(0.0, 1.0))
     }
 
@@ -59,43 +66,64 @@ impl ColorPalette {
     /// Get one of the built-in palettes by name.
     pub fn built_in(name: &str) -> Option<Self> {
         let (stops, n): (Vec<([u8; 3], f64)>, usize) = match name {
-            "sunset" => (vec![
-                ([20, 10, 40], 0.0),
-                ([255, 80, 0], 0.5),
-                ([255, 220, 100], 1.0),
-            ], 32),
-            "ocean" => (vec![
-                ([0, 20, 80], 0.0),
-                ([0, 100, 200], 0.5),
-                ([150, 220, 255], 1.0),
-            ], 32),
-            "forest" => (vec![
-                ([10, 40, 10], 0.0),
-                ([30, 120, 30], 0.5),
-                ([180, 220, 100], 1.0),
-            ], 32),
-            "neon" => (vec![
-                ([0, 0, 0], 0.0),
-                ([255, 0, 200], 0.33),
-                ([0, 255, 200], 0.66),
-                ([255, 255, 0], 1.0),
-            ], 32),
-            "pastel" => (vec![
-                ([255, 200, 220], 0.0),
-                ([200, 220, 255], 0.5),
-                ([220, 255, 200], 1.0),
-            ], 32),
-            "monochrome" => (vec![
-                ([0, 0, 0], 0.0),
-                ([128, 128, 128], 0.5),
-                ([255, 255, 255], 1.0),
-            ], 32),
-            "fire" => (vec![
-                ([0, 0, 0], 0.0),
-                ([180, 0, 0], 0.3),
-                ([255, 120, 0], 0.6),
-                ([255, 255, 100], 1.0),
-            ], 32),
+            "sunset" => (
+                vec![
+                    ([20, 10, 40], 0.0),
+                    ([255, 80, 0], 0.5),
+                    ([255, 220, 100], 1.0),
+                ],
+                32,
+            ),
+            "ocean" => (
+                vec![
+                    ([0, 20, 80], 0.0),
+                    ([0, 100, 200], 0.5),
+                    ([150, 220, 255], 1.0),
+                ],
+                32,
+            ),
+            "forest" => (
+                vec![
+                    ([10, 40, 10], 0.0),
+                    ([30, 120, 30], 0.5),
+                    ([180, 220, 100], 1.0),
+                ],
+                32,
+            ),
+            "neon" => (
+                vec![
+                    ([0, 0, 0], 0.0),
+                    ([255, 0, 200], 0.33),
+                    ([0, 255, 200], 0.66),
+                    ([255, 255, 0], 1.0),
+                ],
+                32,
+            ),
+            "pastel" => (
+                vec![
+                    ([255, 200, 220], 0.0),
+                    ([200, 220, 255], 0.5),
+                    ([220, 255, 200], 1.0),
+                ],
+                32,
+            ),
+            "monochrome" => (
+                vec![
+                    ([0, 0, 0], 0.0),
+                    ([128, 128, 128], 0.5),
+                    ([255, 255, 255], 1.0),
+                ],
+                32,
+            ),
+            "fire" => (
+                vec![
+                    ([0, 0, 0], 0.0),
+                    ([180, 0, 0], 0.3),
+                    ([255, 120, 0], 0.6),
+                    ([255, 255, 100], 1.0),
+                ],
+                32,
+            ),
             _ => return None,
         };
         let mut palette = Self::from_stops(stops, n);
@@ -219,7 +247,12 @@ impl GenerativeArtist {
 
         // Generate seed points
         let seeds: Vec<(f64, f64)> = (0..num_seeds)
-            .map(|_| (next_rand_f64(&mut rng) * w as f64, next_rand_f64(&mut rng) * h as f64))
+            .map(|_| {
+                (
+                    next_rand_f64(&mut rng) * w as f64,
+                    next_rand_f64(&mut rng) * h as f64,
+                )
+            })
             .collect();
 
         let mut image = vec![vec![[0u8; 3]; w]; h];
@@ -235,13 +268,18 @@ impl GenerativeArtist {
                 let py = y as f64 + dy;
 
                 // Find nearest seed
-                let (nearest_idx, _) = seeds.iter().enumerate().fold(
-                    (0, f64::MAX),
-                    |(bi, bd), (i, &(sx, sy))| {
-                        let d = (px - sx).powi(2) + (py - sy).powi(2);
-                        if d < bd { (i, d) } else { (bi, bd) }
-                    },
-                );
+                let (nearest_idx, _) =
+                    seeds
+                        .iter()
+                        .enumerate()
+                        .fold((0, f64::MAX), |(bi, bd), (i, &(sx, sy))| {
+                            let d = (px - sx).powi(2) + (py - sy).powi(2);
+                            if d < bd {
+                                (i, d)
+                            } else {
+                                (bi, bd)
+                            }
+                        });
 
                 let t = nearest_idx as f64 / num_seeds as f64;
                 image[y][x] = params.palette.sample(t);
@@ -329,9 +367,9 @@ impl GenerativeArtist {
                     (wx, wy.wrapping_sub(1)),
                     (wx, wy + 1),
                 ];
-                let adjacent = neighbors.iter().any(|&(nx, ny)| {
-                    nx < w && ny < h && grid[ny][nx]
-                });
+                let adjacent = neighbors
+                    .iter()
+                    .any(|&(nx, ny)| nx < w && ny < h && grid[ny][nx]);
 
                 if adjacent && !grid[wy][wx] {
                     grid[wy][wx] = true;
@@ -360,7 +398,12 @@ impl GenerativeArtist {
                 let qx = fbm(nx, ny, params.octaves, params.seed);
                 let qy = fbm(nx + 5.2, ny + 1.3, params.octaves, params.seed ^ 0xDEAD);
 
-                let rx = fbm(nx + 4.0 * qx + 1.7, ny + 4.0 * qy + 9.2, params.octaves, params.seed ^ 0xBEEF);
+                let rx = fbm(
+                    nx + 4.0 * qx + 1.7,
+                    ny + 4.0 * qy + 9.2,
+                    params.octaves,
+                    params.seed ^ 0xBEEF,
+                );
 
                 // Marble veins from sine
                 let vein = ((nx + 3.0 * rx + params.time_offset).sin() + 1.0) * 0.5;
@@ -406,7 +449,7 @@ pub(crate) fn fbm(x: f64, y: f64, octaves: u8, seed: u64) -> f64 {
     let mut frequency = 1.0f64;
 
     for oct in 0..octaves {
-        let oct_seed = seed.wrapping_add(oct as u64 * 0x9E3779B97F4A7C15);
+        let oct_seed = seed.wrapping_add((oct as u64).wrapping_mul(0x9E3779B97F4A7C15));
         value += amplitude * GenerativeArtist::perlin_2d(x * frequency, y * frequency, oct_seed);
         amplitude *= 0.5;
         frequency *= 2.0;
@@ -432,8 +475,8 @@ pub(crate) fn lerp_color(a: [u8; 3], b: [u8; 3], t: f64) -> [u8; 3] {
 
 fn hash(xi: i64, yi: i64, seed: u64) -> u64 {
     let mut h = seed
-        .wrapping_add(xi as u64 * 0x517CC1B727220A95)
-        .wrapping_add(yi as u64 * 0x6C62272E07BB0142);
+        .wrapping_add((xi as u64).wrapping_mul(0x517CC1B727220A95))
+        .wrapping_add((yi as u64).wrapping_mul(0x6C62272E07BB0142));
     h ^= h >> 33;
     h = h.wrapping_mul(0xFF51AFD7ED558CCD);
     h ^= h >> 33;
@@ -476,8 +519,20 @@ mod tests {
 
     #[test]
     fn test_palette_built_in_names() {
-        for name in &["sunset", "ocean", "forest", "neon", "pastel", "monochrome", "fire"] {
-            assert!(ColorPalette::built_in(name).is_some(), "missing palette: {}", name);
+        for name in &[
+            "sunset",
+            "ocean",
+            "forest",
+            "neon",
+            "pastel",
+            "monochrome",
+            "fire",
+        ] {
+            assert!(
+                ColorPalette::built_in(name).is_some(),
+                "missing palette: {}",
+                name
+            );
         }
         assert!(ColorPalette::built_in("nonexistent").is_none());
     }

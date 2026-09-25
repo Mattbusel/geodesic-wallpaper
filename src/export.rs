@@ -35,7 +35,9 @@ impl std::fmt::Display for ExportError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ExportError::Io(e) => write!(f, "IO error: {e}"),
-            ExportError::InvalidDimensions => write!(f, "invalid image dimensions (zero width or height)"),
+            ExportError::InvalidDimensions => {
+                write!(f, "invalid image dimensions (zero width or height)")
+            }
             ExportError::UnsupportedFormat(s) => write!(f, "unsupported format: {s}"),
         }
     }
@@ -86,7 +88,13 @@ impl ImageExporter {
             ExportFormat::Svg => write_svg(pixels, width, height, path)?,
         };
         let elapsed_ms = start.elapsed().as_millis() as u64;
-        Ok(ExportStats { bytes_written, format, width, height, elapsed_ms })
+        Ok(ExportStats {
+            bytes_written,
+            format,
+            width,
+            height,
+            elapsed_ms,
+        })
     }
 }
 
@@ -167,7 +175,11 @@ fn write_svg(pixels: &[[u8; 3]], width: u32, height: u32, path: &Path) -> Result
     let mut f = std::fs::File::create(path)?;
 
     // Use 8x8 tiles for large images to keep SVG manageable
-    let tile = if width > 64 || height > 64 { 8u32 } else { 1u32 };
+    let tile = if width > 64 || height > 64 {
+        8u32
+    } else {
+        1u32
+    };
     let svg_w = width * tile;
     let svg_h = height * tile;
 
@@ -234,7 +246,12 @@ fn write_png(pixels: &[[u8; 3]], width: u32, height: u32, path: &Path) -> Result
 
 // ── Shared PNG encoding (mirrors animation.rs) ────────────────────────────────
 
-pub fn encode_png_rgba(path: &Path, width: u32, height: u32, rgba: &[u8]) -> Result<(), std::io::Error> {
+pub fn encode_png_rgba(
+    path: &Path,
+    width: u32,
+    height: u32,
+    rgba: &[u8],
+) -> Result<(), std::io::Error> {
     use std::io::Write;
 
     let mut f = std::fs::File::create(path)?;
@@ -247,11 +264,11 @@ pub fn encode_png_rgba(path: &Path, width: u32, height: u32, rgba: &[u8]) -> Res
         let mut d = Vec::with_capacity(13);
         d.extend_from_slice(&width.to_be_bytes());
         d.extend_from_slice(&height.to_be_bytes());
-        d.push(8);  // bit depth
-        d.push(6);  // RGBA
-        d.push(0);  // compression
-        d.push(0);  // filter
-        d.push(0);  // interlace
+        d.push(8); // bit depth
+        d.push(6); // RGBA
+        d.push(0); // compression
+        d.push(0); // filter
+        d.push(0); // interlace
         d
     };
     write_png_chunk(&mut f, b"IHDR", &ihdr_data)?;

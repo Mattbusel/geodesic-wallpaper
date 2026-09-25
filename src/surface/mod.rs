@@ -9,17 +9,17 @@ pub mod catenoid;
 pub mod ellipsoid;
 pub mod enneper;
 pub mod helicoid;
-pub mod hyperboloid;
 pub mod hyperbolic_paraboloid;
+pub mod hyperboloid;
 pub mod klein_bottle;
 pub mod procedural;
-pub mod user_defined;
 pub mod pseudosphere;
 pub mod saddle;
 pub mod sphere;
 pub mod torus;
 pub mod torus_knot;
 pub mod trefoil;
+pub mod user_defined;
 
 use glam::Vec3;
 

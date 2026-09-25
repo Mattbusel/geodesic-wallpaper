@@ -21,9 +21,21 @@ A geodesic on a torus, a saddle or a Klein bottle behaves very differently from 
 
 ## Quick start
 
-**Prebuilt:** download `geodesic-wallpaper-windows.zip` from the [latest release](https://github.com/Mattbusel/geodesic-wallpaper/releases/latest), extract it, and run `geodesic-wallpaper.exe`. The zip contains the exe and a sample `config.toml`. Requires Windows 10 or 11 and a GPU with DirectX 12 or Vulkan.
+### Download (Windows)
 
-**From source:**
+1. Open the [latest release](https://github.com/Mattbusel/geodesic-wallpaper/releases/latest) and download `geodesic-wallpaper-vX.Y.Z-x86_64-pc-windows-msvc.zip`.
+2. Extract it and run `geodesic-wallpaper.exe`. The zip also holds a sample `config.toml` and the `presets/` folder.
+3. The exe is unsigned, so Windows SmartScreen may say "unknown publisher": click **More info**, then **Run anyway**. You can check the download against `SHA256SUMS.txt` on the release page.
+
+Requires Windows 10 or 11 and a GPU with DirectX 12 or Vulkan. There are no macOS or Linux builds: the app is a Win32 desktop wallpaper.
+
+### Install with Cargo (Windows)
+
+```powershell
+cargo install geodesic-wallpaper
+```
+
+### Build from source
 
 ```powershell
 git clone https://github.com/Mattbusel/geodesic-wallpaper.git
@@ -181,7 +193,7 @@ The crate is also a library (`geodesic_wallpaper`) with a large set of additiona
 
 ## Status
 
-Working Windows wallpaper, version 1.4.0 in `Cargo.toml` (latest GitHub release: v1.2.2). The CI workflow is currently failing; `cargo test --lib` is the quickest local check. Contributions: see [CONTRIBUTING.md](CONTRIBUTING.md).
+Working Windows wallpaper, version 1.5.0. `cargo test --lib` is the quickest local check. Contributions: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

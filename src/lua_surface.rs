@@ -97,7 +97,10 @@ mod inner {
                 .get::<Value>("christoffel")
                 .map(|v| matches!(v, Value::Function(_)))
                 .unwrap_or(false);
-            Ok(Self { lua, has_christoffel })
+            Ok(Self {
+                lua,
+                has_christoffel,
+            })
         }
 
         /// Call the Lua `metric` function and parse the result.
@@ -188,7 +191,9 @@ mod inner {
                     if det > 1e-10 && m.g_uu.is_finite() && m.g_vv.is_finite() {
                         [[m.g_uu, m.g_uv], [m.g_vu, m.g_vv]]
                     } else {
-                        tracing::warn!("LuaSurface: degenerate metric at ({u},{v}), using fallback");
+                        tracing::warn!(
+                            "LuaSurface: degenerate metric at ({u},{v}), using fallback"
+                        );
                         Self::fallback_metric(u, v)
                     }
                 }
@@ -211,11 +216,11 @@ mod inner {
         /// Uses a central finite difference with step `h = 1e-4`.
         fn numeric_christoffel(&self, u: f32, v: f32) -> [[[f32; 2]; 2]; 2] {
             const H: f32 = 1e-4;
-            let g    = self.eval_metric(u,     v    );
-            let g_u1 = self.eval_metric(u + H, v    );
-            let g_u0 = self.eval_metric(u - H, v    );
-            let g_v1 = self.eval_metric(u,     v + H);
-            let g_v0 = self.eval_metric(u,     v - H);
+            let g = self.eval_metric(u, v);
+            let g_u1 = self.eval_metric(u + H, v);
+            let g_u0 = self.eval_metric(u - H, v);
+            let g_v1 = self.eval_metric(u, v + H);
+            let g_v0 = self.eval_metric(u, v - H);
 
             // ∂g_{ij}/∂u and ∂g_{ij}/∂v by central differences.
             let dg_du = |i: usize, j: usize| (g_u1[i][j] - g_u0[i][j]) / (2.0 * H);
@@ -225,8 +230,8 @@ mod inner {
             // Inverse of 2×2 symmetric metric.
             let inv = if det.abs() > 1e-12 {
                 [
-                    [ g[1][1] / det, -g[0][1] / det],
-                    [-g[1][0] / det,  g[0][0] / det],
+                    [g[1][1] / det, -g[0][1] / det],
+                    [-g[1][0] / det, g[0][0] / det],
                 ]
             } else {
                 [[1.0, 0.0], [0.0, 1.0]]
@@ -235,10 +240,7 @@ mod inner {
             // Γ^k_ij = ½ g^{kl} (∂_i g_{lj} + ∂_j g_{li} − ∂_l g_{ij})
             let partial = |coord: usize| -> [[f32; 2]; 2] {
                 let dg = if coord == 0 { dg_du } else { dg_dv };
-                [
-                    [dg(0, 0), dg(0, 1)],
-                    [dg(1, 0), dg(1, 1)],
-                ]
+                [[dg(0, 0), dg(0, 1)], [dg(1, 0), dg(1, 1)]]
             };
             let dg_by = [partial(0), partial(1)]; // dg_by[l][i][j] = ∂_l g_{ij}
 
@@ -428,7 +430,10 @@ mod tests {
         "#;
         s.reload(new_script);
         let g = s.metric(0.0, 0.0);
-        assert!((g[0][0] - 4.0).abs() < 1e-4, "g_uu should be 4.0 after reload");
+        assert!(
+            (g[0][0] - 4.0).abs() < 1e-4,
+            "g_uu should be 4.0 after reload"
+        );
     }
 
     #[test]

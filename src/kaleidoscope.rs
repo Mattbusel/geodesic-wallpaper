@@ -70,7 +70,8 @@ pub fn kaleidoscope_transform(x: f64, y: f64, config: &KaleidoscopeConfig) -> (f
 
     // Mirror on every odd sector.
     if sector_idx % 2 == 1 {
-        theta = sector_angle * (sector_idx as f64 + 1.0) - (theta - sector_angle * sector_idx as f64);
+        theta =
+            sector_angle * (sector_idx as f64 + 1.0) - (theta - sector_angle * sector_idx as f64);
     } else {
         theta -= sector_angle * sector_idx as f64;
     }
@@ -275,9 +276,13 @@ impl KaleidoscopeRenderer {
     /// Bilinear sample from source at floating-point pixel coords.
     pub fn sample_bilinear(source: &Vec<Vec<[u8; 3]>>, x: f64, y: f64) -> [u8; 3] {
         let h = source.len();
-        if h == 0 { return [0, 0, 0]; }
+        if h == 0 {
+            return [0, 0, 0];
+        }
         let w = source[0].len();
-        if w == 0 { return [0, 0, 0]; }
+        if w == 0 {
+            return [0, 0, 0];
+        }
 
         let x = x.clamp(0.0, (w - 1) as f64);
         let y = y.clamp(0.0, (h - 1) as f64);
@@ -290,18 +295,26 @@ impl KaleidoscopeRenderer {
         let tf = y - j0 as f64;
 
         let lerp = |a: u8, b: u8, t: f64| -> u8 {
-            (a as f64 * (1.0 - t) + b as f64 * t).round().clamp(0.0, 255.0) as u8
+            (a as f64 * (1.0 - t) + b as f64 * t)
+                .round()
+                .clamp(0.0, 255.0) as u8
         };
 
-        let top    = [lerp(source[j0][i0][0], source[j0][i1][0], sf),
-                      lerp(source[j0][i0][1], source[j0][i1][1], sf),
-                      lerp(source[j0][i0][2], source[j0][i1][2], sf)];
-        let bottom = [lerp(source[j1][i0][0], source[j1][i1][0], sf),
-                      lerp(source[j1][i0][1], source[j1][i1][1], sf),
-                      lerp(source[j1][i0][2], source[j1][i1][2], sf)];
-        [lerp(top[0], bottom[0], tf),
-         lerp(top[1], bottom[1], tf),
-         lerp(top[2], bottom[2], tf)]
+        let top = [
+            lerp(source[j0][i0][0], source[j0][i1][0], sf),
+            lerp(source[j0][i0][1], source[j0][i1][1], sf),
+            lerp(source[j0][i0][2], source[j0][i1][2], sf),
+        ];
+        let bottom = [
+            lerp(source[j1][i0][0], source[j1][i1][0], sf),
+            lerp(source[j1][i0][1], source[j1][i1][1], sf),
+            lerp(source[j1][i0][2], source[j1][i1][2], sf),
+        ];
+        [
+            lerp(top[0], bottom[0], tf),
+            lerp(top[1], bottom[1], tf),
+            lerp(top[2], bottom[2], tf),
+        ]
     }
 
     /// Rotate hue of `color` by `angle` (in [0, 1] turns).
@@ -354,7 +367,11 @@ impl KaleidoscopeRenderer {
     }
 
     /// Advance rotation and return a modified config for animation.
-    pub fn animated_frame(config: &mut KaleidoscopeConfig2, frame: u32, fps: f64) -> KaleidoscopeConfig2 {
+    pub fn animated_frame(
+        config: &mut KaleidoscopeConfig2,
+        frame: u32,
+        fps: f64,
+    ) -> KaleidoscopeConfig2 {
         let t = frame as f64 / fps.max(1.0);
         let mut c = config.clone();
         c.rotation_offset = config.rotation_offset + t * 0.1;

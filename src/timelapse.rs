@@ -49,7 +49,9 @@ impl TimelapseDuration {
     /// Supported formats: `"24h"`, `"30m"`, `"90s"`, `"1h30m"`, `"2h15m30s"`.
     pub fn parse(s: &str) -> Result<Self, String> {
         let s = s.trim();
-        if s.is_empty() { return Err("empty duration string".to_string()); }
+        if s.is_empty() {
+            return Err("empty duration string".to_string());
+        }
 
         let mut total = 0u64;
         let mut num_buf = String::new();
@@ -58,7 +60,9 @@ impl TimelapseDuration {
             if ch.is_ascii_digit() {
                 num_buf.push(ch);
             } else {
-                let n: u64 = num_buf.parse().map_err(|e| format!("invalid number: {e}"))?;
+                let n: u64 = num_buf
+                    .parse()
+                    .map_err(|e| format!("invalid number: {e}"))?;
                 num_buf.clear();
                 match ch {
                     'h' | 'H' => total += n * 3600,
@@ -76,7 +80,9 @@ impl TimelapseDuration {
             return Err("duration must be greater than zero".to_string());
         }
 
-        Ok(Self { total_seconds: total })
+        Ok(Self {
+            total_seconds: total,
+        })
     }
 
     /// Duration as a [`std::time::Duration`].
@@ -89,7 +95,11 @@ impl TimelapseDuration {
         let h = self.total_seconds / 3600;
         let m = (self.total_seconds % 3600) / 60;
         let s = self.total_seconds % 60;
-        if h > 0 { format!("{h}h{m:02}m{s:02}s") } else { format!("{m}m{s:02}s") }
+        if h > 0 {
+            format!("{h}h{m:02}m{s:02}s")
+        } else {
+            format!("{m}m{s:02}s")
+        }
     }
 }
 
@@ -174,10 +184,14 @@ impl TimelapseRecorder {
     }
 
     /// Return the recorder configuration.
-    pub fn config(&self) -> &TimelapseConfig { &self.cfg }
+    pub fn config(&self) -> &TimelapseConfig {
+        &self.cfg
+    }
 
     /// All frame paths written so far.
-    pub fn frame_paths(&self) -> &[PathBuf] { &self.frame_paths }
+    pub fn frame_paths(&self) -> &[PathBuf] {
+        &self.frame_paths
+    }
 
     /// Advance the recorder by `dt`. When the capture interval elapses,
     /// `capture_fn(frame_index)` is called; the returned raw RGBA pixel data
@@ -188,7 +202,9 @@ impl TimelapseRecorder {
     where
         F: FnOnce(usize) -> Vec<u8>,
     {
-        if self.finished { return false; }
+        if self.finished {
+            return false;
+        }
 
         self.time_since_capture += dt;
         self.total_elapsed += dt;
@@ -202,13 +218,13 @@ impl TimelapseRecorder {
             self.time_since_capture = Duration::ZERO;
             let rgba = capture_fn(self.frame_index);
             let path = self.frame_path(self.frame_index);
-            if let Err(e) = write_png_rgba(
-                &path,
-                &rgba,
-                self.cfg.frame_width,
-                self.cfg.frame_height,
-            ) {
-                eprintln!("[timelapse] failed to write frame {}: {e}", self.frame_index);
+            if let Err(e) =
+                write_png_rgba(&path, &rgba, self.cfg.frame_width, self.cfg.frame_height)
+            {
+                eprintln!(
+                    "[timelapse] failed to write frame {}: {e}",
+                    self.frame_index
+                );
             } else {
                 self.frame_paths.push(path);
             }
@@ -227,7 +243,9 @@ impl TimelapseRecorder {
     /// Progress as a fraction in `[0, 1]`.
     pub fn progress(&self) -> f32 {
         let total_secs = self.cfg.duration.total_seconds as f32;
-        if total_secs <= 0.0 { return 1.0; }
+        if total_secs <= 0.0 {
+            return 1.0;
+        }
         (self.total_elapsed.as_secs_f32() / total_secs).clamp(0.0, 1.0)
     }
 
@@ -252,30 +270,40 @@ impl TimelapseRecorder {
 ///
 /// Returns the exit status string on success or an error message.
 pub fn compile_to_mp4(cfg: &TimelapseConfig) -> Result<String, String> {
-    let input_pattern = cfg.output_dir
+    let input_pattern = cfg
+        .output_dir
         .join("frame_%06d.png")
         .to_string_lossy()
         .into_owned();
-    let output_path = cfg.output_dir
+    let output_path = cfg
+        .output_dir
         .join(&cfg.output_filename)
         .to_string_lossy()
         .into_owned();
 
     let status = std::process::Command::new("ffmpeg")
         .args([
-            "-y",                                        // overwrite output
-            "-framerate", &cfg.fps.to_string(),
-            "-i", &input_pattern,
-            "-c:v", "libx264",
-            "-crf", "18",
-            "-pix_fmt", "yuv420p",
+            "-y", // overwrite output
+            "-framerate",
+            &cfg.fps.to_string(),
+            "-i",
+            &input_pattern,
+            "-c:v",
+            "libx264",
+            "-crf",
+            "18",
+            "-pix_fmt",
+            "yuv420p",
             &output_path,
         ])
         .status()
         .map_err(|e| format!("failed to spawn ffmpeg: {e}"))?;
 
     if status.success() {
-        Ok(format!("compiled {} frames to {output_path}", cfg.expected_frames()))
+        Ok(format!(
+            "compiled {} frames to {output_path}",
+            cfg.expected_frames()
+        ))
     } else {
         Err(format!("ffmpeg exited with status: {status}"))
     }
@@ -293,15 +321,15 @@ fn write_png_rgba(path: &Path, rgba: &[u8], width: u32, height: u32) -> Result<(
     use std::io::Write;
 
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("cannot create output dir: {e}"))?;
+        std::fs::create_dir_all(parent).map_err(|e| format!("cannot create output dir: {e}"))?;
     }
 
     let mut file = std::fs::File::create(path)
         .map_err(|e| format!("cannot create {}: {e}", path.display()))?;
 
     // PNG signature.
-    file.write_all(b"\x89PNG\r\n\x1a\n").map_err(|e| e.to_string())?;
+    file.write_all(b"\x89PNG\r\n\x1a\n")
+        .map_err(|e| e.to_string())?;
 
     // IHDR chunk: width, height, bit depth=8, color type=6 (RGBA), compression=0, filter=0, interlace=0.
     let mut ihdr = Vec::with_capacity(13);
@@ -328,14 +356,19 @@ fn write_png_rgba(path: &Path, rgba: &[u8], width: u32, height: u32) -> Result<(
     Ok(())
 }
 
-fn write_png_chunk(file: &mut std::fs::File, chunk_type: &[u8; 4], data: &[u8]) -> Result<(), String> {
+fn write_png_chunk(
+    file: &mut std::fs::File,
+    chunk_type: &[u8; 4],
+    data: &[u8],
+) -> Result<(), String> {
     use std::io::Write;
     let len = (data.len() as u32).to_be_bytes();
     file.write_all(&len).map_err(|e| e.to_string())?;
     file.write_all(chunk_type).map_err(|e| e.to_string())?;
     file.write_all(data).map_err(|e| e.to_string())?;
     let crc = png_crc(chunk_type, data);
-    file.write_all(&crc.to_be_bytes()).map_err(|e| e.to_string())?;
+    file.write_all(&crc.to_be_bytes())
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -355,7 +388,9 @@ fn zlib_store(data: &[u8]) -> Vec<u8> {
         out.extend_from_slice(&nlen.to_le_bytes());
         out.extend_from_slice(&remaining[..block_len]);
         remaining = &remaining[block_len..];
-        if is_final { break; }
+        if is_final {
+            break;
+        }
     }
     // Adler-32 checksum.
     let adler = adler32(data);
@@ -381,7 +416,11 @@ fn png_crc(chunk_type: &[u8; 4], data: &[u8]) -> u32 {
         for n in 0..256u32 {
             let mut c = n;
             for _ in 0..8 {
-                c = if c & 1 != 0 { 0xEDB88320 ^ (c >> 1) } else { c >> 1 };
+                c = if c & 1 != 0 {
+                    0xEDB88320 ^ (c >> 1)
+                } else {
+                    c >> 1
+                };
             }
             t[n as usize] = c;
         }

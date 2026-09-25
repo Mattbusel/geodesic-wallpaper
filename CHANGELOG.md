@@ -15,6 +15,26 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [1.5.0] - 2026-09-25
+
+### Added
+
+- Release workflow builds a Windows x86_64 zip (exe, README, LICENSE,
+  `config.toml`, `presets/`) plus `SHA256SUMS.txt` on every `v*` tag.
+- `--version` flag.
+
+### Fixed
+
+- CI is green again: `cargo fmt`, a crate-level lint allow list for the
+  library-only generative-art modules, and the rustdoc link warnings.
+- Arithmetic overflow panics in the Perlin/fBm hash helpers
+  (`generative_art`, `texture_synthesizer`) and a compile-time overflow in
+  `quilts`.
+- `stereographic::plane_to_sphere` returned the mirrored z coordinate.
+- Fractal renderer now samples pixel centres.
+
+---
+
 ## [1.2.0] - 2026-03-17
 
 ### Added

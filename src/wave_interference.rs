@@ -58,8 +58,7 @@ pub fn wave_value(wave: &Wave, x: f64, y: f64, t: f64) -> f64 {
             let dy = y - wave.origin.1;
             let r = (dx * dx + dy * dy).sqrt();
             wave.amplitude
-                * (2.0 * PI * wave.frequency * t - 2.0 * PI * wave.frequency * r + wave.phase)
-                    .sin()
+                * (2.0 * PI * wave.frequency * t - 2.0 * PI * wave.frequency * r + wave.phase).sin()
         }
         WaveType::Plane { direction } => {
             let len = (direction.0 * direction.0 + direction.1 * direction.1).sqrt();
@@ -70,8 +69,7 @@ pub fn wave_value(wave: &Wave, x: f64, y: f64, t: f64) -> f64 {
             };
             let proj = x * dx + y * dy;
             wave.amplitude
-                * (2.0 * PI * wave.frequency * t - 2.0 * PI * wave.frequency * proj
-                    + wave.phase)
+                * (2.0 * PI * wave.frequency * t - 2.0 * PI * wave.frequency * proj + wave.phase)
                     .sin()
         }
         WaveType::Standing => {
@@ -110,11 +108,7 @@ impl InterferenceColormap {
                 let r = (t * 2.0).min(1.0);
                 let b = ((1.0 - t) * 2.0).min(1.0);
                 let g = 1.0 - (r - b).abs();
-                (
-                    (r * 255.0) as u8,
-                    (g * 255.0) as u8,
-                    (b * 255.0) as u8,
-                )
+                ((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8)
             }
             InterferenceColormap::RainbowWave => {
                 // Map t in [0,1] to full HSV hue cycle (H = 360*t, S=1, V=1).
@@ -173,10 +167,14 @@ fn heatmap_rgb(t: f64) -> (u8, u8, u8) {
         }
     }
     let range = hi.0 - lo.0;
-    let local_t = if range > 1e-12 { (t - lo.0) / range } else { 0.0 };
-    let r = lo.1.0 + (hi.1.0 - lo.1.0) * local_t;
-    let g = lo.1.1 + (hi.1.1 - lo.1.1) * local_t;
-    let b = lo.1.2 + (hi.1.2 - lo.1.2) * local_t;
+    let local_t = if range > 1e-12 {
+        (t - lo.0) / range
+    } else {
+        0.0
+    };
+    let r = lo.1 .0 + (hi.1 .0 - lo.1 .0) * local_t;
+    let g = lo.1 .1 + (hi.1 .1 - lo.1 .1) * local_t;
+    let b = lo.1 .2 + (hi.1 .2 - lo.1 .2) * local_t;
     ((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8)
 }
 
@@ -191,7 +189,11 @@ pub struct InterferencePattern {
 
 impl InterferencePattern {
     pub fn new(width: usize, height: usize) -> Self {
-        Self { width, height, waves: Vec::new() }
+        Self {
+            width,
+            height,
+            waves: Vec::new(),
+        }
     }
 
     /// Add a wave to the superposition.
@@ -217,11 +219,7 @@ impl InterferencePattern {
     /// Values are normalised to [-1, 1] before mapping.
     pub fn to_rgb(&self, values: &[f64], colormap: InterferenceColormap) -> Vec<u8> {
         // Find the absolute maximum for normalisation.
-        let max_abs = values
-            .iter()
-            .copied()
-            .map(f64::abs)
-            .fold(0.0_f64, f64::max);
+        let max_abs = values.iter().copied().map(f64::abs).fold(0.0_f64, f64::max);
         let scale = if max_abs > 1e-12 { 1.0 / max_abs } else { 1.0 };
 
         let mut pixels = vec![0u8; values.len() * 3];
@@ -255,7 +253,11 @@ pub fn double_slit_pattern(
     height: usize,
 ) -> Vec<f64> {
     let cx = width as f64 / 2.0;
-    let freq = if wavelength > 1e-12 { 1.0 / wavelength } else { 1.0 };
+    let freq = if wavelength > 1e-12 {
+        1.0 / wavelength
+    } else {
+        1.0
+    };
 
     let wave_left = Wave {
         amplitude: 1.0,
@@ -272,7 +274,11 @@ pub fn double_slit_pattern(
         wave_type: WaveType::Circular,
     };
 
-    let pattern = InterferencePattern { width, height, waves: vec![wave_left, wave_right] };
+    let pattern = InterferencePattern {
+        width,
+        height,
+        waves: vec![wave_left, wave_right],
+    };
     pattern.compute_at_time(0.0)
 }
 
@@ -298,7 +304,10 @@ mod tests {
         // At t = 0.25/freq the argument is π/2 so sin = 1 (amplitude).
         let t_quarter = 0.25 / wave.frequency;
         let v2 = wave_value(&wave, 0.0, 0.0, t_quarter);
-        assert!((v2 - wave.amplitude).abs() < 1e-9, "expected amplitude at quarter period; got {v2}");
+        assert!(
+            (v2 - wave.amplitude).abs() < 1e-9,
+            "expected amplitude at quarter period; got {v2}"
+        );
     }
 
     #[test]
@@ -309,8 +318,14 @@ mod tests {
         // Verify that there is both positive and negative interference.
         let max_val = values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         let min_val = values.iter().copied().fold(f64::INFINITY, f64::min);
-        assert!(max_val > 0.5, "expected constructive interference; max={max_val}");
-        assert!(min_val < -0.5, "expected destructive interference; min={min_val}");
+        assert!(
+            max_val > 0.5,
+            "expected constructive interference; max={max_val}"
+        );
+        assert!(
+            min_val < -0.5,
+            "expected destructive interference; min={min_val}"
+        );
     }
 
     #[test]
@@ -336,10 +351,12 @@ mod tests {
             frequency: 0.05,
             phase: 0.0,
             origin: (0.0, 0.0),
-            wave_type: WaveType::Plane { direction: (1.0, 0.0) },
+            wave_type: WaveType::Plane {
+                direction: (1.0, 0.0),
+            },
         };
         let v0 = wave_value(&wave, 0.0, 0.0, 0.0);
-        let v1 = wave_value(&wave, 10.0, 0.0, 0.0);
+        let v1 = wave_value(&wave, 5.0, 0.0, 0.0);
         // Two spatially separated samples should (generically) differ.
         assert!(
             (v0 - v1).abs() > 1e-6,
@@ -363,7 +380,7 @@ mod tests {
 
     #[test]
     fn to_rgb_returns_correct_buffer_size() {
-        let p = InterferencePattern::new(10, 10, );
+        let p = InterferencePattern::new(10, 10);
         let values = vec![0.5f64; 100];
         let rgb = p.to_rgb(&values, InterferenceColormap::Grayscale);
         assert_eq!(rgb.len(), 100 * 3);

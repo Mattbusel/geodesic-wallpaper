@@ -18,7 +18,8 @@ pub fn wave_at(source: &WaveSource, px: f64, py: f64, time: f64) -> f64 {
     let dy = py - source.y;
     let dist = (dx * dx + dy * dy).sqrt();
     let wavelength = 1.0 / source.frequency; // normalized
-    source.amplitude * (2.0 * PI * source.frequency * time - 2.0 * PI * dist / wavelength + source.phase).cos()
+    source.amplitude
+        * (2.0 * PI * source.frequency * time - 2.0 * PI * dist / wavelength + source.phase).cos()
 }
 
 /// Superposes multiple wave sources at a point.
@@ -35,13 +36,21 @@ pub struct InterferencePattern {
 
 impl InterferencePattern {
     pub fn new(width: u32, height: u32, sources: Vec<WaveSource>) -> Self {
-        Self { width, height, sources }
+        Self {
+            width,
+            height,
+            sources,
+        }
     }
 
     /// Renders the pattern at a given time as an RGB image.
     pub fn render_at_time(&self, t: f64) -> Vec<u8> {
         let total_amplitude: f64 = self.sources.iter().map(|s| s.amplitude).sum();
-        let total_amplitude = if total_amplitude == 0.0 { 1.0 } else { total_amplitude };
+        let total_amplitude = if total_amplitude == 0.0 {
+            1.0
+        } else {
+            total_amplitude
+        };
 
         let w = self.width as f64;
         let h = self.height as f64;
@@ -167,8 +176,20 @@ mod tests {
 
     #[test]
     fn superpose_sums_correctly() {
-        let s1 = WaveSource { x: 0.0, y: 0.0, amplitude: 1.0, frequency: 1.0, phase: 0.0 };
-        let s2 = WaveSource { x: 0.0, y: 0.0, amplitude: 1.0, frequency: 1.0, phase: 0.0 };
+        let s1 = WaveSource {
+            x: 0.0,
+            y: 0.0,
+            amplitude: 1.0,
+            frequency: 1.0,
+            phase: 0.0,
+        };
+        let s2 = WaveSource {
+            x: 0.0,
+            y: 0.0,
+            amplitude: 1.0,
+            frequency: 1.0,
+            phase: 0.0,
+        };
         let combined = superpose(&[s1.clone(), s2.clone()], 0.0, 0.0, 0.0);
         let individual = wave_at(&s1, 0.0, 0.0, 0.0) + wave_at(&s2, 0.0, 0.0, 0.0);
         assert!((combined - individual).abs() < 1e-10);
@@ -182,7 +203,10 @@ mod tests {
             screen_distance: 1.0,
         };
         let intensity = ds.intensity_at(0.0);
-        assert!((intensity - 1.0).abs() < 1e-10, "At 0°, intensity should be 1.0");
+        assert!(
+            (intensity - 1.0).abs() < 1e-10,
+            "At 0°, intensity should be 1.0"
+        );
     }
 
     #[test]
@@ -205,9 +229,13 @@ mod tests {
 
     #[test]
     fn render_returns_correct_buffer_size() {
-        let sources = vec![
-            WaveSource { x: 0.3, y: 0.5, amplitude: 1.0, frequency: 2.0, phase: 0.0 },
-        ];
+        let sources = vec![WaveSource {
+            x: 0.3,
+            y: 0.5,
+            amplitude: 1.0,
+            frequency: 2.0,
+            phase: 0.0,
+        }];
         let pattern = InterferencePattern::new(16, 8, sources);
         let buf = pattern.render_at_time(0.0);
         assert_eq!(buf.len(), 16 * 8 * 3);
@@ -215,7 +243,13 @@ mod tests {
 
     #[test]
     fn constructive_destructive_classification() {
-        let s = WaveSource { x: 0.5, y: 0.5, amplitude: 1.0, frequency: 1.0, phase: 0.0 };
+        let s = WaveSource {
+            x: 0.5,
+            y: 0.5,
+            amplitude: 1.0,
+            frequency: 1.0,
+            phase: 0.0,
+        };
         // At the source location and t=0, wave_at = amplitude * cos(0) = 1.0 (constructive)
         let itype = interference_type_at(&[s], 0.5, 0.5, 0.0);
         assert_eq!(itype, "constructive");
@@ -223,8 +257,20 @@ mod tests {
 
     #[test]
     fn two_source_animation_frame_count() {
-        let s1 = WaveSource { x: 0.3, y: 0.5, amplitude: 1.0, frequency: 1.0, phase: 0.0 };
-        let s2 = WaveSource { x: 0.7, y: 0.5, amplitude: 1.0, frequency: 1.0, phase: 0.0 };
+        let s1 = WaveSource {
+            x: 0.3,
+            y: 0.5,
+            amplitude: 1.0,
+            frequency: 1.0,
+            phase: 0.0,
+        };
+        let s2 = WaveSource {
+            x: 0.7,
+            y: 0.5,
+            amplitude: 1.0,
+            frequency: 1.0,
+            phase: 0.0,
+        };
         let frames = render_two_source_animation([s1, s2], 8, 8, 5);
         assert_eq!(frames.len(), 5);
         assert_eq!(frames[0].len(), 8 * 8 * 3);

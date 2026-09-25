@@ -116,16 +116,24 @@ impl Surface for BoySurface {
         // dg[i][j][d] = ∂_d g_{ij}  (d=0 → ∂u, d=1 → ∂v)
         let dg = [
             [
-                [(metric_uh[0][0] - metric_ul[0][0]) * 0.5 / H,
-                 (metric_vh[0][0] - metric_vl[0][0]) * 0.5 / H],
-                [(metric_uh[0][1] - metric_ul[0][1]) * 0.5 / H,
-                 (metric_vh[0][1] - metric_vl[0][1]) * 0.5 / H],
+                [
+                    (metric_uh[0][0] - metric_ul[0][0]) * 0.5 / H,
+                    (metric_vh[0][0] - metric_vl[0][0]) * 0.5 / H,
+                ],
+                [
+                    (metric_uh[0][1] - metric_ul[0][1]) * 0.5 / H,
+                    (metric_vh[0][1] - metric_vl[0][1]) * 0.5 / H,
+                ],
             ],
             [
-                [(metric_uh[1][0] - metric_ul[1][0]) * 0.5 / H,
-                 (metric_vh[1][0] - metric_vl[1][0]) * 0.5 / H],
-                [(metric_uh[1][1] - metric_ul[1][1]) * 0.5 / H,
-                 (metric_vh[1][1] - metric_vl[1][1]) * 0.5 / H],
+                [
+                    (metric_uh[1][0] - metric_ul[1][0]) * 0.5 / H,
+                    (metric_vh[1][0] - metric_vl[1][0]) * 0.5 / H,
+                ],
+                [
+                    (metric_uh[1][1] - metric_ul[1][1]) * 0.5 / H,
+                    (metric_vh[1][1] - metric_vl[1][1]) * 0.5 / H,
+                ],
             ],
         ];
 
@@ -220,8 +228,10 @@ mod tests {
                 let u = ui as f32 * PI / 8.0;
                 let v = vi as f32 * PI / 8.0;
                 let p = boy.position(u, v);
-                assert!(p.x.is_finite() && p.y.is_finite() && p.z.is_finite(),
-                    "position not finite at u={u:.3} v={v:.3}: {p:?}");
+                assert!(
+                    p.x.is_finite() && p.y.is_finite() && p.z.is_finite(),
+                    "position not finite at u={u:.3} v={v:.3}: {p:?}"
+                );
             }
         }
     }
@@ -249,8 +259,11 @@ mod tests {
         for k in 0..2 {
             for i in 0..2 {
                 for j in 0..2 {
-                    assert!(gamma[k][i][j].is_finite(),
-                        "Γ^{k}_{i}{j} not finite: {}", gamma[k][i][j]);
+                    assert!(
+                        gamma[k][i][j].is_finite(),
+                        "Γ^{k}_{i}{j} not finite: {}",
+                        gamma[k][i][j]
+                    );
                 }
             }
         }
@@ -261,8 +274,10 @@ mod tests {
         let boy = BoySurface::default();
         let gamma = boy.christoffel(1.0, 0.5);
         for k in 0..2 {
-            assert!((gamma[k][0][1] - gamma[k][1][0]).abs() < 1e-3,
-                "Γ^{k}_01 != Γ^{k}_10");
+            assert!(
+                (gamma[k][0][1] - gamma[k][1][0]).abs() < 1e-3,
+                "Γ^{k}_01 != Γ^{k}_10"
+            );
         }
     }
 
@@ -270,7 +285,11 @@ mod tests {
     fn normal_is_unit() {
         let boy = BoySurface::default();
         let n = boy.normal(1.0, 0.5);
-        assert!((n.length() - 1.0).abs() < 1e-4, "normal not unit: {}", n.length());
+        assert!(
+            (n.length() - 1.0).abs() < 1e-4,
+            "normal not unit: {}",
+            n.length()
+        );
     }
 
     #[test]

@@ -150,7 +150,12 @@ impl TextureSynthesizer {
                 };
 
                 // Add slight noise for texture
-                let noise = fbm(nx * params.scale * 2.0, ny * params.scale * 2.0, 2, params.seed) * 0.05;
+                let noise = fbm(
+                    nx * params.scale * 2.0,
+                    ny * params.scale * 2.0,
+                    2,
+                    params.seed,
+                ) * 0.05;
                 let t = (t + noise).clamp(0.0, 1.0);
                 image[y][x] = lerp_color(params.color_a, params.color_b, t);
             }
@@ -310,7 +315,7 @@ pub(crate) fn turb(x: f64, y: f64, seed: u64, octaves: u8) -> f64 {
     let mut frequency = 1.0f64;
 
     for oct in 0..octaves {
-        let oct_seed = seed.wrapping_add(oct as u64 * 0x9E3779B97F4A7C15);
+        let oct_seed = seed.wrapping_add((oct as u64).wrapping_mul(0x9E3779B97F4A7C15));
         value += amplitude * fbm(x * frequency, y * frequency, 1, oct_seed).abs();
         amplitude *= 0.5;
         frequency *= 2.0;
@@ -368,9 +373,15 @@ mod tests {
     #[test]
     fn test_all_types_synthesize() {
         let types = [
-            TextureType::Wood, TextureType::Marble, TextureType::Brick,
-            TextureType::Fabric, TextureType::Metal, TextureType::Water,
-            TextureType::Clouds, TextureType::Lava, TextureType::Concrete,
+            TextureType::Wood,
+            TextureType::Marble,
+            TextureType::Brick,
+            TextureType::Fabric,
+            TextureType::Metal,
+            TextureType::Water,
+            TextureType::Clouds,
+            TextureType::Lava,
+            TextureType::Concrete,
             TextureType::Sand,
         ];
         for tt in types {

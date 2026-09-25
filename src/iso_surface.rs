@@ -18,12 +18,7 @@ pub struct ScalarField2D {
 
 impl ScalarField2D {
     /// Create a zero-filled field.
-    pub fn new(
-        width: usize,
-        height: usize,
-        x_range: (f64, f64),
-        y_range: (f64, f64),
-    ) -> Self {
+    pub fn new(width: usize, height: usize, x_range: (f64, f64), y_range: (f64, f64)) -> Self {
         ScalarField2D {
             values: vec![vec![0.0; width]; height],
             width,
@@ -166,14 +161,14 @@ impl MarchingSquares {
             for i in 0..field.width - 1 {
                 // Cell corners (counter-clockwise from bottom-left)
                 // 0 = bottom-left, 1 = bottom-right, 2 = top-right, 3 = top-left
-                let v0 = field.get(i,     j + 1); // bottom-left  (x0, y1)
+                let v0 = field.get(i, j + 1); // bottom-left  (x0, y1)
                 let v1 = field.get(i + 1, j + 1); // bottom-right (x1, y1)
-                let v2 = field.get(i + 1, j);     // top-right    (x1, y0)
-                let v3 = field.get(i,     j);     // top-left     (x0, y0)
+                let v2 = field.get(i + 1, j); // top-right    (x1, y0)
+                let v3 = field.get(i, j); // top-left     (x0, y0)
 
                 let x0 = field.world_x(i);
                 let x1 = field.world_x(i + 1);
-                let y0 = field.world_y(j);     // top y (smaller j)
+                let y0 = field.world_y(j); // top y (smaller j)
                 let y1 = field.world_y(j + 1); // bottom y
 
                 // Build 4-bit index: bit k = 1 if v_k >= level
@@ -201,17 +196,20 @@ impl MarchingSquares {
                 let p3 = (x0, y0 + t3 * (y1 - y0)); // left edge (top to bottom)
 
                 let seg = |a: (f64, f64), b: (f64, f64)| LineSegment {
-                    x0: a.0, y0: a.1, x1: b.0, y1: b.1,
+                    x0: a.0,
+                    y0: a.1,
+                    x1: b.0,
+                    y1: b.1,
                 };
 
                 // All 16 cases
                 match case {
                     0 | 15 => {}
-                    1  => segments.push(seg(p0, p3)),
-                    2  => segments.push(seg(p0, p1)),
-                    3  => segments.push(seg(p1, p3)),
-                    4  => segments.push(seg(p1, p2)),
-                    5  => {
+                    1 => segments.push(seg(p0, p3)),
+                    2 => segments.push(seg(p0, p1)),
+                    3 => segments.push(seg(p1, p3)),
+                    4 => segments.push(seg(p1, p2)),
+                    5 => {
                         // Ambiguous: resolve by center average
                         let center = (v0 + v1 + v2 + v3) / 4.0;
                         if center >= level {
@@ -222,10 +220,10 @@ impl MarchingSquares {
                             segments.push(seg(p1, p2));
                         }
                     }
-                    6  => segments.push(seg(p0, p2)),
-                    7  => segments.push(seg(p2, p3)),
-                    8  => segments.push(seg(p2, p3)),
-                    9  => segments.push(seg(p0, p2)),
+                    6 => segments.push(seg(p0, p2)),
+                    7 => segments.push(seg(p2, p3)),
+                    8 => segments.push(seg(p2, p3)),
+                    9 => segments.push(seg(p0, p2)),
                     10 => {
                         let center = (v0 + v1 + v2 + v3) / 4.0;
                         if center >= level {
@@ -240,7 +238,7 @@ impl MarchingSquares {
                     12 => segments.push(seg(p1, p3)),
                     13 => segments.push(seg(p0, p1)),
                     14 => segments.push(seg(p0, p3)),
-                    _  => {}
+                    _ => {}
                 }
             }
         }
@@ -390,11 +388,18 @@ pub fn metaball_field(
 ) -> ScalarField2D {
     let centers = centers.to_vec();
     ScalarField2D::from_function(width, height, x_range, y_range, move |x, y| {
-        centers.iter().map(|&(cx, cy, r)| {
-            let d2 = (x - cx).powi(2) + (y - cy).powi(2);
-            let r2 = r * r;
-            if r2 < 1e-12 { 0.0 } else { (-d2 / (2.0 * r2)).exp() }
-        }).sum()
+        centers
+            .iter()
+            .map(|&(cx, cy, r)| {
+                let d2 = (x - cx).powi(2) + (y - cy).powi(2);
+                let r2 = r * r;
+                if r2 < 1e-12 {
+                    0.0
+                } else {
+                    (-d2 / (2.0 * r2)).exp()
+                }
+            })
+            .sum()
     })
 }
 
@@ -432,10 +437,18 @@ fn bresenham(x0: isize, y0: isize, x1: isize, y1: isize) -> Vec<(isize, isize)> 
     let mut err = dx + dy;
     loop {
         pts.push((x, y));
-        if x == x1 && y == y1 { break; }
+        if x == x1 && y == y1 {
+            break;
+        }
         let e2 = 2 * err;
-        if e2 >= dy { err += dy; x += sx; }
-        if e2 <= dx { err += dx; y += sy; }
+        if e2 >= dy {
+            err += dy;
+            x += sx;
+        }
+        if e2 <= dx {
+            err += dx;
+            y += sy;
+        }
     }
     pts
 }
@@ -459,7 +472,10 @@ mod tests {
     fn test_extract_circle_produces_segments() {
         let f = circle_field(50, 50, (-1.0, 1.0), (-1.0, 1.0));
         let segs = MarchingSquares::extract(&f, 0.25);
-        assert!(!segs.is_empty(), "expected contour segments for circle at r=0.5");
+        assert!(
+            !segs.is_empty(),
+            "expected contour segments for circle at r=0.5"
+        );
     }
 
     #[test]

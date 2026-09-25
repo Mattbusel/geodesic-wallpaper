@@ -354,6 +354,10 @@ mod tests {
         // C(0) and C(2π) should coincide (the knot is closed)
         let c0 = TrefoilTube::knot(0.0);
         let c2pi = TrefoilTube::knot(TAU);
-        assert!((c0 - c2pi).length() < 1e-4, "knot not closed: d={}", (c0 - c2pi).length());
+        assert!(
+            (c0 - c2pi).length() < 1e-4,
+            "knot not closed: d={}",
+            (c0 - c2pi).length()
+        );
     }
 }

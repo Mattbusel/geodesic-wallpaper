@@ -159,9 +159,7 @@ impl MultiMonitorManager {
     /// 12-monitor setup has a unique surface per display.
     pub fn assign_surfaces(monitor_count: usize) -> Vec<MonitorConfig> {
         let count = monitor_count.max(1);
-        (0..count)
-            .map(MonitorConfig::default_for_index)
-            .collect()
+        (0..count).map(MonitorConfig::default_for_index).collect()
     }
 
     /// Build a manager from an explicit list of per-monitor configurations.

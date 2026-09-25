@@ -97,9 +97,7 @@ impl GalleryMode {
             surface_start: if enabled { Some(Instant::now()) } else { None },
             phase: TransitionPhase::None,
             phase_start: None,
-            fade_duration: Duration::from_millis(
-                (Self::DEFAULT_FADE_SECS * 1000.0) as u64,
-            ),
+            fade_duration: Duration::from_millis((Self::DEFAULT_FADE_SECS * 1000.0) as u64),
             surface_changed: enabled, // trigger initial surface apply if enabled
         }
     }
@@ -194,7 +192,10 @@ impl GalleryMode {
         // Drive the transition FSM.
         match self.phase {
             TransitionPhase::FadeOut => {
-                if self.phase_start.map_or(false, |s| s.elapsed() >= self.fade_duration) {
+                if self
+                    .phase_start
+                    .map_or(false, |s| s.elapsed() >= self.fade_duration)
+                {
                     // Fade-out complete: switch the surface and begin fade-in.
                     self.current_index = (self.current_index + 1) % ALL_SURFACES.len();
                     self.surface_changed = true;
@@ -204,7 +205,10 @@ impl GalleryMode {
                 }
             }
             TransitionPhase::FadeIn => {
-                if self.phase_start.map_or(false, |s| s.elapsed() >= self.fade_duration) {
+                if self
+                    .phase_start
+                    .map_or(false, |s| s.elapsed() >= self.fade_duration)
+                {
                     // Fade-in complete: steady state.
                     self.phase = TransitionPhase::None;
                     self.phase_start = None;
@@ -314,15 +318,18 @@ mod tests {
         let mut g = GalleryMode::new(false, 30);
         g.next_surface();
         assert!(g.take_surface_changed(), "flag should be set after advance");
-        assert!(!g.take_surface_changed(), "flag should be cleared after first take");
+        assert!(
+            !g.take_surface_changed(),
+            "flag should be cleared after first take"
+        );
     }
 
     #[test]
     fn transition_alpha_during_fade_in_increases() {
         let mut g = GalleryMode::new(false, 30);
         g.next_surface(); // triggers a fade-in
-        // Immediately after triggering the fade, alpha should be near 0.
-        // (Very short elapsed time.)
+                          // Immediately after triggering the fade, alpha should be near 0.
+                          // (Very short elapsed time.)
         let alpha = g.transition_alpha();
         assert!(alpha >= 0.0 && alpha <= 1.0, "alpha out of range: {alpha}");
     }

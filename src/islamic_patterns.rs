@@ -40,7 +40,11 @@ pub struct PatternTile {
 
 impl PatternTile {
     pub fn new(vertices: Vec<(f64, f64)>, fill_color: [u8; 3], outline: bool) -> Self {
-        Self { vertices, fill_color, outline }
+        Self {
+            vertices,
+            fill_color,
+            outline,
+        }
     }
 }
 
@@ -114,8 +118,12 @@ impl IslamicPatternGenerator {
                     PatternType::Star { points } => {
                         Self::generate_star_polygon(center, unit * 0.45, *points, 0.45)
                     }
-                    PatternType::Hexagonal => Self::generate_regular_polygon(center, unit * 0.48, 6),
-                    PatternType::Octagonal => Self::generate_regular_polygon(center, unit * 0.45, 8),
+                    PatternType::Hexagonal => {
+                        Self::generate_regular_polygon(center, unit * 0.48, 6)
+                    }
+                    PatternType::Octagonal => {
+                        Self::generate_regular_polygon(center, unit * 0.45, 8)
+                    }
                     PatternType::Twelve => Self::generate_regular_polygon(center, unit * 0.45, 12),
                     PatternType::Girih => Self::generate_girih_pentagon(center, unit * 0.45),
                 };
@@ -189,7 +197,10 @@ fn generate_regular_polygon(center: (f64, f64), radius: f64, n: usize) -> Vec<(f
     (0..n)
         .map(|i| {
             let angle = 2.0 * PI * i as f64 / n as f64 - PI / 2.0;
-            (center.0 + radius * angle.cos(), center.1 + radius * angle.sin())
+            (
+                center.0 + radius * angle.cos(),
+                center.1 + radius * angle.sin(),
+            )
         })
         .collect()
 }
@@ -279,10 +290,8 @@ mod tests {
 
     #[test]
     fn test_tile_plane_star() {
-        let tiles = IslamicPatternGenerator::tile_plane(
-            PatternType::Star { points: 8 },
-            400, 400, 80.0,
-        );
+        let tiles =
+            IslamicPatternGenerator::tile_plane(PatternType::Star { points: 8 }, 400, 400, 80.0);
         assert!(!tiles.is_empty());
         for tile in &tiles {
             // Each star tile should have 16 vertices (8 points)

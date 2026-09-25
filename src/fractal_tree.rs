@@ -99,7 +99,9 @@ struct LcgRng {
 
 impl LcgRng {
     fn new(seed: u64) -> Self {
-        Self { state: seed.wrapping_add(1) }
+        Self {
+            state: seed.wrapping_add(1),
+        }
     }
 
     fn next_float(&mut self) -> f64 {
@@ -198,12 +200,7 @@ pub fn generate_tree(config: &TreeConfig) -> Vec<TreeSegment> {
 // ---------------------------------------------------------------------------
 
 /// Render tree segments onto a pixel buffer using Bresenham line drawing.
-pub fn render_tree(
-    segments: &[TreeSegment],
-    width: u32,
-    height: u32,
-    bg: [u8; 3],
-) -> Vec<u8> {
+pub fn render_tree(segments: &[TreeSegment], width: u32, height: u32, bg: [u8; 3]) -> Vec<u8> {
     let mut pixels = vec![0u8; (width * height * 3) as usize];
     // Fill background
     for i in 0..(width * height) as usize {
@@ -354,7 +351,10 @@ mod tests {
 
     #[test]
     fn test_render_returns_correct_size() {
-        let config = TreeConfig { iterations: 3, ..TreeConfig::default() };
+        let config = TreeConfig {
+            iterations: 3,
+            ..TreeConfig::default()
+        };
         let segments = generate_tree(&config);
         let pixels = render_tree(&segments, 200, 200, [255, 255, 255]);
         assert_eq!(pixels.len(), 200 * 200 * 3);
@@ -362,7 +362,12 @@ mod tests {
 
     #[test]
     fn test_seasons_produce_different_colors() {
-        let seasons = [Season::Spring, Season::Summer, Season::Autumn, Season::Winter];
+        let seasons = [
+            Season::Spring,
+            Season::Summer,
+            Season::Autumn,
+            Season::Winter,
+        ];
         let colors: Vec<[u8; 3]> = seasons.iter().map(|s| branch_color(5, 5, s)).collect();
         // All four tip colors should differ
         for i in 0..colors.len() {
@@ -378,17 +383,22 @@ mod tests {
 
     #[test]
     fn test_leaf_positions_are_segment_endpoints() {
-        let config = TreeConfig { iterations: 2, ..TreeConfig::default() };
+        let config = TreeConfig {
+            iterations: 2,
+            ..TreeConfig::default()
+        };
         let segments = generate_tree(&config);
         let leaves = leaf_positions(&segments, config.iterations);
         // Each leaf position should match the x2,y2 of a depth=iterations segment
         for (lx, ly) in &leaves {
             let found = segments.iter().any(|s| {
-                s.depth == config.iterations
-                    && (s.x2 - lx).abs() < 1e-4
-                    && (s.y2 - ly).abs() < 1e-4
+                s.depth == config.iterations && (s.x2 - lx).abs() < 1e-4 && (s.y2 - ly).abs() < 1e-4
             });
-            assert!(found, "Leaf position ({}, {}) not found in segments", lx, ly);
+            assert!(
+                found,
+                "Leaf position ({}, {}) not found in segments",
+                lx, ly
+            );
         }
     }
 }

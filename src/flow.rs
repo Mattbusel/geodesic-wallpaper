@@ -143,8 +143,16 @@ impl FlowField {
                 let pv = surface_fn(u, (v + eps).min(1.0));
                 let pv_m = surface_fn(u, (v - eps).max(0.0));
 
-                let tu = [(pu[0] - pu_m[0]) / du, (pu[1] - pu_m[1]) / du, (pu[2] - pu_m[2]) / du];
-                let tv = [(pv[0] - pv_m[0]) / dv, (pv[1] - pv_m[1]) / dv, (pv[2] - pv_m[2]) / dv];
+                let tu = [
+                    (pu[0] - pu_m[0]) / du,
+                    (pu[1] - pu_m[1]) / du,
+                    (pu[2] - pu_m[2]) / du,
+                ];
+                let tv = [
+                    (pv[0] - pv_m[0]) / dv,
+                    (pv[1] - pv_m[1]) / dv,
+                    (pv[2] - pv_m[2]) / dv,
+                ];
 
                 // Geodesic direction = cos(θ) * tu + sin(θ) * tv, then normalise.
                 let cos_t = cfg.flow_angle.cos();
@@ -155,11 +163,17 @@ impl FlowField {
                     cos_t * tu[2] + sin_t * tv[2],
                 ];
                 let speed = (dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]).sqrt();
-                if speed > max_speed { max_speed = speed; }
+                if speed > max_speed {
+                    max_speed = speed;
+                }
 
                 let head = if speed > 1e-8 {
                     let scale = cfg.arrow_length / speed;
-                    [p[0] + dir[0] * scale, p[1] + dir[1] * scale, p[2] + dir[2] * scale]
+                    [
+                        p[0] + dir[0] * scale,
+                        p[1] + dir[1] * scale,
+                        p[2] + dir[2] * scale,
+                    ]
                 } else {
                     p
                 };
@@ -172,10 +186,21 @@ impl FlowField {
         for (tail, head, uv, speed) in raw {
             let norm_speed = (speed / max_speed).clamp(0.0, 1.0);
             let color = lerp_color(&cfg.color_slow, &cfg.color_fast, norm_speed);
-            arrows.push(FlowArrow { tail, head, color, speed: norm_speed, uv });
+            arrows.push(FlowArrow {
+                tail,
+                head,
+                color,
+                speed: norm_speed,
+                uv,
+            });
         }
 
-        Self { arrows, cfg, grid_width: grid_w, grid_height: grid_h }
+        Self {
+            arrows,
+            cfg,
+            grid_width: grid_w,
+            grid_height: grid_h,
+        }
     }
 
     /// Convenience constructor: compute the flow field on the flat plane z=0.
@@ -192,17 +217,25 @@ impl FlowField {
     /// (parametrised by spherical coordinates).
     pub fn on_sphere(cfg: FlowConfig, grid_w: usize, grid_h: usize) -> Self {
         Self::compute(cfg, grid_w, grid_h, |u, v| {
-            let theta = v * PI;       // polar angle  [0, π]
-            let phi   = u * 2.0 * PI; // azimuth      [0, 2π]
-            [theta.sin() * phi.cos(), theta.sin() * phi.sin(), theta.cos()]
+            let theta = v * PI; // polar angle  [0, π]
+            let phi = u * 2.0 * PI; // azimuth      [0, 2π]
+            [
+                theta.sin() * phi.cos(),
+                theta.sin() * phi.sin(),
+                theta.cos(),
+            ]
         })
     }
 
     /// All computed flow arrows.
-    pub fn arrows(&self) -> &[FlowArrow] { &self.arrows }
+    pub fn arrows(&self) -> &[FlowArrow] {
+        &self.arrows
+    }
 
     /// The configuration used to generate this field.
-    pub fn config(&self) -> &FlowConfig { &self.cfg }
+    pub fn config(&self) -> &FlowConfig {
+        &self.cfg
+    }
 
     /// Flat list of arrow tails as `[x, y, z]` triples (for GPU upload).
     pub fn tails_flat(&self) -> Vec<f32> {
@@ -221,7 +254,10 @@ impl FlowField {
 
     /// Regenerate the field with a different flow angle (cheap re-parametrisation).
     pub fn with_angle(self, angle: f32) -> FlowConfig {
-        FlowConfig { flow_angle: angle, ..self.cfg }
+        FlowConfig {
+            flow_angle: angle,
+            ..self.cfg
+        }
     }
 }
 
@@ -254,8 +290,12 @@ mod tests {
     fn arrows_have_finite_positions() {
         let field = FlowField::on_plane(FlowConfig::default(), 6, 6);
         for arrow in field.arrows() {
-            for &v in &arrow.tail { assert!(v.is_finite()); }
-            for &v in &arrow.head { assert!(v.is_finite()); }
+            for &v in &arrow.tail {
+                assert!(v.is_finite());
+            }
+            for &v in &arrow.head {
+                assert!(v.is_finite());
+            }
         }
     }
 
@@ -297,7 +337,10 @@ mod tests {
 
     #[test]
     fn arrow_length_approximately_correct() {
-        let cfg = FlowConfig { arrow_length: 0.1, ..FlowConfig::default() };
+        let cfg = FlowConfig {
+            arrow_length: 0.1,
+            ..FlowConfig::default()
+        };
         let field = FlowField::on_plane(cfg, 4, 4);
         // On a flat plane with uniform tangent vectors the arrow length should
         // be close to arrow_length.
@@ -320,8 +363,14 @@ mod tests {
 
     #[test]
     fn parallel_direction_produces_different_heads() {
-        let cfg_mer = FlowConfig { flow_angle: 0.0, ..FlowConfig::default() };
-        let cfg_par = FlowConfig { flow_angle: std::f32::consts::FRAC_PI_2, ..FlowConfig::default() };
+        let cfg_mer = FlowConfig {
+            flow_angle: 0.0,
+            ..FlowConfig::default()
+        };
+        let cfg_par = FlowConfig {
+            flow_angle: std::f32::consts::FRAC_PI_2,
+            ..FlowConfig::default()
+        };
         let f_mer = FlowField::on_sphere(cfg_mer, 4, 4);
         let f_par = FlowField::on_sphere(cfg_par, 4, 4);
         let differ = f_mer.arrows().iter().zip(f_par.arrows()).any(|(m, p)| {

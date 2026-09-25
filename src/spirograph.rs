@@ -227,7 +227,10 @@ mod tests {
 
     #[test]
     fn generate_curve_returns_correct_count() {
-        let cfg = SpirographConfig { steps: 100, ..Default::default() };
+        let cfg = SpirographConfig {
+            steps: 100,
+            ..Default::default()
+        };
         let pts = generate_curve(&cfg);
         assert_eq!(pts.len(), 101); // 0..=steps
     }
@@ -271,7 +274,11 @@ mod tests {
             ..Default::default()
         };
         let canvas = render(&cfg, 200, 200);
-        let non_bg = canvas.iter().flatten().filter(|&&p| p != [0u8, 0, 0]).count();
+        let non_bg = canvas
+            .iter()
+            .flatten()
+            .filter(|&&p| p != [0u8, 0, 0])
+            .count();
         assert!(non_bg > 0, "Expected at least one drawn pixel");
     }
 
@@ -286,7 +293,10 @@ mod tests {
     fn curve_is_bounded() {
         let cfg = SpirographConfig::default();
         let pts = generate_curve(&cfg);
-        let max_coord = pts.iter().map(|p| p.x.abs().max(p.y.abs())).fold(0.0f64, f64::max);
+        let max_coord = pts
+            .iter()
+            .map(|p| p.x.abs().max(p.y.abs()))
+            .fold(0.0f64, f64::max);
         // r + rho + d = 5 + 3 + 5 = 13 — the hypotrochoid stays within this
         assert!(max_coord < 20.0, "max_coord={max_coord}");
     }

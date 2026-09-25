@@ -57,7 +57,13 @@ impl ParameterRange {
     /// Construct a new parameter range, clamping `current` into `[min, max]`.
     pub fn new(name: impl Into<String>, min: f64, max: f64, current: f64, step: f64) -> Self {
         let current = current.clamp(min, max);
-        Self { name: name.into(), min, max, current, step }
+        Self {
+            name: name.into(),
+            min,
+            max,
+            current,
+            step,
+        }
     }
 
     /// Increment the value by one step, clamping to `max`.
@@ -173,16 +179,16 @@ impl ParameterTuner {
     /// Only the `[tuning]` section is updated; all other keys are preserved.
     /// Returns `Ok(())` on success; errors are non-fatal (logged via `tracing`).
     pub fn persist(&self) -> Result<(), PersistError> {
-        let raw = std::fs::read_to_string(&self.config_path)
-            .unwrap_or_default();
+        let raw = std::fs::read_to_string(&self.config_path).unwrap_or_default();
 
         // Strip the existing [tuning] block if present.
         let stripped = strip_tuning_section(&raw);
 
         // Serialise the tuning section.
-        let tuning = TuningConfig { parameters: self.params.clone() };
-        let tuning_toml = toml::to_string_pretty(&tuning)
-            .map_err(PersistError::Serialize)?;
+        let tuning = TuningConfig {
+            parameters: self.params.clone(),
+        };
+        let tuning_toml = toml::to_string_pretty(&tuning).map_err(PersistError::Serialize)?;
 
         let new_content = if tuning_toml.trim().is_empty() {
             stripped
@@ -190,8 +196,7 @@ impl ParameterTuner {
             format!("{}\n[tuning]\n{}", stripped.trim_end(), tuning_toml)
         };
 
-        std::fs::write(&self.config_path, new_content)
-            .map_err(PersistError::Io)?;
+        std::fs::write(&self.config_path, new_content).map_err(PersistError::Io)?;
 
         Ok(())
     }
@@ -205,10 +210,14 @@ impl ParameterTuner {
         let tuning_table = full.get("tuning")?;
         let tuning: TuningConfig = tuning_table.clone().try_into().ok()?;
         // Clamp all values into their declared ranges.
-        let params = tuning.parameters.into_iter().map(|mut p| {
-            p.current = p.current.clamp(p.min, p.max);
-            p
-        }).collect();
+        let params = tuning
+            .parameters
+            .into_iter()
+            .map(|mut p| {
+                p.current = p.current.clamp(p.min, p.max);
+                p
+            })
+            .collect();
         Some(params)
     }
 }
@@ -347,7 +356,10 @@ mod tests {
         assert!(stripped.contains("[foo]"), "should keep [foo]");
         assert!(stripped.contains("[bar]"), "should keep [bar]");
         assert!(!stripped.contains("[tuning]"), "should remove [tuning]");
-        assert!(!stripped.contains("[[tuning.parameters]]"), "should remove tuning sub-table");
+        assert!(
+            !stripped.contains("[[tuning.parameters]]"),
+            "should remove tuning sub-table"
+        );
     }
 
     #[test]
@@ -358,13 +370,21 @@ mod tests {
 
         let mut tuner = ParameterTuner::from_config(&path);
         // Manually add a parameter since the config has no [tuning] section.
-        tuner.params.push(ParameterRange::new("rotation_speed", 0.0, 1.0, 0.5, 0.1));
+        tuner
+            .params
+            .push(ParameterRange::new("rotation_speed", 0.0, 1.0, 0.5, 0.1));
         tuner.increase(); // 0.5 + 0.1 = 0.6
         tuner.persist().unwrap();
 
         let content = std::fs::read_to_string(&path).unwrap();
-        assert!(content.contains("[tuning]"), "persisted config should have [tuning]");
-        assert!(content.contains("rotation_speed"), "should contain parameter name");
+        assert!(
+            content.contains("[tuning]"),
+            "persisted config should have [tuning]"
+        );
+        assert!(
+            content.contains("rotation_speed"),
+            "should contain parameter name"
+        );
         assert!(content.contains("surface"), "should preserve original keys");
     }
 }

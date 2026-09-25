@@ -60,9 +60,7 @@ pub enum MorphState {
     /// Not morphing; showing surface B entirely.
     AtB,
     /// Morphing from B → A.
-    MorphingBToA {
-        t: f32,
-    },
+    MorphingBToA { t: f32 },
 }
 
 // ── Surface morph ─────────────────────────────────────────────────────────────
@@ -302,7 +300,10 @@ mod tests {
         assert!(m.is_morphing());
         m.tick(2.5); // halfway through 5s
         let t = m.blend_t();
-        assert!(t > 0.0 && t < 1.0, "blend_t should be in (0,1) halfway: {t}");
+        assert!(
+            t > 0.0 && t < 1.0,
+            "blend_t should be in (0,1) halfway: {t}"
+        );
     }
 
     #[test]
@@ -331,7 +332,10 @@ mod tests {
         let pa = m.surface_a.position(0.5, 0.5);
         let pm = m.position(0.5, 0.5);
         let diff = (pa - pm).length();
-        assert!(diff < 1e-4, "at t=0, morphed position should equal surface A: {diff}");
+        assert!(
+            diff < 1e-4,
+            "at t=0, morphed position should equal surface A: {diff}"
+        );
     }
 
     #[test]

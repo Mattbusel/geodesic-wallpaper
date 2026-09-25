@@ -47,11 +47,7 @@ impl Default for StereographicConfig {
 ///
 /// Returns `None` for the north pole itself (theta ≈ 0) where the projection
 /// diverges.
-pub fn sphere_to_plane(
-    theta: f64,
-    phi: f64,
-    config: &StereographicConfig,
-) -> Option<(f64, f64)> {
+pub fn sphere_to_plane(theta: f64, phi: f64, config: &StereographicConfig) -> Option<(f64, f64)> {
     // Cartesian sphere point:
     let r = config.sphere_radius;
     let x = r * theta.sin() * phi.cos();
@@ -76,7 +72,7 @@ pub fn plane_to_sphere(x: f64, y: f64, config: &StereographicConfig) -> (f64, f6
     let denom = r * r + x * x + y * y;
     let sx = 2.0 * r * r * x / denom;
     let sy = 2.0 * r * r * y / denom;
-    let sz = r * (r * r - x * x - y * y) / denom;
+    let sz = r * (x * x + y * y - r * r) / denom;
     (sx, sy, sz)
 }
 
@@ -184,7 +180,11 @@ impl StereographicRenderer {
                 if let Some((px, py)) = sphere_to_plane(theta, phi, config) {
                     let ix = ((px - config.center.0) * scale + config.width as f64 / 2.0) as i64;
                     let iy = ((py - config.center.1) * scale + config.height as f64 / 2.0) as i64;
-                    if ix >= 0 && iy >= 0 && (ix as u32) < config.width && (iy as u32) < config.height {
+                    if ix >= 0
+                        && iy >= 0
+                        && (ix as u32) < config.width
+                        && (iy as u32) < config.height
+                    {
                         buffer[iy as usize][ix as usize] = color;
                     }
                 }
@@ -210,7 +210,11 @@ impl StereographicRenderer {
                 if let Some((px, py)) = sphere_to_plane(theta, phi, config) {
                     let ix = ((px - config.center.0) * scale + config.width as f64 / 2.0) as i64;
                     let iy = ((py - config.center.1) * scale + config.height as f64 / 2.0) as i64;
-                    if ix >= 0 && iy >= 0 && (ix as u32) < config.width && (iy as u32) < config.height {
+                    if ix >= 0
+                        && iy >= 0
+                        && (ix as u32) < config.width
+                        && (iy as u32) < config.height
+                    {
                         buffer[iy as usize][ix as usize] = color;
                     }
                 }
@@ -298,7 +302,7 @@ mod tests {
     #[test]
     fn test_south_pole_projects_to_origin() {
         let cfg = default_cfg(); // sphere_radius = 1
-        // South pole: theta = PI, phi = 0.
+                                 // South pole: theta = PI, phi = 0.
         let result = sphere_to_plane(PI, 0.0, &cfg).unwrap();
         // The south pole projects to the origin (0, 0) for unit sphere.
         assert!(result.0.abs() < 1e-9, "x = {}", result.0);

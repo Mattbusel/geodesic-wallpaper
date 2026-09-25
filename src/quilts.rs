@@ -219,7 +219,9 @@ impl QuiltGenerator {
         let mut rng = Lcg::new(seed);
 
         for i in 0..total {
-            let block_seed = seed.wrapping_add(i as u64).wrapping_mul(rng.next_usize(u64::MAX as usize + 1) as u64 + 1);
+            let block_seed = seed
+                .wrapping_add(i as u64)
+                .wrapping_mul((rng.next_usize(usize::MAX) as u64).wrapping_add(1));
             let b = match block {
                 QuiltBlock::NinePatches => QuiltPattern::generate_nine_patch(palette, block_seed),
                 QuiltBlock::PinwheelBlock => QuiltPattern::generate_pinwheel(palette),
@@ -279,10 +281,18 @@ impl QuiltGenerator {
                 let horizontal = (cell_row + cell_col) % 2 == 0;
                 let color = if horizontal {
                     // Horizontal stripes: alternate by row within cell
-                    if (py / stripe) % 2 == 0 { c0 } else { c1 }
+                    if (py / stripe) % 2 == 0 {
+                        c0
+                    } else {
+                        c1
+                    }
                 } else {
                     // Vertical stripes: alternate by col within cell
-                    if (px / stripe) % 2 == 0 { c0 } else { c1 }
+                    if (px / stripe) % 2 == 0 {
+                        c0
+                    } else {
+                        c1
+                    }
                 };
                 grid[py][px] = color;
             }
@@ -370,8 +380,8 @@ mod tests {
         let block: Vec<Vec<[u8; 3]>> = vec![vec![[1u8, 2, 3]; block_size]; block_size];
         let blocks = vec![block; 6];
         let assembled = QuiltPattern::assemble_quilt(&blocks, 3);
-        assert_eq!(assembled.len(), 20);        // 2 rows × 10
-        assert_eq!(assembled[0].len(), 30);     // 3 cols × 10
+        assert_eq!(assembled.len(), 20); // 2 rows × 10
+        assert_eq!(assembled[0].len(), 30); // 3 cols × 10
     }
 
     #[test]

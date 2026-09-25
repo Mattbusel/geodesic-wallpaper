@@ -83,9 +83,9 @@ impl Grid {
                 let alive = self.cells[y][x] != 0;
                 let neighbors = self.neighbor_count(x, y);
                 next.cells[y][x] = match (alive, neighbors) {
-                    (true, 2) | (true, 3) => 1,  // survives
-                    (false, 3) => 1,               // born
-                    _ => 0,                        // dies
+                    (true, 2) | (true, 3) => 1, // survives
+                    (false, 3) => 1,            // born
+                    _ => 0,                     // dies
                 };
             }
         }
@@ -136,7 +136,12 @@ impl LangtonAnt {
     pub fn new(grid: Grid) -> Self {
         let x = grid.width as i32 / 2;
         let y = grid.height as i32 / 2;
-        Self { x, y, direction: 0, grid }
+        Self {
+            x,
+            y,
+            direction: 0,
+            grid,
+        }
     }
 
     /// Executes one step of Langton's Ant.
@@ -178,7 +183,11 @@ pub fn to_rgb(grid: &Grid, alive_color: [u8; 3], dead_color: [u8; 3]) -> Vec<u8>
     let mut buf = Vec::with_capacity(grid.width * grid.height * 3);
     for y in 0..grid.height {
         for x in 0..grid.width {
-            let color = if grid.cells[y][x] != 0 { alive_color } else { dead_color };
+            let color = if grid.cells[y][x] != 0 {
+                alive_color
+            } else {
+                dead_color
+            };
             buf.push(color[0]);
             buf.push(color[1]);
             buf.push(color[2]);
@@ -273,8 +282,16 @@ mod tests {
         let grid = make_glider(10, 10, 1, 1);
         let next = grid.game_of_life_step();
         // The glider should still have 5 alive cells after 1 step
-        let alive: usize = next.cells.iter().flat_map(|r| r.iter()).filter(|&&c| c != 0).count();
-        assert_eq!(alive, 5, "Glider should still have 5 alive cells after 1 step");
+        let alive: usize = next
+            .cells
+            .iter()
+            .flat_map(|r| r.iter())
+            .filter(|&&c| c != 0)
+            .count();
+        assert_eq!(
+            alive, 5,
+            "Glider should still have 5 alive cells after 1 step"
+        );
     }
 
     #[test]
@@ -286,7 +303,10 @@ mod tests {
         // Rule 110 with pattern 010 (left=0, center=1, right=0) = pattern 2 -> bit 2 of 110 = 1
         // Rule 110 with pattern 000 = 0
         // The center cell (pattern 010) -> RULE_110 >> 2 & 1 = (0b01101110 >> 2) & 1 = 0b011011 & 1 = 1
-        assert_eq!(next.cells[0][4], 1, "Center cell stays alive under Rule 110 with 010 pattern");
+        assert_eq!(
+            next.cells[0][4], 1,
+            "Center cell stays alive under Rule 110 with 010 pattern"
+        );
     }
 
     #[test]
@@ -299,7 +319,10 @@ mod tests {
         ant.step();
         // After step, the cell the ant was on should be flipped
         let after = ant.grid.cells[cy][cx];
-        assert_ne!(before, after, "Langton's Ant should flip the cell it stands on");
+        assert_ne!(
+            before, after,
+            "Langton's Ant should flip the cell it stands on"
+        );
     }
 
     #[test]
@@ -312,7 +335,12 @@ mod tests {
     #[test]
     fn random_grid_has_some_alive_cells() {
         let grid = Grid::random(20, 20, 42);
-        let alive: usize = grid.cells.iter().flat_map(|r| r.iter()).filter(|&&c| c != 0).count();
+        let alive: usize = grid
+            .cells
+            .iter()
+            .flat_map(|r| r.iter())
+            .filter(|&&c| c != 0)
+            .count();
         assert!(alive > 0, "Random grid should have some alive cells");
         assert!(alive < 400, "Random grid should not be entirely alive");
     }

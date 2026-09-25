@@ -28,28 +28,30 @@ impl Palette {
 
     /// Monochrome: black and white.
     pub fn monochrome() -> Self {
-        Palette { colors: vec![(0, 0, 0), (255, 255, 255)] }
+        Palette {
+            colors: vec![(0, 0, 0), (255, 255, 255)],
+        }
     }
 
     /// Commodore 64 16-colour palette.
     pub fn c64() -> Self {
         Palette {
             colors: vec![
-                (0,   0,   0  ), // Black
+                (0, 0, 0),       // Black
                 (255, 255, 255), // White
-                (136, 0,   0  ), // Red
+                (136, 0, 0),     // Red
                 (170, 255, 238), // Cyan
-                (204, 68,  204), // Purple
-                (0,   204, 85 ), // Green
-                (0,   0,   170), // Blue
+                (204, 68, 204),  // Purple
+                (0, 204, 85),    // Green
+                (0, 0, 170),     // Blue
                 (238, 238, 119), // Yellow
-                (221, 136, 85 ), // Orange
-                (102, 68,  0  ), // Brown
+                (221, 136, 85),  // Orange
+                (102, 68, 0),    // Brown
                 (255, 119, 119), // Light Red
-                (51,  51,  51 ), // Dark Grey
+                (51, 51, 51),    // Dark Grey
                 (119, 119, 119), // Grey
                 (170, 255, 102), // Light Green
-                (0,   136, 255), // Light Blue
+                (0, 136, 255),   // Light Blue
                 (187, 187, 187), // Light Grey
             ],
         }
@@ -59,10 +61,10 @@ impl Palette {
     pub fn gameboy() -> Self {
         Palette {
             colors: vec![
-                (15,  56,  15 ), // Darkest green
-                (48,  98,  48 ), // Dark green
-                (139, 172, 15 ), // Light green
-                (155, 188, 15 ), // Lightest green
+                (15, 56, 15),   // Darkest green
+                (48, 98, 48),   // Dark green
+                (139, 172, 15), // Light green
+                (155, 188, 15), // Lightest green
             ],
         }
     }
@@ -71,21 +73,21 @@ impl Palette {
     pub fn ega() -> Self {
         Palette {
             colors: vec![
-                (0,   0,   0  ), // Black
-                (0,   0,   170), // Blue
-                (0,   170, 0  ), // Green
-                (0,   170, 170), // Cyan
-                (170, 0,   0  ), // Red
-                (170, 0,   170), // Magenta
-                (170, 85,  0  ), // Brown
+                (0, 0, 0),       // Black
+                (0, 0, 170),     // Blue
+                (0, 170, 0),     // Green
+                (0, 170, 170),   // Cyan
+                (170, 0, 0),     // Red
+                (170, 0, 170),   // Magenta
+                (170, 85, 0),    // Brown
                 (170, 170, 170), // Light Grey
-                (85,  85,  85 ), // Dark Grey
-                (85,  85,  255), // Bright Blue
-                (85,  255, 85 ), // Bright Green
-                (85,  255, 255), // Bright Cyan
-                (255, 85,  85 ), // Bright Red
-                (255, 85,  255), // Bright Magenta
-                (255, 255, 85 ), // Bright Yellow
+                (85, 85, 85),    // Dark Grey
+                (85, 85, 255),   // Bright Blue
+                (85, 255, 85),   // Bright Green
+                (85, 255, 255),  // Bright Cyan
+                (255, 85, 85),   // Bright Red
+                (255, 85, 255),  // Bright Magenta
+                (255, 255, 85),  // Bright Yellow
                 (255, 255, 255), // White
             ],
         }
@@ -97,15 +99,12 @@ impl Palette {
 /// Return the normalised Bayer threshold matrix for size 2, 4, or 8.
 fn bayer_matrix(n: usize) -> Vec<Vec<f64>> {
     match n {
-        2 => vec![
-            vec![0.0, 2.0],
-            vec![3.0, 1.0],
-        ],
+        2 => vec![vec![0.0, 2.0], vec![3.0, 1.0]],
         4 => vec![
-            vec![ 0.0,  8.0,  2.0, 10.0],
-            vec![12.0,  4.0, 14.0,  6.0],
-            vec![ 3.0, 11.0,  1.0,  9.0],
-            vec![15.0,  7.0, 13.0,  5.0],
+            vec![0.0, 8.0, 2.0, 10.0],
+            vec![12.0, 4.0, 14.0, 6.0],
+            vec![3.0, 11.0, 1.0, 9.0],
+            vec![15.0, 7.0, 13.0, 5.0],
         ],
         // 8×8 Bayer matrix.
         _ => {
@@ -232,12 +231,7 @@ pub fn floyd_steinberg_dither(
 // ── atkinson_dither ───────────────────────────────────────────────────────────
 
 /// Atkinson dithering: distribute only 6/8 of error to 6 neighbours.
-pub fn atkinson_dither(
-    pixels: &[u8],
-    width: usize,
-    height: usize,
-    palette: &Palette,
-) -> Vec<u8> {
+pub fn atkinson_dither(pixels: &[u8], width: usize, height: usize, palette: &Palette) -> Vec<u8> {
     let mut buf: Vec<[i32; 3]> = pixels
         .chunks_exact(3)
         .map(|c| [c[0] as i32, c[1] as i32, c[2] as i32])
@@ -263,11 +257,7 @@ pub fn atkinson_dither(
             let eb = b as i32 - qb as i32;
 
             // 6 neighbours, each gets 1/8 of the error.
-            let neighbors: &[(i32, i32)] = &[
-                (1, 0), (2, 0),
-                (-1, 1), (0, 1), (1, 1),
-                (0, 2),
-            ];
+            let neighbors: &[(i32, i32)] = &[(1, 0), (2, 0), (-1, 1), (0, 1), (1, 1), (0, 2)];
             for &(dx, dy) in neighbors {
                 let nx = x as i32 + dx;
                 let ny = y as i32 + dy;
@@ -286,12 +276,7 @@ pub fn atkinson_dither(
 // ── reduce_to_palette ─────────────────────────────────────────────────────────
 
 /// Map each pixel to the nearest palette colour with no dithering.
-pub fn reduce_to_palette(
-    pixels: &[u8],
-    width: usize,
-    height: usize,
-    palette: &Palette,
-) -> Vec<u8> {
+pub fn reduce_to_palette(pixels: &[u8], width: usize, height: usize, palette: &Palette) -> Vec<u8> {
     let _ = (width, height); // dimensions unused but kept for API symmetry
     pixels
         .chunks_exact(3)

@@ -129,10 +129,7 @@ pub fn wallpaper_transforms(
 ) -> Vec<SymmetryTransform> {
     match group {
         WallpaperGroup::P1 => vec![SymmetryTransform::identity()],
-        WallpaperGroup::P2 => vec![
-            SymmetryTransform::identity(),
-            make_rotation(180.0),
-        ],
+        WallpaperGroup::P2 => vec![SymmetryTransform::identity(), make_rotation(180.0)],
         WallpaperGroup::PM => vec![
             SymmetryTransform::identity(),
             make_reflect_y_translate(0.0, 0.0),
@@ -310,9 +307,7 @@ pub fn wallpaper_transforms(
             }
             t
         }
-        WallpaperGroup::P6 => (0..6)
-            .map(|i| make_rotation(i as f64 * 60.0))
-            .collect(),
+        WallpaperGroup::P6 => (0..6).map(|i| make_rotation(i as f64 * 60.0)).collect(),
         WallpaperGroup::P6M => {
             let mut t: Vec<SymmetryTransform> =
                 (0..6).map(|i| make_rotation(i as f64 * 60.0)).collect();
@@ -333,10 +328,7 @@ pub fn wallpaper_transforms(
 pub fn frieze_transforms(group: &FriezeGroup, repeat: f64) -> Vec<SymmetryTransform> {
     match group {
         FriezeGroup::F1 => vec![SymmetryTransform::identity()],
-        FriezeGroup::F2 => vec![
-            SymmetryTransform::identity(),
-            make_rotation(180.0),
-        ],
+        FriezeGroup::F2 => vec![SymmetryTransform::identity(), make_rotation(180.0)],
         FriezeGroup::F11 => vec![
             SymmetryTransform::identity(),
             // Glide reflection: reflect y, translate x by half
@@ -422,7 +414,9 @@ pub fn draw_circle(image: &mut Vec<u8>, width: u32, cx: f64, cy: f64, r: f64, co
 
 /// LCG random number generator returning f64 in [0, 1).
 fn lcg_next(state: &mut u64) -> f64 {
-    *state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+    *state = state
+        .wrapping_mul(6364136223846793005)
+        .wrapping_add(1442695040888963407);
     (*state >> 33) as f64 / u32::MAX as f64
 }
 

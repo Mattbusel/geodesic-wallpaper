@@ -207,7 +207,8 @@ impl ParticleSystem {
                             let delta = particle.position.sub(other_pos);
                             let dist = delta.magnitude();
                             if dist > 1e-9 && dist < *radius {
-                                let factor = strength * (1.0 - dist / radius) / (dist * particle.mass);
+                                let factor =
+                                    strength * (1.0 - dist / radius) / (dist * particle.mass);
                                 accel = accel.add(delta.normalize().scale(factor));
                             }
                         }
@@ -222,7 +223,10 @@ impl ParticleSystem {
                         }
                     }
 
-                    Force::Wind { direction, strength } => {
+                    Force::Wind {
+                        direction,
+                        strength,
+                    } => {
                         let wind = direction.normalize().scale(*strength / particle.mass);
                         accel = accel.add(wind);
                     }
@@ -378,7 +382,13 @@ mod tests {
     #[test]
     fn gravity_moves_particle_down() {
         let mut sys = make_system();
-        sys.emit(Vec2::new(0.5, 0.5), Vec2::zero(), 1.0, 10_000.0, [255, 255, 255]);
+        sys.emit(
+            Vec2::new(0.5, 0.5),
+            Vec2::zero(),
+            1.0,
+            10_000.0,
+            [255, 255, 255],
+        );
         let forces = vec![Force::Gravity { strength: 9.8 }];
         let initial_y = sys.particles()[0].position.y;
         sys.update(16.0, &forces); // ~1 frame at 60fps
@@ -389,7 +399,13 @@ mod tests {
     #[test]
     fn wind_moves_particle_in_wind_direction() {
         let mut sys = make_system();
-        sys.emit(Vec2::new(0.5, 0.5), Vec2::zero(), 1.0, 10_000.0, [0, 0, 255]);
+        sys.emit(
+            Vec2::new(0.5, 0.5),
+            Vec2::zero(),
+            1.0,
+            10_000.0,
+            [0, 0, 255],
+        );
         let forces = vec![Force::Wind {
             direction: Vec2::new(1.0, 0.0),
             strength: 10.0,
@@ -437,7 +453,13 @@ mod tests {
     fn attraction_pulls_towards_target() {
         let mut sys = make_system();
         let target = Vec2::new(1.0, 0.5);
-        sys.emit(Vec2::new(0.0, 0.5), Vec2::zero(), 1.0, 10_000.0, [0, 255, 0]);
+        sys.emit(
+            Vec2::new(0.0, 0.5),
+            Vec2::zero(),
+            1.0,
+            10_000.0,
+            [0, 255, 0],
+        );
         let forces = vec![Force::Attraction {
             target,
             strength: 50.0,
@@ -445,6 +467,9 @@ mod tests {
         let initial_x = sys.particles()[0].position.x;
         sys.update(100.0, &forces);
         let new_x = sys.particles()[0].position.x;
-        assert!(new_x > initial_x, "particle should be pulled right towards target");
+        assert!(
+            new_x > initial_x,
+            "particle should be pulled right towards target"
+        );
     }
 }

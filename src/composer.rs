@@ -1,7 +1,7 @@
 //! Pattern Composer — composites multiple weighted pattern layers into one image.
 
-use std::sync::Arc;
 use crate::gradient::Gradient;
+use std::sync::Arc;
 
 // ── BlendMode ─────────────────────────────────────────────────────────────────
 
@@ -93,8 +93,16 @@ impl PatternComposer {
         for (idx, px) in pixels.iter_mut().enumerate() {
             let row = idx / w;
             let col = idx % w;
-            let xn = if w > 1 { col as f32 / (w - 1) as f32 } else { 0.5 };
-            let yn = if h > 1 { row as f32 / (h - 1) as f32 } else { 0.5 };
+            let xn = if w > 1 {
+                col as f32 / (w - 1) as f32
+            } else {
+                0.5
+            };
+            let yn = if h > 1 {
+                row as f32 / (h - 1) as f32
+            } else {
+                0.5
+            };
 
             let mut acc = 0.0_f32;
             for layer in &self.layers {
@@ -175,7 +183,11 @@ mod tests {
     #[test]
     fn test_screen_brightens() {
         let s = BlendMode::Screen.apply(0.5, 0.5);
-        assert!(s > 0.5, "screen should be brighter than either input: {}", s);
+        assert!(
+            s > 0.5,
+            "screen should be brighter than either input: {}",
+            s
+        );
     }
 
     #[test]

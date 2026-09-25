@@ -61,8 +61,8 @@ impl FractalRenderer {
 
         for py in 0..h {
             for px in 0..w {
-                let cx = center_x + (px as f64 - width as f64 * 0.5) * scale;
-                let cy = center_y + (py as f64 - height as f64 * 0.5) * scale;
+                let cx = center_x + (px as f64 + 0.5 - width as f64 * 0.5) * scale;
+                let cy = center_y + (py as f64 + 0.5 - height as f64 * 0.5) * scale;
 
                 let smooth = Self::escape_smooth(fractal, cx, cy, max_iter);
                 field[py * w + px] = smooth;
@@ -130,7 +130,11 @@ impl FractalOverlay {
     /// - The base hue is rotated by `fractal_value * blend * 360°`.
     /// - `blend = 0.0` → base unchanged; `blend = 1.0` → full hue rotation.
     pub fn apply(base: &[[u8; 3]], fractal_field: &[f32], blend: f32) -> Vec<[u8; 3]> {
-        assert_eq!(base.len(), fractal_field.len(), "base and field must be the same length");
+        assert_eq!(
+            base.len(),
+            fractal_field.len(),
+            "base and field must be the same length"
+        );
         let blend = blend.clamp(0.0, 1.0);
         base.iter()
             .zip(fractal_field.iter())
@@ -200,20 +204,14 @@ mod tests {
     // 1. Mandelbrot field has correct length
     #[test]
     fn mandelbrot_field_length() {
-        let field = FractalRenderer::render(
-            &FractalType::Mandelbrot,
-            32, 32, 0.0, 0.0, 1.0, 64,
-        );
+        let field = FractalRenderer::render(&FractalType::Mandelbrot, 32, 32, 0.0, 0.0, 1.0, 64);
         assert_eq!(field.len(), 32 * 32);
     }
 
     // 2. All values in [0, 1]
     #[test]
     fn mandelbrot_values_in_range() {
-        let field = FractalRenderer::render(
-            &FractalType::Mandelbrot,
-            32, 32, 0.0, 0.0, 1.0, 64,
-        );
+        let field = FractalRenderer::render(&FractalType::Mandelbrot, 32, 32, 0.0, 0.0, 1.0, 64);
         for v in &field {
             assert!(*v >= 0.0 && *v <= 1.0, "value out of range: {}", v);
         }
@@ -223,8 +221,16 @@ mod tests {
     #[test]
     fn julia_field_length() {
         let field = FractalRenderer::render(
-            &FractalType::Julia { c_re: -0.7, c_im: 0.27 },
-            32, 32, 0.0, 0.0, 1.0, 64,
+            &FractalType::Julia {
+                c_re: -0.7,
+                c_im: 0.27,
+            },
+            32,
+            32,
+            0.0,
+            0.0,
+            1.0,
+            64,
         );
         assert_eq!(field.len(), 32 * 32);
     }
@@ -233,8 +239,16 @@ mod tests {
     #[test]
     fn julia_values_in_range() {
         let field = FractalRenderer::render(
-            &FractalType::Julia { c_re: -0.7, c_im: 0.27 },
-            32, 32, 0.0, 0.0, 1.0, 64,
+            &FractalType::Julia {
+                c_re: -0.7,
+                c_im: 0.27,
+            },
+            32,
+            32,
+            0.0,
+            0.0,
+            1.0,
+            64,
         );
         for v in &field {
             assert!(*v >= 0.0 && *v <= 1.0);
@@ -244,20 +258,14 @@ mod tests {
     // 5. Burning Ship field length
     #[test]
     fn burning_ship_field_length() {
-        let field = FractalRenderer::render(
-            &FractalType::BurningShip,
-            32, 32, -0.5, -0.5, 1.0, 64,
-        );
+        let field = FractalRenderer::render(&FractalType::BurningShip, 32, 32, -0.5, -0.5, 1.0, 64);
         assert_eq!(field.len(), 32 * 32);
     }
 
     // 6. Burning Ship values in [0, 1]
     #[test]
     fn burning_ship_values_in_range() {
-        let field = FractalRenderer::render(
-            &FractalType::BurningShip,
-            32, 32, -0.5, -0.5, 1.0, 64,
-        );
+        let field = FractalRenderer::render(&FractalType::BurningShip, 32, 32, -0.5, -0.5, 1.0, 64);
         for v in &field {
             assert!(*v >= 0.0 && *v <= 1.0);
         }
@@ -268,10 +276,7 @@ mod tests {
     #[test]
     fn mandelbrot_origin_inside() {
         // Render a tiny image centred exactly at (0,0) with high zoom
-        let field = FractalRenderer::render(
-            &FractalType::Mandelbrot,
-            1, 1, 0.0, 0.0, 1.0, 256,
-        );
+        let field = FractalRenderer::render(&FractalType::Mandelbrot, 1, 1, 0.0, 0.0, 1.0, 256);
         // A single pixel at the centre of the Mandelbrot set: 1x1 image,
         // centre=(0,0), scale is 1/(1*0.5)=2, so the pixel maps to cx=0, cy=0.
         // Origin is inside the set → should return 0.0 → normalised stays 0.0.
@@ -282,10 +287,7 @@ mod tests {
     #[test]
     fn mandelbrot_far_point_escapes() {
         // Render at centre (3, 3) — far outside Mandelbrot set
-        let field = FractalRenderer::render(
-            &FractalType::Mandelbrot,
-            4, 4, 3.0, 3.0, 0.1, 64,
-        );
+        let field = FractalRenderer::render(&FractalType::Mandelbrot, 4, 4, 3.0, 3.0, 0.1, 64);
         // Most pixels should be non-zero (escaped)
         let nonzero = field.iter().filter(|&&v| v > 0.0).count();
         assert!(nonzero > 0, "expected non-zero escape values");
@@ -296,10 +298,14 @@ mod tests {
     fn smooth_iter_nonzero_for_escape() {
         let smooth = FractalRenderer::escape_smooth(
             &FractalType::Mandelbrot,
-            2.5, 0.0, // Far outside the set
+            2.5,
+            0.0, // Far outside the set
             256,
         );
-        assert!(smooth > 0.0, "expected non-zero smooth value for escaped point");
+        assert!(
+            smooth > 0.0,
+            "expected non-zero smooth value for escaped point"
+        );
     }
 
     // 10. Overlay output length matches base
@@ -341,10 +347,7 @@ mod tests {
     // 13. Mandelbrot render with max_iter=1 produces mostly escaped pixels
     #[test]
     fn mandelbrot_low_iter() {
-        let field = FractalRenderer::render(
-            &FractalType::Mandelbrot,
-            32, 32, 2.0, 2.0, 1.0, 1,
-        );
+        let field = FractalRenderer::render(&FractalType::Mandelbrot, 32, 32, 2.0, 2.0, 1.0, 1);
         assert_eq!(field.len(), 32 * 32);
         // All values should be in [0, 1]
         for v in &field {
@@ -368,8 +371,16 @@ mod tests {
     #[test]
     fn julia_c_zero_escapes() {
         let field = FractalRenderer::render(
-            &FractalType::Julia { c_re: 0.0, c_im: 0.0 },
-            16, 16, 0.0, 0.0, 0.3, 64,
+            &FractalType::Julia {
+                c_re: 0.0,
+                c_im: 0.0,
+            },
+            16,
+            16,
+            0.0,
+            0.0,
+            0.3,
+            64,
         );
         // With c=0, |z|^2^n grows for |z|>1; the edges should escape
         let nonzero = field.iter().filter(|&&v| v > 0.0).count();

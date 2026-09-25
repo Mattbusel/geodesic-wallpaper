@@ -150,7 +150,12 @@ impl VoronoiArt {
             let y = lcg() * height as f64;
             let weight = 0.5 + lcg() * 0.5; // [0.5, 1.0)
             let color = color_for_scheme(&config.scheme, i, num_sites);
-            sites.push(Site { x, y, color, weight });
+            sites.push(Site {
+                x,
+                y,
+                color,
+                weight,
+            });
         }
 
         Self { config, sites }
@@ -200,11 +205,7 @@ impl VoronoiArt {
                             }
                             let bx = x + nx as f64;
                             let by = y + ny as f64;
-                            if bx < 0.0
-                                || bx >= width as f64
-                                || by < 0.0
-                                || by >= height as f64
-                            {
+                            if bx < 0.0 || bx >= width as f64 || by < 0.0 || by >= height as f64 {
                                 continue;
                             }
                             let n2 = Self::nearest_site(bx, by, &self.sites, self.config.weighted);
@@ -244,12 +245,8 @@ impl VoronoiArt {
 
             for py in 0..height {
                 for px in 0..width {
-                    let nearest = Self::nearest_site(
-                        px as f64,
-                        py as f64,
-                        &self.sites,
-                        self.config.weighted,
-                    );
+                    let nearest =
+                        Self::nearest_site(px as f64, py as f64, &self.sites, self.config.weighted);
                     sums_x[nearest] += px as f64;
                     sums_y[nearest] += py as f64;
                     counts[nearest] += 1;
@@ -291,8 +288,18 @@ mod tests {
     #[test]
     fn test_nearest_site_correctness() {
         let sites = vec![
-            Site { x: 0.0, y: 0.0, color: [255, 0, 0], weight: 1.0 },
-            Site { x: 100.0, y: 0.0, color: [0, 255, 0], weight: 1.0 },
+            Site {
+                x: 0.0,
+                y: 0.0,
+                color: [255, 0, 0],
+                weight: 1.0,
+            },
+            Site {
+                x: 100.0,
+                y: 0.0,
+                color: [0, 255, 0],
+                weight: 1.0,
+            },
         ];
         assert_eq!(VoronoiArt::nearest_site(10.0, 0.0, &sites, false), 0);
         assert_eq!(VoronoiArt::nearest_site(90.0, 0.0, &sites, false), 1);
@@ -312,9 +319,10 @@ mod tests {
         art.lloyd_relax(32, 32, 1);
         let after: Vec<(f64, f64)> = art.sites.iter().map(|s| (s.x, s.y)).collect();
         // At least some sites should move
-        let any_moved = before.iter().zip(after.iter()).any(|((bx, by), (ax, ay))| {
-            (bx - ax).abs() > 1e-6 || (by - ay).abs() > 1e-6
-        });
+        let any_moved = before
+            .iter()
+            .zip(after.iter())
+            .any(|((bx, by), (ax, ay))| (bx - ax).abs() > 1e-6 || (by - ay).abs() > 1e-6);
         assert!(any_moved, "Lloyd relaxation should move at least one site");
     }
 
