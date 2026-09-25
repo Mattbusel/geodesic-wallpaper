@@ -81,7 +81,9 @@ pub struct P4g {
 
 impl P4g {
     pub fn new(period: f32) -> Self {
-        Self { period: period.max(1e-6) }
+        Self {
+            period: period.max(1e-6),
+        }
     }
 
     /// Reduce `(x, y)` modulo the lattice to `[0, period)^2`.
@@ -93,20 +95,30 @@ impl P4g {
 }
 
 impl SymmetryGroup for P4g {
-    fn name(&self) -> &str { "p4g" }
+    fn name(&self) -> &str {
+        "p4g"
+    }
 
-    fn operations(&self) -> usize { 8 }
+    fn operations(&self) -> usize {
+        8
+    }
 
     fn to_fundamental_domain(&self, x: f32, y: f32) -> (f32, f32) {
         let p = self.period;
         let (mut u, mut v) = self.reduce(x, y);
 
         // Fold into [0, p/2]^2 using 180° rotation symmetry
-        if u > p * 0.5 { u = p - u; }
-        if v > p * 0.5 { v = p - v; }
+        if u > p * 0.5 {
+            u = p - u;
+        }
+        if v > p * 0.5 {
+            v = p - v;
+        }
 
         // Fold by the diagonal reflection (glide): if u < v, swap
-        if u < v { std::mem::swap(&mut u, &mut v); }
+        if u < v {
+            std::mem::swap(&mut u, &mut v);
+        }
 
         // Normalise to [0, 1)
         (u / p, v / p)
@@ -158,7 +170,9 @@ pub struct P6m {
 
 impl P6m {
     pub fn new(period: f32) -> Self {
-        Self { period: period.max(1e-6) }
+        Self {
+            period: period.max(1e-6),
+        }
     }
 
     /// Convert rectangular to hexagonal lattice coordinates.
@@ -173,9 +187,13 @@ impl P6m {
 }
 
 impl SymmetryGroup for P6m {
-    fn name(&self) -> &str { "p6m" }
+    fn name(&self) -> &str {
+        "p6m"
+    }
 
-    fn operations(&self) -> usize { 12 }
+    fn operations(&self) -> usize {
+        12
+    }
 
     fn to_fundamental_domain(&self, x: f32, y: f32) -> (f32, f32) {
         let p = self.period;
@@ -200,7 +218,11 @@ impl SymmetryGroup for P6m {
         let angle_deg = angle.to_degrees().rem_euclid(360.0);
         let sector = (angle_deg / 60.0).floor() as u32;
         let local_angle = angle_deg - sector as f32 * 60.0;
-        let folded_angle = if local_angle > 30.0 { 60.0 - local_angle } else { local_angle };
+        let folded_angle = if local_angle > 30.0 {
+            60.0 - local_angle
+        } else {
+            local_angle
+        };
 
         let r = (s * s + t * t).sqrt();
         let (fu, fv) = (
@@ -281,8 +303,14 @@ mod tests {
             let x = i as f32 * 0.3 - 2.0;
             let y = i as f32 * 0.17 - 1.5;
             let (u, v) = p4g.to_fundamental_domain(x, y);
-            assert!((0.0..=1.0).contains(&u), "u out of range: {u} at ({x}, {y})");
-            assert!((0.0..=1.0).contains(&v), "v out of range: {v} at ({x}, {y})");
+            assert!(
+                (0.0..=1.0).contains(&u),
+                "u out of range: {u} at ({x}, {y})"
+            );
+            assert!(
+                (0.0..=1.0).contains(&v),
+                "v out of range: {v} at ({x}, {y})"
+            );
         }
     }
 
@@ -376,9 +404,9 @@ mod tests {
         // The 60° rotation of (1, 0) is (cos60, sin60) = (0.5, sqrt(3)/2)
         let expected_x = 0.5_f32;
         let expected_y = (3.0_f32).sqrt() * 0.5;
-        let found = orbit.iter().any(|&(x, y)| {
-            (x - expected_x).abs() < 1e-5 && (y - expected_y).abs() < 1e-5
-        });
+        let found = orbit
+            .iter()
+            .any(|&(x, y)| (x - expected_x).abs() < 1e-5 && (y - expected_y).abs() < 1e-5);
         assert!(found, "Orbit should contain 60° rotation: {:?}", orbit);
     }
 
@@ -387,9 +415,9 @@ mod tests {
         let p6m = P6m::new(1.0);
         let orbit = p6m.orbit(0.5, 0.3);
         // Reflection of (0.5, 0.3) about x-axis is (0.5, -0.3)
-        let found = orbit.iter().any(|&(x, y)| {
-            (x - 0.5).abs() < 1e-5 && (y - (-0.3)).abs() < 1e-5
-        });
+        let found = orbit
+            .iter()
+            .any(|&(x, y)| (x - 0.5).abs() < 1e-5 && (y - (-0.3)).abs() < 1e-5);
         assert!(found, "Orbit should contain x-axis reflection: {:?}", orbit);
     }
 
@@ -406,6 +434,9 @@ mod tests {
     fn test_sample_pattern_values_in_range() {
         let p6m = P6m::new(1.0);
         let grid = sample_pattern(&p6m, 16, 16, (-2.0, 2.0), (-2.0, 2.0));
-        assert!(grid.iter().all(|&v| (0.0..=1.0).contains(&v)), "values out of range");
+        assert!(
+            grid.iter().all(|&v| (0.0..=1.0).contains(&v)),
+            "values out of range"
+        );
     }
 }

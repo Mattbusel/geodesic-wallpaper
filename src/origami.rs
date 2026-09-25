@@ -46,7 +46,13 @@ pub struct CreaseLine {
 impl CreaseLine {
     /// Construct a new crease line.
     pub fn new(x1: f64, y1: f64, x2: f64, y2: f64, crease_type: CreaseType) -> Self {
-        CreaseLine { x1, y1, x2, y2, crease_type }
+        CreaseLine {
+            x1,
+            y1,
+            x2,
+            y2,
+            crease_type,
+        }
     }
 }
 
@@ -234,20 +240,12 @@ impl OrigamiPatterns {
 fn apply_op(line: &CreaseLine, op: &FoldOperation) -> CreaseLine {
     match op {
         FoldOperation::Fold(_) | FoldOperation::Unfold => line.clone(),
-        FoldOperation::MirrorY => CreaseLine::new(
-            -line.x1,
-            line.y1,
-            -line.x2,
-            line.y2,
-            line.crease_type,
-        ),
-        FoldOperation::MirrorX => CreaseLine::new(
-            line.x1,
-            -line.y1,
-            line.x2,
-            -line.y2,
-            line.crease_type,
-        ),
+        FoldOperation::MirrorY => {
+            CreaseLine::new(-line.x1, line.y1, -line.x2, line.y2, line.crease_type)
+        }
+        FoldOperation::MirrorX => {
+            CreaseLine::new(line.x1, -line.y1, line.x2, -line.y2, line.crease_type)
+        }
         FoldOperation::RotatePoint { cx, cy, angle } => {
             let (x1, y1) = rotate(*cx, *cy, line.x1, line.y1, *angle);
             let (x2, y2) = rotate(*cx, *cy, line.x2, line.y2, *angle);

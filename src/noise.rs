@@ -45,7 +45,9 @@ impl PerlinNoise {
         // LCG: multiplier and increment from Numerical Recipes
         let mut rng = seed.wrapping_add(1);
         for i in (1..256).rev() {
-            rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            rng = rng
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let j = (rng >> 33) as usize % (i + 1);
             table.swap(i, j);
         }
@@ -100,11 +102,7 @@ impl PerlinNoise {
         let ba = self.perm[self.perm[xi + 1] as usize + yi] as u8;
         let bb = self.perm[self.perm[xi + 1] as usize + yi + 1] as u8;
 
-        let x1 = Self::lerp(
-            Self::grad(aa, xf, yf),
-            Self::grad(ba, xf - 1.0, yf),
-            u,
-        );
+        let x1 = Self::lerp(Self::grad(aa, xf, yf), Self::grad(ba, xf - 1.0, yf), u);
         let x2 = Self::lerp(
             Self::grad(ab, xf, yf - 1.0),
             Self::grad(bb, xf - 1.0, yf - 1.0),
@@ -175,7 +173,9 @@ impl NoiseGenerator {
                 // Deterministic hash-based white noise
                 let ix = (x * 1000.0) as i64;
                 let iy = (y * 1000.0) as i64;
-                let h = ix.wrapping_mul(374761393).wrapping_add(iy.wrapping_mul(668265263));
+                let h = ix
+                    .wrapping_mul(374761393)
+                    .wrapping_add(iy.wrapping_mul(668265263));
                 let h = h ^ (h >> 13);
                 let h = h.wrapping_mul(1274126177i64);
                 (h & 0xFFFF) as f32 / 32767.5 - 1.0
@@ -258,7 +258,11 @@ mod tests {
                 max_delta = delta;
             }
         }
-        assert!(max_delta < 0.5, "noise should be smooth; max_delta={}", max_delta);
+        assert!(
+            max_delta < 0.5,
+            "noise should be smooth; max_delta={}",
+            max_delta
+        );
     }
 
     #[test]
@@ -273,7 +277,12 @@ mod tests {
         for i in 1..=100 {
             let t = i as f64 / 100.0;
             let v = PerlinNoise::fade(t);
-            assert!(v >= prev - 1e-12, "fade should be monotone: {} < {}", v, prev);
+            assert!(
+                v >= prev - 1e-12,
+                "fade should be monotone: {} < {}",
+                v,
+                prev
+            );
             prev = v;
         }
     }
@@ -291,7 +300,10 @@ mod tests {
         let y = 4.56;
         let single = noise.sample(x, y);
         let oct = noise.octaves(x, y, 1, 0.5, 2.0);
-        assert!((single - oct).abs() < 1e-10, "1-octave fBm should equal sample");
+        assert!(
+            (single - oct).abs() < 1e-10,
+            "1-octave fBm should equal sample"
+        );
     }
 
     #[test]

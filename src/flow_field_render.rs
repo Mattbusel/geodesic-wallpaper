@@ -82,7 +82,11 @@ impl FlowField {
                 field.push(f(x as f64, y as f64));
             }
         }
-        Self { width, height, field }
+        Self {
+            width,
+            height,
+            field,
+        }
     }
 
     /// Construct a curl-noise flow field.
@@ -95,7 +99,8 @@ impl FlowField {
             // dψ/dy
             let dpsi_dy = (potential(nx, ny + h, seed) - potential(nx, ny - h, seed)) / (2.0 * h);
             // -dψ/dx
-            let neg_dpsi_dx = -(potential(nx + h, ny, seed) - potential(nx - h, ny, seed)) / (2.0 * h);
+            let neg_dpsi_dx =
+                -(potential(nx + h, ny, seed) - potential(nx - h, ny, seed)) / (2.0 * h);
             Vec2::new(dpsi_dy, neg_dpsi_dx)
         })
     }
@@ -122,7 +127,7 @@ impl FlowField {
         let v01 = self.at(x0, y1);
         let v11 = self.at(x1, y1);
 
-        let top    = v00 * (1.0 - tx) + v10 * tx;
+        let top = v00 * (1.0 - tx) + v10 * tx;
         let bottom = v01 * (1.0 - tx) + v11 * tx;
         top * (1.0 - ty) + bottom * ty
     }
@@ -143,15 +148,15 @@ fn potential(x: f64, y: f64, seed: u64) -> f64 {
     let u = smooth(fx);
     let v = smooth(fy);
 
-    let g00 = gradient(xi,     yi,     seed);
-    let g10 = gradient(xi + 1, yi,     seed);
-    let g01 = gradient(xi,     yi + 1, seed);
+    let g00 = gradient(xi, yi, seed);
+    let g10 = gradient(xi + 1, yi, seed);
+    let g01 = gradient(xi, yi + 1, seed);
     let g11 = gradient(xi + 1, yi + 1, seed);
 
-    let n00 = g00.x * fx       + g00.y * fy;
-    let n10 = g10.x * (fx-1.0) + g10.y * fy;
-    let n01 = g01.x * fx       + g01.y * (fy-1.0);
-    let n11 = g11.x * (fx-1.0) + g11.y * (fy-1.0);
+    let n00 = g00.x * fx + g00.y * fy;
+    let n10 = g10.x * (fx - 1.0) + g10.y * fy;
+    let n01 = g01.x * fx + g01.y * (fy - 1.0);
+    let n11 = g11.x * (fx - 1.0) + g11.y * (fy - 1.0);
 
     let x0 = lerp(n00, n10, u);
     let x1 = lerp(n01, n11, u);
@@ -178,7 +183,9 @@ fn hash(xi: i64, yi: i64, seed: u64) -> u64 {
     h ^= yi.unsigned_abs() as u64 * 2246822519;
     h ^= (xi < 0) as u64 * 0xdeadbeef;
     h ^= (yi < 0) as u64 * 0xcafebabe;
-    h = h.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+    h = h
+        .wrapping_mul(6364136223846793005)
+        .wrapping_add(1442695040888963407);
     h
 }
 
@@ -266,8 +273,16 @@ pub fn render_flow_field(
             let tip_x = gx as f64 + norm.x * arrow_scale;
             let tip_y = gy as f64 + norm.y * arrow_scale;
 
-            draw_line(&mut buf, width, height,
-                gx as f64, gy as f64, tip_x, tip_y, arrow_color);
+            draw_line(
+                &mut buf,
+                width,
+                height,
+                gx as f64,
+                gy as f64,
+                tip_x,
+                tip_y,
+                arrow_color,
+            );
             gy += grid_spacing;
         }
         gx += grid_spacing;
@@ -295,7 +310,9 @@ pub fn render_streamlines(streamlines: &[Streamline], width: u32, height: u32) -
 pub fn generate_streamlines(field: &FlowField, num_lines: usize, seed: u64) -> Vec<Streamline> {
     let mut state = seed;
     let mut lcg = move || -> u64 {
-        state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         state
     };
 
@@ -345,7 +362,7 @@ fn draw_line(
         let y = (y0 + t * (y1 - y0)) as i32;
         if x >= 0 && y >= 0 && (x as u32) < width && (y as u32) < height {
             let idx = ((y as u32 * width + x as u32) * 3) as usize;
-            buf[idx]     = color[0];
+            buf[idx] = color[0];
             buf[idx + 1] = color[1];
             buf[idx + 2] = color[2];
         }

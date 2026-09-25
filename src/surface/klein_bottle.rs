@@ -79,7 +79,10 @@ impl KleinBottle {
         let inv_det = if det.abs() > 1e-12 { 1.0 / det } else { 0.0 };
         (
             [[g00, g01], [g01, g11]],
-            [[g11 * inv_det, -g01 * inv_det], [-g01 * inv_det, g00 * inv_det]],
+            [
+                [g11 * inv_det, -g01 * inv_det],
+                [-g01 * inv_det, g00 * inv_det],
+            ],
         )
     }
 }
@@ -114,16 +117,24 @@ impl Surface for KleinBottle {
 
         let dg = [
             [
-                [(metric_uh[0][0] - metric_ul[0][0]) * 0.5 / H,
-                 (metric_vh[0][0] - metric_vl[0][0]) * 0.5 / H],
-                [(metric_uh[0][1] - metric_ul[0][1]) * 0.5 / H,
-                 (metric_vh[0][1] - metric_vl[0][1]) * 0.5 / H],
+                [
+                    (metric_uh[0][0] - metric_ul[0][0]) * 0.5 / H,
+                    (metric_vh[0][0] - metric_vl[0][0]) * 0.5 / H,
+                ],
+                [
+                    (metric_uh[0][1] - metric_ul[0][1]) * 0.5 / H,
+                    (metric_vh[0][1] - metric_vl[0][1]) * 0.5 / H,
+                ],
             ],
             [
-                [(metric_uh[1][0] - metric_ul[1][0]) * 0.5 / H,
-                 (metric_vh[1][0] - metric_vl[1][0]) * 0.5 / H],
-                [(metric_uh[1][1] - metric_ul[1][1]) * 0.5 / H,
-                 (metric_vh[1][1] - metric_vl[1][1]) * 0.5 / H],
+                [
+                    (metric_uh[1][0] - metric_ul[1][0]) * 0.5 / H,
+                    (metric_vh[1][0] - metric_vl[1][0]) * 0.5 / H,
+                ],
+                [
+                    (metric_uh[1][1] - metric_ul[1][1]) * 0.5 / H,
+                    (metric_vh[1][1] - metric_vl[1][1]) * 0.5 / H,
+                ],
             ],
         ];
 
@@ -139,8 +150,7 @@ impl Surface for KleinBottle {
                         // ∂_i g_{lj}  =  dg[l][j][i]
                         // ∂_j g_{li}  =  dg[l][i][j]
                         // ∂_l g_{ij}  =  dg[i][j][l]   (using symmetry g_ij = g_ji)
-                        s += gi[k][l]
-                            * (dg[l][j][i] + dg[l][i][j] - dg[i][j][l]);
+                        s += gi[k][l] * (dg[l][j][i] + dg[l][i][j] - dg[i][j][l]);
                     }
                     gamma[k][i][j] = 0.5 * s;
                 }
@@ -221,8 +231,10 @@ mod tests {
                 let u = ui as f32 * TAU / 8.0;
                 let v = vi as f32 * TAU / 8.0;
                 let p = kb.position(u, v);
-                assert!(p.x.is_finite() && p.y.is_finite() && p.z.is_finite(),
-                    "position not finite at u={u:.3} v={v:.3}: {p:?}");
+                assert!(
+                    p.x.is_finite() && p.y.is_finite() && p.z.is_finite(),
+                    "position not finite at u={u:.3} v={v:.3}: {p:?}"
+                );
             }
         }
     }
@@ -249,8 +261,11 @@ mod tests {
         for k in 0..2 {
             for i in 0..2 {
                 for j in 0..2 {
-                    assert!(gamma[k][i][j].is_finite(),
-                        "Γ^{k}_{i}{j} not finite: {}", gamma[k][i][j]);
+                    assert!(
+                        gamma[k][i][j].is_finite(),
+                        "Γ^{k}_{i}{j} not finite: {}",
+                        gamma[k][i][j]
+                    );
                 }
             }
         }
@@ -261,8 +276,10 @@ mod tests {
         let kb = KleinBottle::default();
         let gamma = kb.christoffel(1.0, 1.0);
         for k in 0..2 {
-            assert!((gamma[k][0][1] - gamma[k][1][0]).abs() < 1e-4,
-                "Γ^{k}_01 != Γ^{k}_10");
+            assert!(
+                (gamma[k][0][1] - gamma[k][1][0]).abs() < 1e-4,
+                "Γ^{k}_01 != Γ^{k}_10"
+            );
         }
     }
 
@@ -270,7 +287,11 @@ mod tests {
     fn normal_is_unit() {
         let kb = KleinBottle::default();
         let n = kb.normal(1.0, 1.0);
-        assert!((n.length() - 1.0).abs() < 1e-4, "normal not unit: {}", n.length());
+        assert!(
+            (n.length() - 1.0).abs() < 1e-4,
+            "normal not unit: {}",
+            n.length()
+        );
     }
 
     #[test]

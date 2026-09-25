@@ -171,7 +171,7 @@ impl PatternMorpher {
                 };
 
                 let (r, g, b_ch) = PixelMorph::lerp_rgb(ca, cb, t_c);
-                out[dst_idx]     = r;
+                out[dst_idx] = r;
                 out[dst_idx + 1] = g;
                 out[dst_idx + 2] = b_ch;
             }
@@ -239,11 +239,7 @@ mod tests {
 
     #[test]
     fn easing_functions_in_unit_range() {
-        let fns = [
-            EasingFn::Linear,
-            EasingFn::EaseInOut,
-            EasingFn::Bounce,
-        ];
+        let fns = [EasingFn::Linear, EasingFn::EaseInOut, EasingFn::Bounce];
         for ease in &fns {
             for i in 0..=20 {
                 let t = i as f64 / 20.0;

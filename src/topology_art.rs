@@ -3,16 +3,18 @@ use std::f64::consts::PI;
 /// Möbius strip parametric surface
 /// u in [0, 2π], v in [-1, 1]
 pub fn mobius_point(u: f64, v: f64) -> (f64, f64, f64) {
-    let x = (1.0 + v/2.0 * (u/2.0).cos()) * u.cos();
-    let y = (1.0 + v/2.0 * (u/2.0).cos()) * u.sin();
-    let z = v/2.0 * (u/2.0).sin();
+    let x = (1.0 + v / 2.0 * (u / 2.0).cos()) * u.cos();
+    let y = (1.0 + v / 2.0 * (u / 2.0).cos()) * u.sin();
+    let z = v / 2.0 * (u / 2.0).sin();
     (x, y, z)
 }
 
 /// Project 3D point onto 2D screen
 pub fn project(x: f64, y: f64, z: f64, fov: f64, cx: f64, cy: f64) -> Option<(i32, i32)> {
     let d = z + 3.5; // distance from viewer
-    if d < 0.01 { return None; }
+    if d < 0.01 {
+        return None;
+    }
     let px = (x * fov / d + cx) as i32;
     let py = (y * fov / d + cy) as i32;
     Some((px, py))
@@ -38,7 +40,9 @@ impl TopologyRenderer {
     pub fn render_mobius(&self, rotation: f64, steps_u: usize, steps_v: usize) -> Vec<u8> {
         let mut pixels = vec![20u8; (self.width * self.height * 4) as usize];
         // set alpha
-        for i in 0..self.width*self.height { pixels[i as usize * 4 + 3] = 255; }
+        for i in 0..self.width * self.height {
+            pixels[i as usize * 4 + 3] = 255;
+        }
 
         let cx = self.width as f64 / 2.0;
         let cy = self.height as f64 / 2.0;
@@ -59,7 +63,9 @@ impl TopologyRenderer {
                         let r = (hue * 255.0) as u8;
                         let g = ((1.0 - hue) * 200.0 + 50.0) as u8;
                         let b = 200u8;
-                        pixels[pi] = r; pixels[pi+1] = g; pixels[pi+2] = b;
+                        pixels[pi] = r;
+                        pixels[pi + 1] = g;
+                        pixels[pi + 2] = b;
                     }
                 }
             }
@@ -70,7 +76,9 @@ impl TopologyRenderer {
     /// Figure-8 Klein bottle (immersion in 3D)
     pub fn render_klein_bottle(&self, rotation: f64) -> Vec<u8> {
         let mut pixels = vec![10u8; (self.width * self.height * 4) as usize];
-        for i in 0..self.width*self.height { pixels[i as usize * 4 + 3] = 255; }
+        for i in 0..self.width * self.height {
+            pixels[i as usize * 4 + 3] = 255;
+        }
         let cx = self.width as f64 / 2.0;
         let cy = self.height as f64 / 2.0;
         let fov = self.width as f64 * 0.35;
@@ -88,8 +96,8 @@ impl TopologyRenderer {
                         let pi = ((py as u32 * self.width + px as u32) * 4) as usize;
                         let t = v / (2.0 * PI);
                         pixels[pi] = (50.0 + t * 180.0) as u8;
-                        pixels[pi+1] = (100.0 + (1.0-t) * 155.0) as u8;
-                        pixels[pi+2] = 220u8;
+                        pixels[pi + 1] = (100.0 + (1.0 - t) * 155.0) as u8;
+                        pixels[pi + 2] = 220u8;
                     }
                 }
             }

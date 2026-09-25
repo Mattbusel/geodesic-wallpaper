@@ -64,7 +64,11 @@ impl Expr {
             Expr::Mul(a, b) => a.eval(x, y) * b.eval(x, y),
             Expr::Div(a, b) => {
                 let denom = b.eval(x, y);
-                if denom.abs() < 1e-10 { 0.0 } else { a.eval(x, y) / denom }
+                if denom.abs() < 1e-10 {
+                    0.0
+                } else {
+                    a.eval(x, y) / denom
+                }
             }
             Expr::Pow(base, exp) => base.eval(x, y).powf(exp.eval(x, y)),
             Expr::Neg(e) => -e.eval(x, y),
@@ -95,7 +99,10 @@ pub fn parse_expression(input: &str) -> Result<Expr, String> {
     let mut pos = 0usize;
     let expr = parse_expr(&tokens, &mut pos)?;
     if pos < tokens.len() {
-        return Err(format!("unexpected token at position {pos}: {:?}", tokens[pos]));
+        return Err(format!(
+            "unexpected token at position {pos}: {:?}",
+            tokens[pos]
+        ));
     }
     Ok(expr)
 }
@@ -104,8 +111,13 @@ pub fn parse_expression(input: &str) -> Result<Expr, String> {
 enum Token {
     Num(f32),
     Ident(String),
-    Plus, Minus, Star, Slash, Caret,
-    LParen, RParen,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Caret,
+    LParen,
+    RParen,
 }
 
 fn tokenize(input: &str) -> Result<Vec<Token>, String> {
@@ -114,14 +126,37 @@ fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     let mut i = 0;
     while i < chars.len() {
         match chars[i] {
-            c if c.is_whitespace() => { i += 1; }
-            '+' => { tokens.push(Token::Plus);   i += 1; }
-            '-' => { tokens.push(Token::Minus);  i += 1; }
-            '*' => { tokens.push(Token::Star);   i += 1; }
-            '/' => { tokens.push(Token::Slash);  i += 1; }
-            '^' => { tokens.push(Token::Caret);  i += 1; }
-            '(' => { tokens.push(Token::LParen); i += 1; }
-            ')' => { tokens.push(Token::RParen); i += 1; }
+            c if c.is_whitespace() => {
+                i += 1;
+            }
+            '+' => {
+                tokens.push(Token::Plus);
+                i += 1;
+            }
+            '-' => {
+                tokens.push(Token::Minus);
+                i += 1;
+            }
+            '*' => {
+                tokens.push(Token::Star);
+                i += 1;
+            }
+            '/' => {
+                tokens.push(Token::Slash);
+                i += 1;
+            }
+            '^' => {
+                tokens.push(Token::Caret);
+                i += 1;
+            }
+            '(' => {
+                tokens.push(Token::LParen);
+                i += 1;
+            }
+            ')' => {
+                tokens.push(Token::RParen);
+                i += 1;
+            }
             c if c.is_ascii_digit() || c == '.' => {
                 let start = i;
                 while i < chars.len() && (chars[i].is_ascii_digit() || chars[i] == '.') {
@@ -256,7 +291,9 @@ fn parse_base(tokens: &[Token], pos: &mut usize) -> Result<Expr, String> {
 /// Minimal value-noise implementation (no external dep required).
 fn value_noise_2d(x: f32, y: f32, seed: u32) -> f32 {
     fn hash(xi: i32, yi: i32, seed: u32) -> f32 {
-        let mut h = seed.wrapping_add(xi.unsigned_abs()).wrapping_mul(2246822519);
+        let mut h = seed
+            .wrapping_add(xi.unsigned_abs())
+            .wrapping_mul(2246822519);
         h ^= yi.unsigned_abs().wrapping_mul(3266489917);
         h = h.wrapping_mul(668265263);
         h ^= h >> 15;
@@ -292,7 +329,11 @@ pub fn fbm(x: f32, y: f32, octaves: u32, seed: u32) -> f32 {
         amplitude *= 0.5;
         frequency *= 2.0;
     }
-    if max_val > 0.0 { value / max_val } else { 0.0 }
+    if max_val > 0.0 {
+        value / max_val
+    } else {
+        0.0
+    }
 }
 
 // ── Procedural surface ────────────────────────────────────────────────────────
@@ -331,9 +372,16 @@ impl ProceduralSurface {
     /// Create a Perlin / fBm noise surface.
     pub fn perlin(scale: f32, octaves: u32, amplitude: f32) -> Self {
         Self {
-            mode: ProceduralMode::Perlin { scale, octaves, amplitude, seed: 42 },
-            u_min: -5.0, u_max: 5.0,
-            v_min: -5.0, v_max: 5.0,
+            mode: ProceduralMode::Perlin {
+                scale,
+                octaves,
+                amplitude,
+                seed: 42,
+            },
+            u_min: -5.0,
+            u_max: 5.0,
+            v_min: -5.0,
+            v_max: 5.0,
             eps: 1e-3,
         }
     }
@@ -343,8 +391,10 @@ impl ProceduralSurface {
         let expr = parse_expression(expr_str)?;
         Ok(Self {
             mode: ProceduralMode::Expression(expr),
-            u_min: -5.0, u_max: 5.0,
-            v_min: -5.0, v_max: 5.0,
+            u_min: -5.0,
+            u_max: 5.0,
+            v_min: -5.0,
+            v_max: 5.0,
             eps: 1e-3,
         })
     }
@@ -355,12 +405,19 @@ impl ProceduralSurface {
         let x = u;
         let y = v;
         match &self.mode {
-            ProceduralMode::Perlin { scale, octaves, amplitude, seed } => {
-                fbm(x * scale, y * scale, *octaves, *seed) * amplitude
-            }
+            ProceduralMode::Perlin {
+                scale,
+                octaves,
+                amplitude,
+                seed,
+            } => fbm(x * scale, y * scale, *octaves, *seed) * amplitude,
             ProceduralMode::Expression(expr) => {
                 let z = expr.eval(x, y);
-                if z.is_finite() { z } else { 0.0 }
+                if z.is_finite() {
+                    z
+                } else {
+                    0.0
+                }
             }
         }
     }
@@ -381,10 +438,7 @@ impl Surface for ProceduralSurface {
     fn metric(&self, u: f32, v: f32) -> [[f32; 2]; 2] {
         let (dzu, dzv) = self.dz(u, v);
         // g_uu = 1 + (∂z/∂u)², g_vv = 1 + (∂z/∂v)², g_uv = (∂z/∂u)(∂z/∂v)
-        [
-            [1.0 + dzu * dzu, dzu * dzv],
-            [dzu * dzv, 1.0 + dzv * dzv],
-        ]
+        [[1.0 + dzu * dzu, dzu * dzv], [dzu * dzv, 1.0 + dzv * dzv]]
     }
 
     fn christoffel(&self, u: f32, v: f32) -> [[[f32; 2]; 2]; 2] {
@@ -422,8 +476,7 @@ impl Surface for ProceduralSurface {
                 for j in 0..2 {
                     let mut sum = 0.0;
                     for l in 0..2 {
-                        sum += g_inv[k][l]
-                            * (dg[i][l][j] + dg[j][l][i] - dg[l][i][j]);
+                        sum += g_inv[k][l] * (dg[i][l][j] + dg[j][l][i] - dg[l][i][j]);
                     }
                     gamma[k][i][j] = 0.5 * sum;
                 }
@@ -548,7 +601,10 @@ mod tests {
         let surf = ProceduralSurface::from_expression("0.5 * sin(x) * cos(y)").unwrap();
         let n = surf.normal(1.0, 1.0);
         let len = n.length();
-        assert!((len - 1.0).abs() < 1e-4, "normal should be unit length: {len}");
+        assert!(
+            (len - 1.0).abs() < 1e-4,
+            "normal should be unit length: {len}"
+        );
     }
 
     #[test]

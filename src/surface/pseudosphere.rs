@@ -125,11 +125,7 @@ impl Pseudosphere {
     fn d2uv_raw(u: f32, v: f32) -> Vec3 {
         let sech_v = 1.0 / v.cosh();
         let tanh_v = v.tanh();
-        Vec3::new(
-            u.sin() * tanh_v * sech_v,
-            -u.cos() * tanh_v * sech_v,
-            0.0,
-        )
+        Vec3::new(u.sin() * tanh_v * sech_v, -u.cos() * tanh_v * sech_v, 0.0)
     }
 }
 
@@ -142,12 +138,7 @@ impl Default for Pseudosphere {
 impl Surface for Pseudosphere {
     fn position(&self, u: f32, v: f32) -> Vec3 {
         let sech_v = 1.0 / v.cosh();
-        self.scale
-            * Vec3::new(
-                u.cos() * sech_v,
-                u.sin() * sech_v,
-                v - v.tanh(),
-            )
+        self.scale * Vec3::new(u.cos() * sech_v, u.sin() * sech_v, v - v.tanh())
     }
 
     fn metric(&self, u: f32, v: f32) -> [[f32; 2]; 2] {

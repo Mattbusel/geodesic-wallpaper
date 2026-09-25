@@ -151,12 +151,24 @@ impl Surface for TorusKnot {
 
         let dg = [
             [
-                [(muh[0][0] - mul[0][0]) * 0.5 / H, (mvh[0][0] - mvl[0][0]) * 0.5 / H],
-                [(muh[0][1] - mul[0][1]) * 0.5 / H, (mvh[0][1] - mvl[0][1]) * 0.5 / H],
+                [
+                    (muh[0][0] - mul[0][0]) * 0.5 / H,
+                    (mvh[0][0] - mvl[0][0]) * 0.5 / H,
+                ],
+                [
+                    (muh[0][1] - mul[0][1]) * 0.5 / H,
+                    (mvh[0][1] - mvl[0][1]) * 0.5 / H,
+                ],
             ],
             [
-                [(muh[1][0] - mul[1][0]) * 0.5 / H, (mvh[1][0] - mvl[1][0]) * 0.5 / H],
-                [(muh[1][1] - mul[1][1]) * 0.5 / H, (mvh[1][1] - mvl[1][1]) * 0.5 / H],
+                [
+                    (muh[1][0] - mul[1][0]) * 0.5 / H,
+                    (mvh[1][0] - mvl[1][0]) * 0.5 / H,
+                ],
+                [
+                    (muh[1][1] - mul[1][1]) * 0.5 / H,
+                    (mvh[1][1] - mvl[1][1]) * 0.5 / H,
+                ],
             ],
         ];
 
@@ -247,8 +259,10 @@ mod tests {
                 let u = ui as f32 * TAU / 8.0;
                 let v = vi as f32 * TAU / 8.0;
                 let p = tk.position(u, v);
-                assert!(p.x.is_finite() && p.y.is_finite() && p.z.is_finite(),
-                    "position not finite at u={u:.3} v={v:.3}: {p:?}");
+                assert!(
+                    p.x.is_finite() && p.y.is_finite() && p.z.is_finite(),
+                    "position not finite at u={u:.3} v={v:.3}: {p:?}"
+                );
             }
         }
     }
@@ -262,7 +276,11 @@ mod tests {
                 let v = vi as f32 * TAU / 8.0;
                 let g = tk.metric(u, v);
                 let det = g[0][0] * g[1][1] - g[0][1] * g[1][0];
-                assert!(g[0][0] > 0.0, "g_00 ≤ 0 at u={u:.3} v={v:.3}: g_00={}", g[0][0]);
+                assert!(
+                    g[0][0] > 0.0,
+                    "g_00 ≤ 0 at u={u:.3} v={v:.3}: g_00={}",
+                    g[0][0]
+                );
                 assert!(det > 0.0, "det(g) ≤ 0 at u={u:.3} v={v:.3}: det={det}");
             }
         }
@@ -275,8 +293,11 @@ mod tests {
         for k in 0..2 {
             for i in 0..2 {
                 for j in 0..2 {
-                    assert!(gamma[k][i][j].is_finite(),
-                        "Γ^{k}_{i}{j} not finite: {}", gamma[k][i][j]);
+                    assert!(
+                        gamma[k][i][j].is_finite(),
+                        "Γ^{k}_{i}{j} not finite: {}",
+                        gamma[k][i][j]
+                    );
                 }
             }
         }
@@ -287,8 +308,10 @@ mod tests {
         let tk = TorusKnot::default();
         let gamma = tk.christoffel(1.0, 1.0);
         for k in 0..2 {
-            assert!((gamma[k][0][1] - gamma[k][1][0]).abs() < 1e-3,
-                "Γ^{k}_01 != Γ^{k}_10");
+            assert!(
+                (gamma[k][0][1] - gamma[k][1][0]).abs() < 1e-3,
+                "Γ^{k}_01 != Γ^{k}_10"
+            );
         }
     }
 
@@ -298,15 +321,23 @@ mod tests {
         let tk = TorusKnot::new(2, 3, 2.0, 0.8, 0.15);
         let p0 = tk.curve(0.0);
         let p1 = tk.curve(TAU);
-        assert!((p0 - p1).length() < 1e-3,
-            "Trefoil not periodic: {:?} vs {:?}", p0, p1);
+        assert!(
+            (p0 - p1).length() < 1e-3,
+            "Trefoil not periodic: {:?} vs {:?}",
+            p0,
+            p1
+        );
     }
 
     #[test]
     fn normal_is_unit() {
         let tk = TorusKnot::default();
         let n = tk.normal(1.0, 1.0);
-        assert!((n.length() - 1.0).abs() < 1e-4, "normal not unit: {}", n.length());
+        assert!(
+            (n.length() - 1.0).abs() < 1e-4,
+            "normal not unit: {}",
+            n.length()
+        );
     }
 
     #[test]
@@ -323,7 +354,9 @@ mod tests {
         let cinquefoil = TorusKnot::new(2, 5, 2.0, 0.8, 0.15);
         let p_trefoil = trefoil.position(1.0, 1.0);
         let p_cinquefoil = cinquefoil.position(1.0, 1.0);
-        assert!((p_trefoil - p_cinquefoil).length() > 0.01,
-            "Different knot types should give different positions");
+        assert!(
+            (p_trefoil - p_cinquefoil).length() > 0.01,
+            "Different knot types should give different positions"
+        );
     }
 }

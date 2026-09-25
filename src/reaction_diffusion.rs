@@ -83,8 +83,8 @@ impl GrayScottConfig {
     /// Create a configuration from a well-known preset.
     pub fn from_preset(preset: Preset) -> Self {
         let (d_u, d_v, feed, kill) = match preset {
-            Preset::Coral   => (0.16, 0.08, 0.060, 0.062),
-            Preset::Spots   => (0.16, 0.08, 0.035, 0.065),
+            Preset::Coral => (0.16, 0.08, 0.060, 0.062),
+            Preset::Spots => (0.16, 0.08, 0.035, 0.065),
             Preset::Stripes => (0.16, 0.08, 0.060, 0.055),
             Preset::Mitosis => (0.28, 0.05, 0.028, 0.057),
         };
@@ -170,7 +170,9 @@ impl GrayScott {
     pub fn seed_noise(&mut self, seed: u64) {
         let mut rng = seed.wrapping_add(1);
         for i in 0..self.u.len() {
-            rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            rng = rng
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let frac = (rng >> 33) as f64 / u32::MAX as f64;
             if frac < 0.05 {
                 self.v[i] = 0.5;
@@ -262,10 +264,14 @@ impl GrayScott {
     }
 
     /// Access the raw U concentration buffer (read-only).
-    pub fn u(&self) -> &[f64] { &self.u }
+    pub fn u(&self) -> &[f64] {
+        &self.u
+    }
 
     /// Access the raw V concentration buffer (read-only).
-    pub fn v(&self) -> &[f64] { &self.v }
+    pub fn v(&self) -> &[f64] {
+        &self.v
+    }
 }
 
 #[cfg(test)]
@@ -307,7 +313,10 @@ mod tests {
         gs.step(1.0);
         let v_after = gs.v();
         assert!(
-            v_before.iter().zip(v_after).any(|(a, b)| (a - b).abs() > 1e-9),
+            v_before
+                .iter()
+                .zip(v_after)
+                .any(|(a, b)| (a - b).abs() > 1e-9),
             "state should change after a step"
         );
     }
@@ -342,7 +351,12 @@ mod tests {
 
     #[test]
     fn all_presets_run_without_panic() {
-        for preset in [Preset::Coral, Preset::Spots, Preset::Stripes, Preset::Mitosis] {
+        for preset in [
+            Preset::Coral,
+            Preset::Spots,
+            Preset::Stripes,
+            Preset::Mitosis,
+        ] {
             let cfg = GrayScottConfig::from_preset(preset);
             let mut gs = GrayScott::new(16, 16, cfg);
             gs.seed_center();
@@ -373,19 +387,43 @@ pub struct GrayScottParams {
 impl GrayScottParams {
     /// Spots preset: `f=0.035, k=0.065`.
     pub fn spots() -> Self {
-        Self { feed_rate: 0.035, kill_rate: 0.065, du: 0.2, dv: 0.1, dt: 1.0 }
+        Self {
+            feed_rate: 0.035,
+            kill_rate: 0.065,
+            du: 0.2,
+            dv: 0.1,
+            dt: 1.0,
+        }
     }
     /// Stripes preset: `f=0.035, k=0.060`.
     pub fn stripes() -> Self {
-        Self { feed_rate: 0.035, kill_rate: 0.060, du: 0.2, dv: 0.1, dt: 1.0 }
+        Self {
+            feed_rate: 0.035,
+            kill_rate: 0.060,
+            du: 0.2,
+            dv: 0.1,
+            dt: 1.0,
+        }
     }
     /// Maze preset: `f=0.029, k=0.057`.
     pub fn maze() -> Self {
-        Self { feed_rate: 0.029, kill_rate: 0.057, du: 0.2, dv: 0.1, dt: 1.0 }
+        Self {
+            feed_rate: 0.029,
+            kill_rate: 0.057,
+            du: 0.2,
+            dv: 0.1,
+            dt: 1.0,
+        }
     }
     /// Bubbles preset: `f=0.013, k=0.053`.
     pub fn bubbles() -> Self {
-        Self { feed_rate: 0.013, kill_rate: 0.053, du: 0.2, dv: 0.1, dt: 1.0 }
+        Self {
+            feed_rate: 0.013,
+            kill_rate: 0.053,
+            du: 0.2,
+            dv: 0.1,
+            dt: 1.0,
+        }
     }
 }
 
@@ -423,7 +461,9 @@ impl GrayScottGrid {
         let mut rng: u64 = 12345678901234567;
         for dy in 0..=radius * 2 {
             for dx in 0..=radius * 2 {
-                rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                rng = rng
+                    .wrapping_mul(6364136223846793005)
+                    .wrapping_add(1442695040888963407);
                 let frac = (rng >> 33) as f64 / u32::MAX as f64;
                 let x = cx.saturating_sub(radius) + dx;
                 let y = cy.saturating_sub(radius) + dy;
@@ -499,9 +539,10 @@ impl GrayScottGrid {
     ///
     /// V is typically in 0..0.4; values are scaled by 2.5 and clamped.
     pub fn to_grayscale(&self) -> Vec<u8> {
-        self.v.iter().map(|&v| {
-            (v * 2.5 * 255.0).clamp(0.0, 255.0) as u8
-        }).collect()
+        self.v
+            .iter()
+            .map(|&v| (v * 2.5 * 255.0).clamp(0.0, 255.0) as u8)
+            .collect()
     }
 
     /// Map V field to RGB bytes using the given colormap (width*height*3 bytes).
@@ -646,7 +687,8 @@ mod gray_scott_grid_tests {
         assert!(
             (final_sum - initial_sum).abs() / initial_sum < 0.5,
             "sum changed too much: initial={:.2}, final={:.2}",
-            initial_sum, final_sum
+            initial_sum,
+            final_sum
         );
     }
 }

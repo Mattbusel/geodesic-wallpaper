@@ -1,4 +1,4 @@
-﻿//! Photomosaic and pixelation effects.
+//! Photomosaic and pixelation effects.
 
 /// How to sample the representative colour of a pixel block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,7 +49,9 @@ fn clamp_block(
 }
 
 fn average_color(pixels: &[[u8; 3]]) -> [u8; 3] {
-    if pixels.is_empty() { return [0, 0, 0]; }
+    if pixels.is_empty() {
+        return [0, 0, 0];
+    }
     let (r, g, b) = pixels.iter().fold((0u64, 0u64, 0u64), |(r, g, b), p| {
         (r + p[0] as u64, g + p[1] as u64, b + p[2] as u64)
     });
@@ -58,31 +60,42 @@ fn average_color(pixels: &[[u8; 3]]) -> [u8; 3] {
 }
 
 fn median_color(pixels: &[[u8; 3]]) -> [u8; 3] {
-    if pixels.is_empty() { return [0, 0, 0]; }
+    if pixels.is_empty() {
+        return [0, 0, 0];
+    }
     let mut rs: Vec<u8> = pixels.iter().map(|p| p[0]).collect();
     let mut gs: Vec<u8> = pixels.iter().map(|p| p[1]).collect();
     let mut bs: Vec<u8> = pixels.iter().map(|p| p[2]).collect();
-    rs.sort_unstable(); gs.sort_unstable(); bs.sort_unstable();
+    rs.sort_unstable();
+    gs.sort_unstable();
+    bs.sort_unstable();
     let m = pixels.len() / 2;
     [rs[m], gs[m], bs[m]]
 }
 
 fn dominant_color(pixels: &[[u8; 3]]) -> [u8; 3] {
-    if pixels.is_empty() { return [0, 0, 0]; }
+    if pixels.is_empty() {
+        return [0, 0, 0];
+    }
     // Quantise to 4-bit per channel, then find most frequent bucket.
-    let mut counts: std::collections::HashMap<(u8, u8, u8), usize> = std::collections::HashMap::new();
+    let mut counts: std::collections::HashMap<(u8, u8, u8), usize> =
+        std::collections::HashMap::new();
     for p in pixels {
         let key = (p[0] >> 4, p[1] >> 4, p[2] >> 4);
         *counts.entry(key).or_insert(0) += 1;
     }
-    let best = counts.into_iter().max_by_key(|&(_, c)| c).map(|(k, _)| k).unwrap();
+    let best = counts
+        .into_iter()
+        .max_by_key(|&(_, c)| c)
+        .map(|(k, _)| k)
+        .unwrap();
     [best.0 << 4, best.1 << 4, best.2 << 4]
 }
 
 fn representative(pixels: &[[u8; 3]], mode: BlendMode) -> [u8; 3] {
     match mode {
-        BlendMode::Average  => average_color(pixels),
-        BlendMode::Median   => median_color(pixels),
+        BlendMode::Average => average_color(pixels),
+        BlendMode::Median => median_color(pixels),
         BlendMode::Dominant => dominant_color(pixels),
     }
 }
@@ -100,7 +113,9 @@ fn color_dist_sq(a: [u8; 3], b: [u8; 3]) -> u64 {
 /// block with the representative colour.
 pub fn pixelate(image: &Vec<Vec<[u8; 3]>>, config: &PixelateConfig) -> Vec<Vec<[u8; 3]>> {
     let h = image.len();
-    if h == 0 { return vec![]; }
+    if h == 0 {
+        return vec![];
+    }
     let w = image[0].len();
     let bs = config.block_size.max(1) as usize;
     let mut out = image.clone();
@@ -125,7 +140,9 @@ pub fn pixelate(image: &Vec<Vec<[u8; 3]>>, config: &PixelateConfig) -> Vec<Vec<[
 /// Replace each tile with the dominant colour of its pixels.
 pub fn mosaic_filter(image: &Vec<Vec<[u8; 3]>>, config: &MosaicConfig) -> Vec<Vec<[u8; 3]>> {
     let h = image.len();
-    if h == 0 { return vec![]; }
+    if h == 0 {
+        return vec![];
+    }
     let w = image[0].len();
     let ts = config.tile_size.max(1) as usize;
     let mut out = image.clone();
@@ -153,7 +170,9 @@ pub struct CircularPixelate;
 impl CircularPixelate {
     pub fn render(image: &Vec<Vec<[u8; 3]>>, cell_radius: u32) -> Vec<Vec<[u8; 3]>> {
         let h = image.len();
-        if h == 0 { return vec![]; }
+        if h == 0 {
+            return vec![];
+        }
         let w = image[0].len();
         let r = cell_radius.max(1) as usize;
         let diameter = r * 2;
@@ -202,22 +221,36 @@ impl ColorReduction {
 
     /// Map every pixel to its nearest colour in `palette`.
     pub fn reduce(&self, image: &Vec<Vec<[u8; 3]>>, palette: &[[u8; 3]]) -> Vec<Vec<[u8; 3]>> {
-        if palette.is_empty() { return image.clone(); }
-        image.iter().map(|row| {
-            row.iter().map(|&px| {
-                *palette.iter().min_by_key(|&&p| color_dist_sq(px, p)).unwrap()
-            }).collect()
-        }).collect()
+        if palette.is_empty() {
+            return image.clone();
+        }
+        image
+            .iter()
+            .map(|row| {
+                row.iter()
+                    .map(|&px| {
+                        *palette
+                            .iter()
+                            .min_by_key(|&&p| color_dist_sq(px, p))
+                            .unwrap()
+                    })
+                    .collect()
+            })
+            .collect()
     }
 
     /// Extract a palette of `n` representative colours via k-means (max 20 iters).
     pub fn extract_palette(&self, image: &Vec<Vec<[u8; 3]>>, n: u8) -> Vec<[u8; 3]> {
         let k = n.max(1) as usize;
         let h = image.len();
-        if h == 0 { return vec![[0, 0, 0]; k]; }
+        if h == 0 {
+            return vec![[0, 0, 0]; k];
+        }
         let w = image[0].len();
         let total = h * w;
-        if total == 0 { return vec![[0, 0, 0]; k]; }
+        if total == 0 {
+            return vec![[0, 0, 0]; k];
+        }
 
         // Init centres evenly spaced across pixels
         let mut centres: Vec<[u8; 3]> = (0..k)
@@ -233,7 +266,9 @@ impl ColorReduction {
 
             for row in image {
                 for &px in row {
-                    let ci = centres.iter().enumerate()
+                    let ci = centres
+                        .iter()
+                        .enumerate()
                         .min_by_key(|&(_, &c)| color_dist_sq(px, c))
                         .map(|(i, _)| i)
                         .unwrap();
@@ -244,11 +279,25 @@ impl ColorReduction {
                 }
             }
 
-            let new_centres: Vec<[u8; 3]> = sums.iter().zip(&counts).enumerate().map(|(i, (s, &c))| {
-                if c == 0 { centres[i] } else { [(s[0]/c) as u8, (s[1]/c) as u8, (s[2]/c) as u8] }
-            }).collect();
+            let new_centres: Vec<[u8; 3]> = sums
+                .iter()
+                .zip(&counts)
+                .enumerate()
+                .map(|(i, (s, &c))| {
+                    match (
+                        s[0].checked_div(c),
+                        s[1].checked_div(c),
+                        s[2].checked_div(c),
+                    ) {
+                        (Some(r), Some(g), Some(b)) => [r as u8, g as u8, b as u8],
+                        _ => centres[i],
+                    }
+                })
+                .collect();
 
-            if new_centres == centres { break; }
+            if new_centres == centres {
+                break;
+            }
             centres = new_centres;
         }
         centres
@@ -264,13 +313,22 @@ mod tests {
     }
 
     fn gradient_image(h: usize, w: usize) -> Vec<Vec<[u8; 3]>> {
-        (0..h).map(|r| (0..w).map(|c| [(r * 255 / h) as u8, (c * 255 / w) as u8, 128]).collect()).collect()
+        (0..h)
+            .map(|r| {
+                (0..w)
+                    .map(|c| [(r * 255 / h) as u8, (c * 255 / w) as u8, 128])
+                    .collect()
+            })
+            .collect()
     }
 
     #[test]
     fn test_pixelate_solid() {
         let img = solid_image(8, 8, [100, 150, 200]);
-        let cfg = PixelateConfig { block_size: 4, blend_mode: BlendMode::Average };
+        let cfg = PixelateConfig {
+            block_size: 4,
+            blend_mode: BlendMode::Average,
+        };
         let out = pixelate(&img, &cfg);
         assert_eq!(out[0][0], [100, 150, 200]);
     }
@@ -278,7 +336,10 @@ mod tests {
     #[test]
     fn test_pixelate_preserves_dims() {
         let img = gradient_image(16, 16);
-        let cfg = PixelateConfig { block_size: 4, blend_mode: BlendMode::Median };
+        let cfg = PixelateConfig {
+            block_size: 4,
+            blend_mode: BlendMode::Median,
+        };
         let out = pixelate(&img, &cfg);
         assert_eq!(out.len(), 16);
         assert_eq!(out[0].len(), 16);
@@ -287,7 +348,10 @@ mod tests {
     #[test]
     fn test_pixelate_dominant() {
         let img = solid_image(4, 4, [200, 200, 200]);
-        let cfg = PixelateConfig { block_size: 2, blend_mode: BlendMode::Dominant };
+        let cfg = PixelateConfig {
+            block_size: 2,
+            blend_mode: BlendMode::Dominant,
+        };
         let out = pixelate(&img, &cfg);
         assert_eq!(out.len(), 4);
     }
@@ -295,7 +359,11 @@ mod tests {
     #[test]
     fn test_mosaic_filter_preserves_dims() {
         let img = gradient_image(16, 16);
-        let cfg = MosaicConfig { tile_size: 4, grid_cols: 4, grid_rows: 4 };
+        let cfg = MosaicConfig {
+            tile_size: 4,
+            grid_cols: 4,
+            grid_rows: 4,
+        };
         let out = mosaic_filter(&img, &cfg);
         assert_eq!(out.len(), 16);
         assert_eq!(out[0].len(), 16);
@@ -304,7 +372,11 @@ mod tests {
     #[test]
     fn test_mosaic_filter_solid() {
         let img = solid_image(8, 8, [50, 60, 70]);
-        let cfg = MosaicConfig { tile_size: 4, grid_cols: 2, grid_rows: 2 };
+        let cfg = MosaicConfig {
+            tile_size: 4,
+            grid_cols: 2,
+            grid_rows: 2,
+        };
         let out = mosaic_filter(&img, &cfg);
         // dominant of solid block should round to nearest 16
         assert_eq!(out[0][0], out[4][4]);
@@ -338,7 +410,10 @@ mod tests {
     #[test]
     fn test_empty_image_pixelate() {
         let img: Vec<Vec<[u8; 3]>> = vec![];
-        let cfg = PixelateConfig { block_size: 4, blend_mode: BlendMode::Average };
+        let cfg = PixelateConfig {
+            block_size: 4,
+            blend_mode: BlendMode::Average,
+        };
         let out = pixelate(&img, &cfg);
         assert!(out.is_empty());
     }

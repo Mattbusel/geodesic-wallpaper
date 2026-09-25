@@ -222,9 +222,7 @@ impl FieldRenderer {
         let cfg = &self.config;
 
         // Build grid cell indices.
-        let cells: Vec<(usize, usize)> = (0..n)
-            .flat_map(|i| (0..n).map(move |j| (i, j)))
-            .collect();
+        let cells: Vec<(usize, usize)> = (0..n).flat_map(|i| (0..n).map(move |j| (i, j))).collect();
 
         // Compute arrows in parallel.
         let arrows: Vec<FlowArrow> = cells
@@ -234,28 +232,16 @@ impl FieldRenderer {
                 let v0 = v_min + (j as f64 + 0.5) * dv_param;
 
                 // Fixed initial direction per cell (deterministic, spread over [0, 2π]).
-                let angle = 2.0
-                    * std::f64::consts::PI
-                    * (i * n + j) as f64
-                    / (n * n) as f64;
+                let angle = 2.0 * std::f64::consts::PI * (i * n + j) as f64 / (n * n) as f64;
                 let du_init = angle.cos();
                 let dv_init = angle.sin();
 
                 // Integrate and classify fate.
-                let (fate, final_u, final_v) = classify_fate(
-                    u0,
-                    v0,
-                    du_init,
-                    dv_init,
-                    cfg,
-                    &step_fn,
-                );
+                let (fate, final_u, final_v) =
+                    classify_fate(u0, v0, du_init, dv_init, cfg, &step_fn);
 
                 // Direction arrow points toward where the geodesic went.
-                let raw_dir = [
-                    (final_u - u0) as f32,
-                    (final_v - v0) as f32,
-                ];
+                let raw_dir = [(final_u - u0) as f32, (final_v - v0) as f32];
                 let dir = normalise2(raw_dir);
 
                 FlowArrow::new(
@@ -380,9 +366,8 @@ mod tests {
     #[test]
     fn escape_detected_for_fast_step() {
         // A step function that immediately balloons the position.
-        let fast_step = |_u: f64, _v: f64, _du: f64, _dv: f64| {
-            (1000.0_f64, 1000.0_f64, 0.0_f64, 0.0_f64)
-        };
+        let fast_step =
+            |_u: f64, _v: f64, _du: f64, _dv: f64| (1000.0_f64, 1000.0_f64, 0.0_f64, 0.0_f64);
         let cfg = FieldConfig {
             grid_n: 2,
             fate_steps: 5,
@@ -424,7 +409,11 @@ mod tests {
 
     #[test]
     fn geodesic_fate_colors_in_range() {
-        for fate in [GeodesicFate::Bounded, GeodesicFate::Escaping, GeodesicFate::Looping] {
+        for fate in [
+            GeodesicFate::Bounded,
+            GeodesicFate::Escaping,
+            GeodesicFate::Looping,
+        ] {
             let c = fate.color(0.8);
             for ch in c.iter() {
                 assert!(*ch >= 0.0 && *ch <= 1.0, "color channel {ch} out of range");

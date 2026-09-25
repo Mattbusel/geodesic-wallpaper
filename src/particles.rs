@@ -144,8 +144,8 @@ impl ParticleSystem {
             self.config.base_color
         };
 
-        let lifetime = self.config.lifetime_frames
-            + self.rng.gen_range(0..=self.config.lifetime_frames / 4);
+        let lifetime =
+            self.config.lifetime_frames + self.rng.gen_range(0..=self.config.lifetime_frames / 4);
 
         let p = &mut self.pool[slot];
         p.geo = Geodesic::new(u, v, du * speed, dv * speed, lifetime, self.color_idx);
@@ -205,11 +205,11 @@ impl ParticleSystem {
 
 fn default_palette() -> Vec<[f32; 4]> {
     vec![
-        [0.3, 0.8, 1.0, 0.9],  // cyan
-        [1.0, 0.4, 0.8, 0.9],  // pink
-        [0.5, 1.0, 0.5, 0.9],  // green
-        [1.0, 0.8, 0.2, 0.9],  // gold
-        [0.7, 0.4, 1.0, 0.9],  // violet
+        [0.3, 0.8, 1.0, 0.9], // cyan
+        [1.0, 0.4, 0.8, 0.9], // pink
+        [0.5, 1.0, 0.5, 0.9], // green
+        [1.0, 0.8, 0.2, 0.9], // gold
+        [0.7, 0.4, 1.0, 0.9], // violet
     ]
 }
 
@@ -239,7 +239,10 @@ mod tests {
         let mut sys = make_system();
         let surf = Torus::new(2.0, 0.7);
         sys.tick(&surf);
-        assert!(sys.alive_count() > 0, "particles should spawn on first tick");
+        assert!(
+            sys.alive_count() > 0,
+            "particles should spawn on first tick"
+        );
     }
 
     #[test]

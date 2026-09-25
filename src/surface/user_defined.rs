@@ -116,7 +116,7 @@ impl UserDefinedSurface {
     /// Compute the surface normal at `(u, v)` via central finite differences.
     pub fn normal(&self, u: f32, v: f32) -> [f32; 3] {
         let eps = 1e-4_f32;
-        let p  = self.sample(u, v);
+        let p = self.sample(u, v);
         let px = self.sample(u + eps, v);
         let py = self.sample(u, v + eps);
         let tx = [px[0] - p[0], px[1] - p[1], px[2] - p[2]];
@@ -160,14 +160,18 @@ fn eval(e: &Expr, x: f64, y: f64) -> f64 {
         Expr::X => x,
         Expr::Y => y,
         Expr::Pi => std::f64::consts::PI,
-        Expr::E  => std::f64::consts::E,
+        Expr::E => std::f64::consts::E,
         Expr::Neg(a) => -eval(a, x, y),
         Expr::Add(a, b) => eval(a, x, y) + eval(b, x, y),
         Expr::Sub(a, b) => eval(a, x, y) - eval(b, x, y),
         Expr::Mul(a, b) => eval(a, x, y) * eval(b, x, y),
         Expr::Div(a, b) => {
             let d = eval(b, x, y);
-            if d.abs() < 1e-300 { f64::NAN } else { eval(a, x, y) / d }
+            if d.abs() < 1e-300 {
+                f64::NAN
+            } else {
+                eval(a, x, y) / d
+            }
         }
         Expr::Pow(a, b) => eval(a, x, y).powf(eval(b, x, y)),
         Expr::Func1(name, a) => {
@@ -212,9 +216,16 @@ struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    fn new(s: &'a str) -> Self { Self { input: s.as_bytes(), pos: 0 } }
+    fn new(s: &'a str) -> Self {
+        Self {
+            input: s.as_bytes(),
+            pos: 0,
+        }
+    }
 
-    fn peek(&self) -> Option<u8> { self.input.get(self.pos).copied() }
+    fn peek(&self) -> Option<u8> {
+        self.input.get(self.pos).copied()
+    }
 
     fn skip_ws(&mut self) {
         while matches!(self.peek(), Some(b' ' | b'\t' | b'\n' | b'\r')) {
@@ -231,8 +242,15 @@ impl<'a> Parser<'a> {
     fn expect(&mut self, ch: u8) -> Result<(), ParseError> {
         self.skip_ws();
         match self.peek() {
-            Some(c) if c == ch => { self.pos += 1; Ok(()) }
-            other => Err(ParseError(format!("expected '{}', got {:?}", ch as char, other.map(|c| c as char)))),
+            Some(c) if c == ch => {
+                self.pos += 1;
+                Ok(())
+            }
+            other => Err(ParseError(format!(
+                "expected '{}', got {:?}",
+                ch as char,
+                other.map(|c| c as char)
+            ))),
         }
     }
 
@@ -245,8 +263,14 @@ impl<'a> Parser<'a> {
         loop {
             self.skip_ws();
             match self.peek() {
-                Some(b'+') => { self.pos += 1; left = Expr::Add(Box::new(left), Box::new(self.parse_mul()?)); }
-                Some(b'-') => { self.pos += 1; left = Expr::Sub(Box::new(left), Box::new(self.parse_mul()?)); }
+                Some(b'+') => {
+                    self.pos += 1;
+                    left = Expr::Add(Box::new(left), Box::new(self.parse_mul()?));
+                }
+                Some(b'-') => {
+                    self.pos += 1;
+                    left = Expr::Sub(Box::new(left), Box::new(self.parse_mul()?));
+                }
                 _ => break,
             }
         }
@@ -268,7 +292,10 @@ impl<'a> Parser<'a> {
                         left = Expr::Mul(Box::new(left), Box::new(self.parse_unary()?));
                     }
                 }
-                Some(b'/') => { self.pos += 1; left = Expr::Div(Box::new(left), Box::new(self.parse_unary()?)); }
+                Some(b'/') => {
+                    self.pos += 1;
+                    left = Expr::Div(Box::new(left), Box::new(self.parse_unary()?));
+                }
                 _ => break,
             }
         }
@@ -308,26 +335,42 @@ impl<'a> Parser<'a> {
             }
             Some(c) if c.is_ascii_digit() || c == b'.' => self.parse_number(),
             Some(c) if c.is_ascii_alphabetic() || c == b'_' => self.parse_ident_or_func(),
-            other => Err(ParseError(format!("unexpected token: {:?}", other.map(|c| c as char)))),
+            other => Err(ParseError(format!(
+                "unexpected token: {:?}",
+                other.map(|c| c as char)
+            ))),
         }
     }
 
     fn parse_number(&mut self) -> Result<Expr, ParseError> {
         let start = self.pos;
-        while matches!(self.peek(), Some(b'0'..=b'9' | b'.' | b'e' | b'E' | b'+' | b'-')) {
+        while matches!(
+            self.peek(),
+            Some(b'0'..=b'9' | b'.' | b'e' | b'E' | b'+' | b'-')
+        ) {
             // Only allow + / - after e/E.
             let c = self.peek().unwrap();
-            if (c == b'+' || c == b'-') && self.pos == start { break; }
+            if (c == b'+' || c == b'-') && self.pos == start {
+                break;
+            }
             if (c == b'+' || c == b'-') {
                 // Allowed only immediately after e/E.
-                let prev = if self.pos > start { self.input[self.pos - 1] } else { 0 };
-                if prev != b'e' && prev != b'E' { break; }
+                let prev = if self.pos > start {
+                    self.input[self.pos - 1]
+                } else {
+                    0
+                };
+                if prev != b'e' && prev != b'E' {
+                    break;
+                }
             }
             self.pos += 1;
         }
         let s = std::str::from_utf8(&self.input[start..self.pos])
             .map_err(|e| ParseError(e.to_string()))?;
-        s.parse::<f64>().map(Expr::Num).map_err(|e| ParseError(e.to_string()))
+        s.parse::<f64>()
+            .map(Expr::Num)
+            .map_err(|e| ParseError(e.to_string()))
     }
 
     fn parse_ident_or_func(&mut self) -> Result<Expr, ParseError> {
@@ -355,7 +398,11 @@ impl<'a> Parser<'a> {
                 self.pos += 1;
                 let arg2 = self.parse_expr()?;
                 self.expect(b')')?;
-                return Ok(Expr::Func2(name.to_string(), Box::new(arg1), Box::new(arg2)));
+                return Ok(Expr::Func2(
+                    name.to_string(),
+                    Box::new(arg1),
+                    Box::new(arg2),
+                ));
             }
             self.expect(b')')?;
             return Ok(Expr::Func1(name.to_string(), Box::new(arg1)));
@@ -386,7 +433,8 @@ mod tests {
         UserDefinedSurface::new(UserSurfaceConfig {
             z_expr: expr.to_string(),
             ..UserSurfaceConfig::default()
-        }).expect("parse should succeed")
+        })
+        .expect("parse should succeed")
     }
 
     #[test]

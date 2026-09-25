@@ -98,8 +98,8 @@ impl EscherGenerator {
         if colors.is_empty() {
             return vec![];
         }
-        let w = radius * 3.0_f64.sqrt();       // horizontal spacing
-        let h = radius * 1.5;                   // vertical spacing
+        let w = radius * 3.0_f64.sqrt(); // horizontal spacing
+        let h = radius * 1.5; // vertical spacing
 
         let mut tiles = Vec::new();
         for row in 0..rows {
@@ -144,12 +144,7 @@ impl EscherGenerator {
         let mut canvas = vec![vec![[30u8, 30u8, 30u8]; w]; h];
 
         let tile_size = (scale * 20.0).max(4.0) as usize;
-        let colors: [[u8; 3]; 4] = [
-            [200, 80, 50],
-            [50, 160, 80],
-            [60, 80, 200],
-            [200, 160, 50],
-        ];
+        let colors: [[u8; 3]; 4] = [[200, 80, 50], [50, 160, 80], [60, 80, 200], [200, 160, 50]];
 
         let mut rng = seed;
         let cols = (w / tile_size).max(1);
@@ -157,7 +152,9 @@ impl EscherGenerator {
 
         for row in 0..rows {
             for col in 0..cols {
-                rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                rng = rng
+                    .wrapping_mul(6364136223846793005)
+                    .wrapping_add(1442695040888963407);
                 let rotation = (rng >> 33) as usize % 4; // 0, 1, 2, 3 → 0°, 90°, 180°, 270°
                 let color = colors[((row + col + rotation) % colors.len())];
 
@@ -218,16 +215,8 @@ impl EscherGenerator {
         let (x, y) = point;
         match group {
             1 => vec![(x, y)],
-            2 => vec![
-                (x, y),
-                (-x, -y),
-            ],
-            4 => vec![
-                (x, y),
-                (-y, x),
-                (-x, -y),
-                (y, -x),
-            ],
+            2 => vec![(x, y), (-x, -y)],
+            4 => vec![(x, y), (-y, x), (-x, -y), (y, -x)],
             6 => {
                 // 60° rotations
                 let angles: Vec<f64> = (0..6).map(|k| k as f64 * PI / 3.0).collect();
@@ -266,7 +255,11 @@ fn fill_polygon(
         return;
     }
 
-    let min_y = vertices.iter().map(|v| v.1).fold(f64::INFINITY, f64::min).max(0.0) as usize;
+    let min_y = vertices
+        .iter()
+        .map(|v| v.1)
+        .fold(f64::INFINITY, f64::min)
+        .max(0.0) as usize;
     let max_y = vertices
         .iter()
         .map(|v| v.1)
@@ -408,7 +401,11 @@ mod tests {
             color: [255, 0, 0],
         };
         let canvas = g.render_tiles(&[tile], 100, 80, [0, 0, 0]);
-        let red_pixels = canvas.iter().flatten().filter(|&&p| p == [255u8, 0, 0]).count();
+        let red_pixels = canvas
+            .iter()
+            .flatten()
+            .filter(|&&p| p == [255u8, 0, 0])
+            .count();
         assert!(red_pixels > 0);
     }
 

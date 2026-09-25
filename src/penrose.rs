@@ -145,7 +145,10 @@ impl PenroseTiling {
 
             let v0 = (cx, cy);
             let v1 = (cx + r * angle0.cos(), cy + r * angle0.sin());
-            let v2 = (cx + r * PHI * angle_mid.cos(), cy + r * PHI * angle_mid.sin());
+            let v2 = (
+                cx + r * PHI * angle_mid.cos(),
+                cy + r * PHI * angle_mid.sin(),
+            );
             let v3 = (cx + r * angle1.cos(), cy + r * angle1.sin());
 
             tiles.push(PenroseTile {
@@ -155,7 +158,11 @@ impl PenroseTiling {
             });
         }
 
-        Self { center, radius, initial_tiles: tiles }
+        Self {
+            center,
+            radius,
+            initial_tiles: tiles,
+        }
     }
 
     /// Apply N rounds of subdivision and return all resulting tiles.
@@ -201,10 +208,26 @@ impl PenroseTiling {
                 .map(|&(x, y)| (x + hw, hh - y))
                 .collect();
 
-            let min_x = px_verts.iter().map(|v| v.0).fold(f64::INFINITY, f64::min).floor() as i64;
-            let max_x = px_verts.iter().map(|v| v.0).fold(f64::NEG_INFINITY, f64::max).ceil() as i64;
-            let min_y = px_verts.iter().map(|v| v.1).fold(f64::INFINITY, f64::min).floor() as i64;
-            let max_y = px_verts.iter().map(|v| v.1).fold(f64::NEG_INFINITY, f64::max).ceil() as i64;
+            let min_x = px_verts
+                .iter()
+                .map(|v| v.0)
+                .fold(f64::INFINITY, f64::min)
+                .floor() as i64;
+            let max_x = px_verts
+                .iter()
+                .map(|v| v.0)
+                .fold(f64::NEG_INFINITY, f64::max)
+                .ceil() as i64;
+            let min_y = px_verts
+                .iter()
+                .map(|v| v.1)
+                .fold(f64::INFINITY, f64::min)
+                .floor() as i64;
+            let max_y = px_verts
+                .iter()
+                .map(|v| v.1)
+                .fold(f64::NEG_INFINITY, f64::max)
+                .ceil() as i64;
 
             for py in min_y.max(0)..max_y.min(height as i64) {
                 for px in min_x.max(0)..max_x.min(width as i64) {
@@ -305,8 +328,14 @@ mod tests {
         };
         let children = subdivide_thin(&tile);
         assert_eq!(children.len(), 3);
-        let thick_count = children.iter().filter(|t| t.tile_type == PenroseTileType::RhombusThick).count();
-        let thin_count = children.iter().filter(|t| t.tile_type == PenroseTileType::RhombusThin).count();
+        let thick_count = children
+            .iter()
+            .filter(|t| t.tile_type == PenroseTileType::RhombusThick)
+            .count();
+        let thin_count = children
+            .iter()
+            .filter(|t| t.tile_type == PenroseTileType::RhombusThin)
+            .count();
         assert_eq!(thick_count, 2);
         assert_eq!(thin_count, 1);
     }
@@ -326,10 +355,7 @@ mod tests {
         let tiles = tiling.inflate(1);
         let bg = [0u8, 0, 0];
         let img = PenroseTiling::render(&tiles, 128, 128, bg);
-        let painted = img
-            .iter()
-            .flatten()
-            .any(|&px| px != bg);
+        let painted = img.iter().flatten().any(|&px| px != bg);
         assert!(painted, "render produced a fully black image");
     }
 

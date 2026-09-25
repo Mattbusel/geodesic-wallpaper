@@ -133,8 +133,8 @@ pub fn inverse_parameterize(
             let p = surface.position(u, v);
 
             // Transform to clip space: clip = MVP * [x, y, z, 1]^T
-            let cx = mvp[0] * p.x + mvp[4] * p.y + mvp[8]  * p.z + mvp[12];
-            let cy = mvp[1] * p.x + mvp[5] * p.y + mvp[9]  * p.z + mvp[13];
+            let cx = mvp[0] * p.x + mvp[4] * p.y + mvp[8] * p.z + mvp[12];
+            let cy = mvp[1] * p.x + mvp[5] * p.y + mvp[9] * p.z + mvp[13];
             let _cz = mvp[2] * p.x + mvp[6] * p.y + mvp[10] * p.z + mvp[14];
             let cw = mvp[3] * p.x + mvp[7] * p.y + mvp[11] * p.z + mvp[15];
 
@@ -256,14 +256,8 @@ impl GeodesicShooter {
         match event {
             MouseEvent::LeftClick { x, y } => {
                 let (ndc_x, ndc_y) = screen_to_ndc(x, y, self.width, self.height);
-                let uv = inverse_parameterize(
-                    surface,
-                    mvp,
-                    ndc_x,
-                    ndc_y,
-                    self.grid_u,
-                    self.grid_v,
-                )?;
+                let uv =
+                    inverse_parameterize(surface, mvp, ndc_x, ndc_y, self.grid_u, self.grid_v)?;
                 let (u, v) = surface.wrap(uv.0, uv.1);
                 let (du, dv) = surface.random_tangent(u, v, rng);
                 let du = du * self.speed.multiplier;
@@ -325,10 +319,7 @@ mod tests {
 
     fn identity_mvp() -> [f32; 16] {
         [
-            1.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            0.0, 0.0, 0.0, 1.0,
+            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
         ]
     }
 
@@ -374,7 +365,10 @@ mod tests {
         let mvp = identity_mvp();
         shooter.handle(MouseEvent::RightClick, &t, &mvp, &mut rng);
         assert!(shooter.pending_reset(), "expected reset flag");
-        assert!(!shooter.pending_reset(), "flag should be cleared after read");
+        assert!(
+            !shooter.pending_reset(),
+            "flag should be cleared after read"
+        );
     }
 
     #[test]
@@ -401,7 +395,10 @@ mod tests {
         let mut ctrl = SpeedController::default();
         let before = ctrl.multiplier;
         ctrl.apply_scroll(-1.0);
-        assert!(ctrl.multiplier < before, "scroll down should decrease speed");
+        assert!(
+            ctrl.multiplier < before,
+            "scroll down should decrease speed"
+        );
     }
 
     #[test]
@@ -410,12 +407,18 @@ mod tests {
         for _ in 0..100 {
             ctrl.apply_scroll(1.0);
         }
-        assert!(ctrl.multiplier <= ctrl.max, "speed should be clamped at max");
+        assert!(
+            ctrl.multiplier <= ctrl.max,
+            "speed should be clamped at max"
+        );
         ctrl.reset();
         for _ in 0..100 {
             ctrl.apply_scroll(-1.0);
         }
-        assert!(ctrl.multiplier >= ctrl.min, "speed should be clamped at min");
+        assert!(
+            ctrl.multiplier >= ctrl.min,
+            "speed should be clamped at min"
+        );
     }
 
     #[test]
@@ -426,14 +429,19 @@ mod tests {
         let mvp = identity_mvp();
         let mut color_indices = Vec::new();
         for _ in 0..6 {
-            if let Some(g) = shooter.handle(MouseEvent::LeftClick { x: 50, y: 50 }, &t, &mvp, &mut rng) {
+            if let Some(g) =
+                shooter.handle(MouseEvent::LeftClick { x: 50, y: 50 }, &t, &mvp, &mut rng)
+            {
                 color_indices.push(g.color_idx);
             }
         }
         // Should cycle 0,1,2,0,1,2
         if color_indices.len() >= 4 {
-            assert_eq!(color_indices[0], color_indices[3],
-                "color should cycle: {:?}", color_indices);
+            assert_eq!(
+                color_indices[0], color_indices[3],
+                "color should cycle: {:?}",
+                color_indices
+            );
         }
     }
 }

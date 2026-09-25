@@ -94,8 +94,18 @@ pub struct FrameInterpolator {
 
 impl FrameInterpolator {
     /// Create a new frame interpolator.
-    pub fn new(parameter: AnimationParameter, start: f64, end: f64, mode: InterpolationMode) -> Self {
-        Self { parameter, start, end, mode }
+    pub fn new(
+        parameter: AnimationParameter,
+        start: f64,
+        end: f64,
+        mode: InterpolationMode,
+    ) -> Self {
+        Self {
+            parameter,
+            start,
+            end,
+            mode,
+        }
     }
 
     /// Evaluate the parameter at a normalised time `t ∈ [0, 1]`.
@@ -203,12 +213,17 @@ pub struct AnimationExporter {
 impl AnimationExporter {
     /// Create a new exporter with the given configuration and interpolators.
     pub fn new(config: AnimationConfig, interpolators: Vec<FrameInterpolator>) -> Self {
-        Self { config, interpolators }
+        Self {
+            config,
+            interpolators,
+        }
     }
 
     /// Return the path for a given frame index: `{output_dir}/frame_{NNNN}.png`.
     pub fn frame_path(&self, frame_index: usize) -> PathBuf {
-        self.config.output_dir.join(format!("frame_{:04}.png", frame_index))
+        self.config
+            .output_dir
+            .join(format!("frame_{:04}.png", frame_index))
     }
 
     /// Evaluate all interpolators at the given frame index.
@@ -250,8 +265,7 @@ impl AnimationExporter {
             let params = self.param_values_at(frame_idx);
             let output_path = self.frame_path(frame_idx);
 
-            render_frame(frame_idx, &params, &output_path)
-                .map_err(ExportError::Render)?;
+            render_frame(frame_idx, &params, &output_path).map_err(ExportError::Render)?;
 
             frames_written += 1;
         }
@@ -281,15 +295,14 @@ impl AnimationExporter {
         for y in 0..height {
             for x in 0..width {
                 let idx = ((y * width + x) * 4) as usize;
-                pixels[idx] = (x * 255 / width.max(1)) as u8;     // R
+                pixels[idx] = (x * 255 / width.max(1)) as u8; // R
                 pixels[idx + 1] = (y * 255 / height.max(1)) as u8; // G
-                pixels[idx + 2] = 128;                              // B
-                pixels[idx + 3] = 255;                              // A
+                pixels[idx + 2] = 128; // B
+                pixels[idx + 3] = 255; // A
             }
         }
 
-        encode_png(path, width, height, &pixels)
-            .map_err(ExportError::Io)
+        encode_png(path, width, height, &pixels).map_err(ExportError::Io)
     }
 }
 
@@ -310,11 +323,11 @@ fn encode_png(path: &Path, width: u32, height: u32, rgba: &[u8]) -> io::Result<(
         let mut d = Vec::with_capacity(13);
         d.extend_from_slice(&width.to_be_bytes());
         d.extend_from_slice(&height.to_be_bytes());
-        d.push(8);  // bit depth
-        d.push(6);  // RGBA
-        d.push(0);  // compression method
-        d.push(0);  // filter method
-        d.push(0);  // interlace
+        d.push(8); // bit depth
+        d.push(6); // RGBA
+        d.push(0); // compression method
+        d.push(0); // filter method
+        d.push(0); // interlace
         d
     };
     write_png_chunk(&mut f, b"IHDR", &ihdr_data)?;
@@ -420,20 +433,35 @@ mod tests {
 
     #[test]
     fn test_linear_interpolation_endpoints() {
-        let interp = FrameInterpolator::new(AnimationParameter::RotationAngle, 0.0, 1.0, InterpolationMode::Linear);
+        let interp = FrameInterpolator::new(
+            AnimationParameter::RotationAngle,
+            0.0,
+            1.0,
+            InterpolationMode::Linear,
+        );
         assert!((interp.evaluate(0.0) - 0.0).abs() < 1e-12);
         assert!((interp.evaluate(1.0) - 1.0).abs() < 1e-12);
     }
 
     #[test]
     fn test_linear_interpolation_midpoint() {
-        let interp = FrameInterpolator::new(AnimationParameter::Scale, 0.0, 2.0, InterpolationMode::Linear);
+        let interp = FrameInterpolator::new(
+            AnimationParameter::Scale,
+            0.0,
+            2.0,
+            InterpolationMode::Linear,
+        );
         assert!((interp.evaluate(0.5) - 1.0).abs() < 1e-12);
     }
 
     #[test]
     fn test_sinusoidal_interpolation_endpoints() {
-        let interp = FrameInterpolator::new(AnimationParameter::ColorHue, 0.0, 360.0, InterpolationMode::Sinusoidal);
+        let interp = FrameInterpolator::new(
+            AnimationParameter::ColorHue,
+            0.0,
+            360.0,
+            InterpolationMode::Sinusoidal,
+        );
         assert!((interp.evaluate(0.0) - 0.0).abs() < 1e-9);
         assert!((interp.evaluate(1.0) - 360.0).abs() < 1e-9);
     }
@@ -441,26 +469,44 @@ mod tests {
     #[test]
     fn test_sinusoidal_interpolation_midpoint() {
         // At t=0.5: eased = 0.5*(1-cos(π*0.5)) = 0.5*(1-0) = 0.5
-        let interp = FrameInterpolator::new(AnimationParameter::Scale, 0.0, 1.0, InterpolationMode::Sinusoidal);
+        let interp = FrameInterpolator::new(
+            AnimationParameter::Scale,
+            0.0,
+            1.0,
+            InterpolationMode::Sinusoidal,
+        );
         assert!((interp.evaluate(0.5) - 0.5).abs() < 1e-9);
     }
 
     #[test]
     fn test_interpolation_clamps_t() {
-        let interp = FrameInterpolator::new(AnimationParameter::Scale, 1.0, 2.0, InterpolationMode::Linear);
+        let interp = FrameInterpolator::new(
+            AnimationParameter::Scale,
+            1.0,
+            2.0,
+            InterpolationMode::Linear,
+        );
         assert!((interp.evaluate(-1.0) - 1.0).abs() < 1e-12);
         assert!((interp.evaluate(2.0) - 2.0).abs() < 1e-12);
     }
 
     #[test]
     fn test_animation_config_duration() {
-        let cfg = AnimationConfig { frames: 60, fps: 30, ..AnimationConfig::default() };
+        let cfg = AnimationConfig {
+            frames: 60,
+            fps: 30,
+            ..AnimationConfig::default()
+        };
         assert!((cfg.duration_secs() - 2.0).abs() < 1e-12);
     }
 
     #[test]
     fn test_animation_config_duration_zero_fps() {
-        let cfg = AnimationConfig { frames: 30, fps: 0, ..AnimationConfig::default() };
+        let cfg = AnimationConfig {
+            frames: 30,
+            fps: 0,
+            ..AnimationConfig::default()
+        };
         // fps clamped to 1 → duration = 30s
         assert!((cfg.duration_secs() - 30.0).abs() < 1e-12);
     }
@@ -468,7 +514,10 @@ mod tests {
     #[test]
     fn test_frame_path_format() {
         let exporter = AnimationExporter::new(
-            AnimationConfig { output_dir: PathBuf::from("/tmp/test"), ..AnimationConfig::default() },
+            AnimationConfig {
+                output_dir: PathBuf::from("/tmp/test"),
+                ..AnimationConfig::default()
+            },
             vec![],
         );
         let p = exporter.frame_path(42);
@@ -477,9 +526,17 @@ mod tests {
 
     #[test]
     fn test_param_values_at_first_frame() {
-        let interp = FrameInterpolator::new(AnimationParameter::RotationAngle, 1.0, 5.0, InterpolationMode::Linear);
+        let interp = FrameInterpolator::new(
+            AnimationParameter::RotationAngle,
+            1.0,
+            5.0,
+            InterpolationMode::Linear,
+        );
         let exporter = AnimationExporter::new(
-            AnimationConfig { frames: 10, ..AnimationConfig::default() },
+            AnimationConfig {
+                frames: 10,
+                ..AnimationConfig::default()
+            },
             vec![interp],
         );
         let vals = exporter.param_values_at(0);
@@ -489,9 +546,17 @@ mod tests {
 
     #[test]
     fn test_param_values_at_last_frame() {
-        let interp = FrameInterpolator::new(AnimationParameter::RotationAngle, 1.0, 5.0, InterpolationMode::Linear);
+        let interp = FrameInterpolator::new(
+            AnimationParameter::RotationAngle,
+            1.0,
+            5.0,
+            InterpolationMode::Linear,
+        );
         let exporter = AnimationExporter::new(
-            AnimationConfig { frames: 10, ..AnimationConfig::default() },
+            AnimationConfig {
+                frames: 10,
+                ..AnimationConfig::default()
+            },
             vec![interp],
         );
         let vals = exporter.param_values_at(9);
@@ -501,7 +566,10 @@ mod tests {
     #[test]
     fn test_export_zero_frames_error() {
         let exporter = AnimationExporter::new(
-            AnimationConfig { frames: 0, ..AnimationConfig::default() },
+            AnimationConfig {
+                frames: 0,
+                ..AnimationConfig::default()
+            },
             vec![],
         );
         let result = exporter.export(|_, _, _| Ok(()));
@@ -512,10 +580,16 @@ mod tests {
     fn test_export_writes_correct_frame_count() {
         let dir = tempfile::tempdir().unwrap();
         let exporter = AnimationExporter::new(
-            AnimationConfig { frames: 5, fps: 10, width: 4, height: 4, output_dir: dir.path().to_path_buf() },
+            AnimationConfig {
+                frames: 5,
+                fps: 10,
+                width: 4,
+                height: 4,
+                output_dir: dir.path().to_path_buf(),
+            },
             vec![],
         );
-        let stats = exporter.export(|_, _, _| { Ok(()) }).unwrap();
+        let stats = exporter.export(|_, _, _| Ok(())).unwrap();
         assert_eq!(stats.frames_written, 5);
     }
 
@@ -523,11 +597,18 @@ mod tests {
     fn test_export_propagates_render_error() {
         let dir = tempfile::tempdir().unwrap();
         let exporter = AnimationExporter::new(
-            AnimationConfig { frames: 3, ..AnimationConfig::default().with_dir(dir.path()) },
+            AnimationConfig {
+                frames: 3,
+                ..AnimationConfig::default().with_dir(dir.path())
+            },
             vec![],
         );
         let result = exporter.export(|i, _, _| {
-            if i == 1 { Err("render failed at frame 1".to_string()) } else { Ok(()) }
+            if i == 1 {
+                Err("render failed at frame 1".to_string())
+            } else {
+                Ok(())
+            }
         });
         assert!(matches!(result, Err(ExportError::Render(_))));
     }
@@ -548,7 +629,11 @@ mod tests {
         let path = dir.path().join("sig_test.png");
         AnimationExporter::write_test_frame(&path, 2, 2).unwrap();
         let bytes = std::fs::read(&path).unwrap();
-        assert_eq!(&bytes[..8], &[137, 80, 78, 71, 13, 10, 26, 10], "PNG signature mismatch");
+        assert_eq!(
+            &bytes[..8],
+            &[137, 80, 78, 71, 13, 10, 26, 10],
+            "PNG signature mismatch"
+        );
     }
 
     #[test]
@@ -562,11 +647,24 @@ mod tests {
     #[test]
     fn test_multiple_interpolators() {
         let interps = vec![
-            FrameInterpolator::new(AnimationParameter::RotationAngle, 0.0, 6.28, InterpolationMode::Linear),
-            FrameInterpolator::new(AnimationParameter::ColorHue, 0.0, 360.0, InterpolationMode::Sinusoidal),
+            FrameInterpolator::new(
+                AnimationParameter::RotationAngle,
+                0.0,
+                6.28,
+                InterpolationMode::Linear,
+            ),
+            FrameInterpolator::new(
+                AnimationParameter::ColorHue,
+                0.0,
+                360.0,
+                InterpolationMode::Sinusoidal,
+            ),
         ];
         let exporter = AnimationExporter::new(
-            AnimationConfig { frames: 4, ..AnimationConfig::default() },
+            AnimationConfig {
+                frames: 4,
+                ..AnimationConfig::default()
+            },
             interps,
         );
         let vals = exporter.param_values_at(2);

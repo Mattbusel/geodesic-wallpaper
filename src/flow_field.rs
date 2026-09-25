@@ -43,22 +43,34 @@ impl Vector2 {
         if len < 1e-12 {
             Self::zero()
         } else {
-            Self { x: self.x / len, y: self.y / len }
+            Self {
+                x: self.x / len,
+                y: self.y / len,
+            }
         }
     }
 
     /// Rotate by `angle` radians counter-clockwise.
     pub fn rotate(&self, angle: f64) -> Self {
         let (sin, cos) = angle.sin_cos();
-        Self { x: self.x * cos - self.y * sin, y: self.x * sin + self.y * cos }
+        Self {
+            x: self.x * cos - self.y * sin,
+            y: self.x * sin + self.y * cos,
+        }
     }
 
     pub fn add(&self, other: &Self) -> Self {
-        Self { x: self.x + other.x, y: self.y + other.y }
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
     }
 
     pub fn scale(&self, s: f64) -> Self {
-        Self { x: self.x * s, y: self.y * s }
+        Self {
+            x: self.x * s,
+            y: self.y * s,
+        }
     }
 }
 
@@ -80,7 +92,11 @@ impl FlowField {
         let angle_rad = angle_deg.to_radians();
         let v = Vector2::new(angle_rad.cos(), angle_rad.sin());
         let field = (0..height).map(|_| vec![v; width]).collect();
-        Self { width, height, field }
+        Self {
+            width,
+            height,
+            field,
+        }
     }
 
     /// Vectors tangent to circles centred at `center`.
@@ -98,7 +114,11 @@ impl FlowField {
                     .collect()
             })
             .collect();
-        Self { width, height, field }
+        Self {
+            width,
+            height,
+            field,
+        }
     }
 
     /// Simple gradient-noise driven field (deterministic, based on a hash).
@@ -119,17 +139,17 @@ impl FlowField {
                     .collect()
             })
             .collect();
-        Self { width, height, field }
+        Self {
+            width,
+            height,
+            field,
+        }
     }
 
     /// Curl field derived from a scalar potential P via finite differences.
     ///
     /// F = (∂P/∂y, -∂P/∂x) with step h = 1.0.
-    pub fn new_curl(
-        width: usize,
-        height: usize,
-        potential_fn: impl Fn(f64, f64) -> f64,
-    ) -> Self {
+    pub fn new_curl(width: usize, height: usize, potential_fn: impl Fn(f64, f64) -> f64) -> Self {
         let h = 1.0_f64;
         let field = (0..height)
             .map(|y| {
@@ -137,16 +157,20 @@ impl FlowField {
                     .map(|x| {
                         let xf = x as f64;
                         let yf = y as f64;
-                        let dp_dy = (potential_fn(xf, yf + h) - potential_fn(xf, yf - h))
-                            / (2.0 * h);
-                        let dp_dx = (potential_fn(xf + h, yf) - potential_fn(xf - h, yf))
-                            / (2.0 * h);
+                        let dp_dy =
+                            (potential_fn(xf, yf + h) - potential_fn(xf, yf - h)) / (2.0 * h);
+                        let dp_dx =
+                            (potential_fn(xf + h, yf) - potential_fn(xf - h, yf)) / (2.0 * h);
                         Vector2::new(dp_dy, -dp_dx)
                     })
                     .collect()
             })
             .collect();
-        Self { width, height, field }
+        Self {
+            width,
+            height,
+            field,
+        }
     }
 
     // ── Sampling ─────────────────────────────────────────────────────────────
@@ -207,12 +231,7 @@ impl Streamline {
     /// Trace a streamline using 4th-order Runge-Kutta integration.
     ///
     /// Stops when the point leaves the field boundary or `max_steps` is reached.
-    pub fn trace(
-        field: &FlowField,
-        start: (f64, f64),
-        step_size: f64,
-        max_steps: usize,
-    ) -> Self {
+    pub fn trace(field: &FlowField, start: (f64, f64), step_size: f64, max_steps: usize) -> Self {
         let w = field.width as f64;
         let h = field.height as f64;
         let mut points = vec![start];
@@ -269,8 +288,14 @@ impl StreamlineRenderer {
                 let (x0, y0) = window[0];
                 let (x1, y1) = window[1];
                 bresenham(
-                    x0 as i64, y0 as i64, x1 as i64, y1 as i64, width, height,
-                    &mut pixels, color,
+                    x0 as i64,
+                    y0 as i64,
+                    x1 as i64,
+                    y1 as i64,
+                    width,
+                    height,
+                    &mut pixels,
+                    color,
                 );
             }
         }
@@ -295,7 +320,13 @@ impl StreamlineRenderer {
                 let ex = (x as f64 + v.x * arrow_len) as i64;
                 let ey = (y as f64 + v.y * arrow_len) as i64;
                 bresenham(
-                    x as i64, y as i64, ex, ey, width, height, &mut pixels,
+                    x as i64,
+                    y as i64,
+                    ex,
+                    ey,
+                    width,
+                    height,
+                    &mut pixels,
                     (200, 200, 200),
                 );
                 x += grid_spacing;
@@ -337,12 +368,16 @@ fn bresenham(
         }
         let e2 = 2 * err;
         if e2 >= dy {
-            if x0 == x1 { break; }
+            if x0 == x1 {
+                break;
+            }
             err += dy;
             x0 += sx;
         }
         if e2 <= dx {
-            if y0 == y1 { break; }
+            if y0 == y1 {
+                break;
+            }
             err += dx;
             y0 += sy;
         }
@@ -357,7 +392,9 @@ struct LcgRng {
 
 impl LcgRng {
     fn new(seed: u64) -> Self {
-        Self { state: seed.wrapping_add(1) }
+        Self {
+            state: seed.wrapping_add(1),
+        }
     }
     fn next_u64(&mut self) -> u64 {
         self.state = self
@@ -446,6 +483,9 @@ mod tests {
             .fold(0.0_f64, f64::max);
 
         // RK4 should keep deviation small over 200 steps.
-        assert!(max_deviation < 5.0, "radius deviation too large: {max_deviation:.2}");
+        assert!(
+            max_deviation < 5.0,
+            "radius deviation too large: {max_deviation:.2}"
+        );
     }
 }

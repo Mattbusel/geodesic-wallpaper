@@ -97,7 +97,11 @@ pub fn rose_curve(p: &RoseCurve) -> Vec<(f64, f64)> {
     let n = p.num_points.max(2);
     // For rational k = a/b we'd need a full period; for integer k one full
     // rotation of 2π suffices to draw all petals (for odd k), 4π for even.
-    let period = if (p.k as i64) % 2 == 0 { 4.0 * PI } else { 2.0 * PI };
+    let period = if (p.k as i64) % 2 == 0 {
+        4.0 * PI
+    } else {
+        2.0 * PI
+    };
     (0..n)
         .map(|i| {
             let theta = period * i as f64 / (n - 1) as f64;
@@ -114,7 +118,15 @@ pub fn rose_curve(p: &RoseCurve) -> Vec<(f64, f64)> {
 /// Map floating-point curve coordinates to pixel coordinates.
 ///
 /// Returns `None` if the point is outside [0, width) × [0, height).
-fn to_pixel(x: f64, y: f64, cx: f64, cy: f64, scale: f64, width: u32, height: u32) -> Option<(u32, u32)> {
+fn to_pixel(
+    x: f64,
+    y: f64,
+    cx: f64,
+    cy: f64,
+    scale: f64,
+    width: u32,
+    height: u32,
+) -> Option<(u32, u32)> {
     let px = (cx + x * scale).round() as i64;
     let py = (cy - y * scale).round() as i64; // flip Y so +y is up
     if px >= 0 && px < width as i64 && py >= 0 && py < height as i64 {
@@ -177,10 +189,10 @@ pub fn render_parametric(
         let dy = fy - fy.floor();
 
         // Distribute brightness to surrounding pixels (bilinear-like).
-        paint(&mut buf, ix,     iy,     (1.0 - dx) * (1.0 - dy));
-        paint(&mut buf, ix + 1, iy,     dx          * (1.0 - dy));
-        paint(&mut buf, ix,     iy + 1, (1.0 - dx) * dy);
-        paint(&mut buf, ix + 1, iy + 1, dx          * dy);
+        paint(&mut buf, ix, iy, (1.0 - dx) * (1.0 - dy));
+        paint(&mut buf, ix + 1, iy, dx * (1.0 - dy));
+        paint(&mut buf, ix, iy + 1, (1.0 - dx) * dy);
+        paint(&mut buf, ix + 1, iy + 1, dx * dy);
     }
 
     buf
@@ -220,7 +232,11 @@ mod tests {
 
     #[test]
     fn rose_k1_has_petals() {
-        let p = RoseCurve { k: 1.0, amplitude: 1.0, num_points: 1000 };
+        let p = RoseCurve {
+            k: 1.0,
+            amplitude: 1.0,
+            num_points: 1000,
+        };
         let curve = rose_curve(&p);
         // All points should be within the amplitude circle.
         for (x, y) in &curve {
@@ -231,7 +247,12 @@ mod tests {
 
     #[test]
     fn spirograph_evaluates_without_nan() {
-        let p = SpirographParams { r_big: 5.0, r_small: 3.0, d: 5.0, num_points: 1000 };
+        let p = SpirographParams {
+            r_big: 5.0,
+            r_small: 3.0,
+            d: 5.0,
+            num_points: 1000,
+        };
         for i in 0..100 {
             let t = 2.0 * PI * i as f64 / 100.0;
             let (x, y) = spirograph_point(t, &p);
@@ -242,8 +263,12 @@ mod tests {
     #[test]
     fn render_returns_correct_buffer_size() {
         let params = LissajousParams {
-            a: 3.0, b: 2.0, delta: PI / 4.0,
-            amplitude_x: 1.0, amplitude_y: 1.0, num_points: 500,
+            a: 3.0,
+            b: 2.0,
+            delta: PI / 4.0,
+            amplitude_x: 1.0,
+            amplitude_y: 1.0,
+            num_points: 500,
         };
         let buf = render_lissajous(&params, 200, 150);
         assert_eq!(buf.len(), (200 * 150 * 3) as usize);

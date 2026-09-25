@@ -60,7 +60,11 @@ pub struct SphereParams {
 
 impl Default for SphereParams {
     fn default() -> Self {
-        Self { radius: 3.0, u_steps: 64, v_steps: 32 }
+        Self {
+            radius: 3.0,
+            u_steps: 64,
+            v_steps: 32,
+        }
     }
 }
 
@@ -139,7 +143,8 @@ pub fn render_torus(
             let v = 2.0 * PI * vi as f64 / params.v_steps as f64;
             let point = torus_point(u, v, params);
             // Scale point to fit screen.
-            let scale = (width.min(height) as f64) / (2.0 * (params.major_radius + params.minor_radius));
+            let scale =
+                (width.min(height) as f64) / (2.0 * (params.major_radius + params.minor_radius));
             let scaled = (point.0 * scale, point.1 * scale, point.2 * scale);
             if let Some((col, row)) = project_orthographic(scaled, width, height) {
                 let u_norm = ui as f64 / params.u_steps as f64;
@@ -189,7 +194,12 @@ mod tests {
 
     #[test]
     fn torus_point_at_origin_angle() {
-        let params = TorusParams { major_radius: 3.0, minor_radius: 1.0, u_steps: 32, v_steps: 16 };
+        let params = TorusParams {
+            major_radius: 3.0,
+            minor_radius: 1.0,
+            u_steps: 32,
+            v_steps: 16,
+        };
         let (x, y, z) = torus_point(0.0, 0.0, &params);
         // u=0, v=0 → x=R+r, y=0, z=0
         assert!((x - 4.0).abs() < 1e-10, "x={x}");
@@ -206,7 +216,10 @@ mod tests {
             let (x, y, _z) = torus_point(u, 0.0, &params);
             let dist = (x * x + y * y).sqrt();
             let expected = params.major_radius + params.minor_radius;
-            assert!((dist - expected).abs() < 1e-9, "dist={dist} expected={expected}");
+            assert!(
+                (dist - expected).abs() < 1e-9,
+                "dist={dist} expected={expected}"
+            );
         }
     }
 
@@ -221,7 +234,11 @@ mod tests {
 
     #[test]
     fn sphere_point_on_surface() {
-        let params = SphereParams { radius: 2.0, u_steps: 16, v_steps: 8 };
+        let params = SphereParams {
+            radius: 2.0,
+            u_steps: 16,
+            v_steps: 8,
+        };
         for ui in 0..8 {
             for vi in 0..4 {
                 let u = 2.0 * PI * ui as f64 / 8.0;
@@ -260,7 +277,11 @@ mod tests {
             .map(|r| {
                 (0..size)
                     .map(|c| {
-                        if (r + c) % 2 == 0 { [255u8, 255, 255] } else { [0u8, 0, 0] }
+                        if (r + c) % 2 == 0 {
+                            [255u8, 255, 255]
+                        } else {
+                            [0u8, 0, 0]
+                        }
                     })
                     .collect()
             })
@@ -270,7 +291,12 @@ mod tests {
     #[test]
     fn render_torus_dimensions() {
         let texture = checker_texture(32);
-        let params = TorusParams { major_radius: 2.0, minor_radius: 0.5, u_steps: 16, v_steps: 8 };
+        let params = TorusParams {
+            major_radius: 2.0,
+            minor_radius: 0.5,
+            u_steps: 16,
+            v_steps: 8,
+        };
         let img = render_torus(&texture, &params, 64, 64);
         assert_eq!(img.len(), 64);
         assert_eq!(img[0].len(), 64);
@@ -279,7 +305,12 @@ mod tests {
     #[test]
     fn render_torus_paints_some_pixels() {
         let texture = checker_texture(16);
-        let params = TorusParams { major_radius: 2.0, minor_radius: 0.5, u_steps: 64, v_steps: 32 };
+        let params = TorusParams {
+            major_radius: 2.0,
+            minor_radius: 0.5,
+            u_steps: 64,
+            v_steps: 32,
+        };
         let bg = [20u8, 20, 20];
         let img = render_torus(&texture, &params, 128, 128);
         let painted = img.iter().flatten().any(|&px| px != bg);
@@ -289,7 +320,11 @@ mod tests {
     #[test]
     fn render_sphere_dimensions() {
         let texture = checker_texture(32);
-        let params = SphereParams { radius: 2.0, u_steps: 16, v_steps: 8 };
+        let params = SphereParams {
+            radius: 2.0,
+            u_steps: 16,
+            v_steps: 8,
+        };
         let img = render_sphere(&texture, &params, 64, 64);
         assert_eq!(img.len(), 64);
         assert_eq!(img[0].len(), 64);
@@ -298,7 +333,11 @@ mod tests {
     #[test]
     fn render_sphere_paints_some_pixels() {
         let texture = checker_texture(16);
-        let params = SphereParams { radius: 2.0, u_steps: 64, v_steps: 32 };
+        let params = SphereParams {
+            radius: 2.0,
+            u_steps: 64,
+            v_steps: 32,
+        };
         let bg = [20u8, 20, 20];
         let img = render_sphere(&texture, &params, 128, 128);
         let painted = img.iter().flatten().any(|&px| px != bg);

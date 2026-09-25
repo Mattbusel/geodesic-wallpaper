@@ -146,12 +146,17 @@ impl PhasePortraitRecorder {
         if self.width == 0 || self.height == 0 {
             return Err(RecorderError::InvalidDimensions);
         }
+        // Unique per process and per recording, so two recorders started in
+        // the same second never share (and overwrite) a frames directory.
+        static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let dir = std::env::temp_dir().join(format!(
-            "geodesic-rec-{}",
+            "geodesic-rec-{}-{}-{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
-                .as_secs()
+                .as_secs(),
+            std::process::id(),
+            NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         ));
         std::fs::create_dir_all(&dir)?;
         self.frames_dir = Some(dir);
@@ -255,13 +260,13 @@ impl PhasePortraitRecorder {
         match self.state {
             RecordingState::Idle => String::new(),
             RecordingState::Recording => {
-                let elapsed = self.start_time
-                    .map(|s| s.elapsed().as_secs())
-                    .unwrap_or(0);
-                format!(" [REC {}s / {}s  {} frames]",
+                let elapsed = self.start_time.map(|s| s.elapsed().as_secs()).unwrap_or(0);
+                format!(
+                    " [REC {}s / {}s  {} frames]",
                     elapsed,
                     self.max_duration.as_secs(),
-                    self.frame_count)
+                    self.frame_count
+                )
             }
             RecordingState::Encoding => format!(" [ENCODING {} frames…]", self.frame_count),
         }
@@ -295,13 +300,18 @@ pub fn encode_to_gif(frames_dir: &Path, output: &Path, fps: u32) -> Result<(), R
     paths.sort();
 
     if paths.is_empty() {
-        tracing::warn!("encode_to_gif: no PNG frames found in {}", frames_dir.display());
+        tracing::warn!(
+            "encode_to_gif: no PNG frames found in {}",
+            frames_dir.display()
+        );
         return Ok(());
     }
 
     let out_file = std::fs::File::create(output)?;
     let mut encoder = GifEncoder::new(out_file);
-    encoder.set_repeat(Repeat::Infinite).map_err(RecorderError::Image)?;
+    encoder
+        .set_repeat(Repeat::Infinite)
+        .map_err(RecorderError::Image)?;
 
     for path in &paths {
         let img = image::open(path)?;
@@ -323,10 +333,7 @@ mod tests {
     use tempfile::tempdir;
 
     fn make_recorder(w: u32, h: u32) -> PhasePortraitRecorder {
-        PhasePortraitRecorder::new(
-            w, h, 30, 10,
-            PathBuf::from("test-output.gif"),
-        )
+        PhasePortraitRecorder::new(w, h, 30, 10, PathBuf::from("test-output.gif"))
     }
 
     #[test]

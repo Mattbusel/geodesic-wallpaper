@@ -25,8 +25,12 @@ impl GeoPoint {
         GeoPoint { lat, lon }
     }
 
-    fn lat_rad(self) -> f64 { self.lat.to_radians() }
-    fn lon_rad(self) -> f64 { self.lon.to_radians() }
+    fn lat_rad(self) -> f64 {
+        self.lat.to_radians()
+    }
+    fn lon_rad(self) -> f64 {
+        self.lon.to_radians()
+    }
 }
 
 // ── PlanePoint ────────────────────────────────────────────────────────────────
@@ -94,22 +98,21 @@ pub fn project_point(geo: &GeoPoint, proj: &Projection) -> PlanePoint {
             let y = (PI / 4.0 + lat / 2.0).tan().ln();
             PlanePoint::new(x, y)
         }
-        Projection::Equirectangular => {
-            PlanePoint::new(geo.lon_rad(), geo.lat_rad())
-        }
+        Projection::Equirectangular => PlanePoint::new(geo.lon_rad(), geo.lat_rad()),
         Projection::AzimuthalEquidistant { center } => {
             let phi1 = center.lat_rad();
             let lam0 = center.lon_rad();
             let phi = geo.lat_rad();
             let lam = geo.lon_rad();
-            let cos_c = phi1.sin() * phi.sin()
-                + phi1.cos() * phi.cos() * (lam - lam0).cos();
+            let cos_c = phi1.sin() * phi.sin() + phi1.cos() * phi.cos() * (lam - lam0).cos();
             let c = cos_c.clamp(-1.0, 1.0).acos();
             if c.abs() < 1e-10 {
                 return PlanePoint::new(0.0, 0.0);
             }
-            let az = (lam - lam0).sin() * phi.cos()
-                .atan2(phi1.cos() * phi.sin() - phi1.sin() * phi.cos() * (lam - lam0).cos());
+            let az = (lam - lam0).sin()
+                * phi
+                    .cos()
+                    .atan2(phi1.cos() * phi.sin() - phi1.sin() * phi.cos() * (lam - lam0).cos());
             PlanePoint::new(c * az.sin(), -c * az.cos())
         }
         Projection::Stereographic { pole } => {
@@ -284,8 +287,16 @@ mod tests {
     fn mercator_equator_maps_to_y_zero() {
         let geo = GeoPoint::new(0.0, 0.0);
         let p = project_point(&geo, &Projection::Mercator);
-        assert!(p.y.abs() < 1e-10, "Mercator equator y = {}, expected 0", p.y);
-        assert!(p.x.abs() < 1e-10, "Mercator prime meridian x = {}, expected 0", p.x);
+        assert!(
+            p.y.abs() < 1e-10,
+            "Mercator equator y = {}, expected 0",
+            p.y
+        );
+        assert!(
+            p.x.abs() < 1e-10,
+            "Mercator prime meridian x = {}, expected 0",
+            p.x
+        );
     }
 
     #[test]
@@ -301,15 +312,22 @@ mod tests {
         let original = GeoPoint::new(30.0, 45.0);
         let plane = project_point(&original, &Projection::Mercator);
         let recovered = unproject(&plane, &Projection::Mercator).expect("Mercator has inverse");
-        assert!((recovered.lat - original.lat).abs() < 1e-8, "lat roundtrip failed");
-        assert!((recovered.lon - original.lon).abs() < 1e-8, "lon roundtrip failed");
+        assert!(
+            (recovered.lat - original.lat).abs() < 1e-8,
+            "lat roundtrip failed"
+        );
+        assert!(
+            (recovered.lon - original.lon).abs() < 1e-8,
+            "lon roundtrip failed"
+        );
     }
 
     #[test]
     fn equirectangular_roundtrip() {
         let original = GeoPoint::new(-15.0, 120.0);
         let plane = project_point(&original, &Projection::Equirectangular);
-        let recovered = unproject(&plane, &Projection::Equirectangular).expect("Equirectangular has inverse");
+        let recovered =
+            unproject(&plane, &Projection::Equirectangular).expect("Equirectangular has inverse");
         assert!((recovered.lat - original.lat).abs() < 1e-10);
         assert!((recovered.lon - original.lon).abs() < 1e-10);
     }
@@ -319,7 +337,11 @@ mod tests {
         let center = GeoPoint::new(51.5, -0.1); // London
         let proj = Projection::AzimuthalEquidistant { center };
         let p = project_point(&center, &proj);
-        assert!(p.x.abs() < 1e-8 && p.y.abs() < 1e-8, "centre should map to origin: {:?}", p);
+        assert!(
+            p.x.abs() < 1e-8 && p.y.abs() < 1e-8,
+            "centre should map to origin: {:?}",
+            p
+        );
     }
 
     #[test]

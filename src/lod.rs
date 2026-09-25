@@ -150,16 +150,23 @@ impl LodController {
             // Too slow → reduce.
             let excess = self.smoothed_ms - self.config.target_ms;
             let step = (self.config.base_step + (excess / 4.0) as usize).min(20);
-            let new_count = old_count.saturating_sub(step).max(self.config.min_geodesics);
+            let new_count = old_count
+                .saturating_sub(step)
+                .max(self.config.min_geodesics);
             if new_count < old_count {
                 self.geodesic_count = new_count;
                 self.cooldown_remaining = self.config.cooldown_frames;
                 self.stats.decreases += 1;
                 log::debug!(
                     "[lod] frame={:.1}ms → reduce {} → {} geodesics",
-                    self.smoothed_ms, old_count, new_count
+                    self.smoothed_ms,
+                    old_count,
+                    new_count
                 );
-                return LodAction::Decreased { from: old_count, to: new_count };
+                return LodAction::Decreased {
+                    from: old_count,
+                    to: new_count,
+                };
             }
         } else if self.smoothed_ms < self.config.increase_threshold_ms {
             // Too fast → increase.
@@ -172,9 +179,14 @@ impl LodController {
                 self.stats.increases += 1;
                 log::debug!(
                     "[lod] frame={:.1}ms → increase {} → {} geodesics",
-                    self.smoothed_ms, old_count, new_count
+                    self.smoothed_ms,
+                    old_count,
+                    new_count
                 );
-                return LodAction::Increased { from: old_count, to: new_count };
+                return LodAction::Increased {
+                    from: old_count,
+                    to: new_count,
+                };
             }
         }
 
@@ -226,14 +238,12 @@ mod tests {
     fn test_lod_reduces_when_slow() {
         let mut ctrl = make_controller(30);
         // Feed a very slow frame time repeatedly.
-        let mut action = LodAction::Unchanged;
+        let mut decreased = false;
         for _ in 0..20 {
-            action = ctrl.update(33.0); // 30 fps
+            let action = ctrl.update(33.0); // 30 fps
+            decreased |= matches!(action, LodAction::Decreased { .. });
         }
-        assert!(
-            matches!(action, LodAction::Decreased { .. }),
-            "should reduce geodesics on slow frame: {:?}", action
-        );
+        assert!(decreased, "should reduce geodesics on slow frame");
         assert!(ctrl.geodesic_count < 30, "geodesic count should decrease");
     }
 
@@ -246,7 +256,8 @@ mod tests {
         }
         assert!(
             matches!(action, LodAction::Increased { .. }),
-            "should increase geodesics on fast frame: {:?}", action
+            "should increase geodesics on fast frame: {:?}",
+            action
         );
         assert!(ctrl.geodesic_count > 30, "geodesic count should increase");
     }
@@ -258,7 +269,11 @@ mod tests {
         for _ in 0..50 {
             last_action = ctrl.update(12.0); // between 8 and 16 ms → stable
         }
-        assert_eq!(last_action, LodAction::Unchanged, "should be stable at target");
+        assert_eq!(
+            last_action,
+            LodAction::Unchanged,
+            "should be stable at target"
+        );
     }
 
     #[test]

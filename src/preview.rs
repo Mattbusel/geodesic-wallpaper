@@ -70,7 +70,9 @@ impl WallpaperParams {
 
     /// Cycle to the next symmetry group in the list.
     pub fn cycle_symmetry_group(&mut self) {
-        let current = Self::GROUPS.iter().position(|&g| g == self.symmetry_group.as_str());
+        let current = Self::GROUPS
+            .iter()
+            .position(|&g| g == self.symmetry_group.as_str());
         let next = match current {
             Some(i) => (i + 1) % Self::GROUPS.len(),
             None => 0,
@@ -80,7 +82,9 @@ impl WallpaperParams {
 
     /// Cycle to the previous symmetry group in the list.
     pub fn cycle_symmetry_group_back(&mut self) {
-        let current = Self::GROUPS.iter().position(|&g| g == self.symmetry_group.as_str());
+        let current = Self::GROUPS
+            .iter()
+            .position(|&g| g == self.symmetry_group.as_str());
         let prev = match current {
             Some(0) => Self::GROUPS.len() - 1,
             Some(i) => i - 1,
@@ -105,7 +109,12 @@ impl AsciiPreview {
     ///
     /// The pattern function is derived from `params`: a tileable sinusoidal
     /// wave modulated by `scale`, `rotation`, and `hue_offset`.
-    pub fn render<W: Write>(params: &WallpaperParams, width: usize, height: usize, sink: &mut W) -> io::Result<()> {
+    pub fn render<W: Write>(
+        params: &WallpaperParams,
+        width: usize,
+        height: usize,
+        sink: &mut W,
+    ) -> io::Result<()> {
         let scale = params.scale;
         let rot_rad = params.rotation.to_radians();
         let hue_norm = params.hue_offset / 360.0;
@@ -139,14 +148,25 @@ impl AsciiPreview {
     }
 
     /// Render with a border and parameter info header to stdout.
-    pub fn render_with_header(params: &WallpaperParams, width: usize, height: usize) -> io::Result<()> {
+    pub fn render_with_header(
+        params: &WallpaperParams,
+        width: usize,
+        height: usize,
+    ) -> io::Result<()> {
         let stdout = io::stdout();
         let mut out = stdout.lock();
 
         // Header
         writeln!(out, "┌{:─<w$}┐", "", w = width * 2)?;
-        writeln!(out, "│ Symmetry: {:10} Scale: {:.2}  Rot: {:.1}°  Hue: {:.0}°  Speed: {:.1} │",
-            params.symmetry_group, params.scale, params.rotation, params.hue_offset, params.animation_speed)?;
+        writeln!(
+            out,
+            "│ Symmetry: {:10} Scale: {:.2}  Rot: {:.1}°  Hue: {:.0}°  Speed: {:.1} │",
+            params.symmetry_group,
+            params.scale,
+            params.rotation,
+            params.hue_offset,
+            params.animation_speed
+        )?;
         writeln!(out, "├{:─<w$}┤", "", w = width * 2)?;
 
         // Pattern
@@ -279,42 +299,60 @@ mod tests {
 
     #[test]
     fn test_clamp_scale_min() {
-        let mut p = WallpaperParams { scale: -1.0, ..Default::default() };
+        let mut p = WallpaperParams {
+            scale: -1.0,
+            ..Default::default()
+        };
         p.clamp();
         assert!((p.scale - 0.1).abs() < 1e-6);
     }
 
     #[test]
     fn test_clamp_scale_max() {
-        let mut p = WallpaperParams { scale: 100.0, ..Default::default() };
+        let mut p = WallpaperParams {
+            scale: 100.0,
+            ..Default::default()
+        };
         p.clamp();
         assert!((p.scale - 10.0).abs() < 1e-6);
     }
 
     #[test]
     fn test_clamp_rotation_wraps() {
-        let mut p = WallpaperParams { rotation: 400.0, ..Default::default() };
+        let mut p = WallpaperParams {
+            rotation: 400.0,
+            ..Default::default()
+        };
         p.clamp();
         assert!((p.rotation - 40.0).abs() < 1e-3);
     }
 
     #[test]
     fn test_clamp_hue_wraps() {
-        let mut p = WallpaperParams { hue_offset: 720.0, ..Default::default() };
+        let mut p = WallpaperParams {
+            hue_offset: 720.0,
+            ..Default::default()
+        };
         p.clamp();
         assert!(p.hue_offset < 360.0);
     }
 
     #[test]
     fn test_clamp_animation_speed_min() {
-        let mut p = WallpaperParams { animation_speed: -5.0, ..Default::default() };
+        let mut p = WallpaperParams {
+            animation_speed: -5.0,
+            ..Default::default()
+        };
         p.clamp();
         assert!((p.animation_speed - 0.0).abs() < 1e-6);
     }
 
     #[test]
     fn test_clamp_animation_speed_max() {
-        let mut p = WallpaperParams { animation_speed: 100.0, ..Default::default() };
+        let mut p = WallpaperParams {
+            animation_speed: 100.0,
+            ..Default::default()
+        };
         p.clamp();
         assert!((p.animation_speed - 10.0).abs() < 1e-6);
     }
@@ -329,7 +367,10 @@ mod tests {
 
     #[test]
     fn test_cycle_symmetry_group_wraps() {
-        let mut p = WallpaperParams { symmetry_group: "p6m".into(), ..Default::default() };
+        let mut p = WallpaperParams {
+            symmetry_group: "p6m".into(),
+            ..Default::default()
+        };
         p.cycle_symmetry_group();
         assert_eq!(p.symmetry_group, WallpaperParams::GROUPS[0]);
     }
@@ -374,13 +415,22 @@ mod tests {
 
     #[test]
     fn test_render_different_params_produce_different_output() {
-        let p1 = WallpaperParams { hue_offset: 0.0, ..Default::default() };
-        let p2 = WallpaperParams { hue_offset: 90.0, ..Default::default() };
+        let p1 = WallpaperParams {
+            hue_offset: 0.0,
+            ..Default::default()
+        };
+        let p2 = WallpaperParams {
+            hue_offset: 90.0,
+            ..Default::default()
+        };
         let mut buf1 = Vec::new();
         let mut buf2 = Vec::new();
         AsciiPreview::render(&p1, 8, 4, &mut buf1).unwrap();
         AsciiPreview::render(&p2, 8, 4, &mut buf2).unwrap();
-        assert_ne!(buf1, buf2, "different hue_offset should produce different output");
+        assert_ne!(
+            buf1, buf2,
+            "different hue_offset should produce different output"
+        );
     }
 
     // ── TuiApp tests ──────────────────────────────────────────────────────

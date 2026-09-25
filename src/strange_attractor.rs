@@ -204,11 +204,7 @@ impl AttractorRenderer {
                 let dx = (k1.x + 2.0 * k2.x + 2.0 * k3.x + k4.x) / 6.0;
                 let dy = (k1.y + 2.0 * k2.y + 2.0 * k3.y + k4.y) / 6.0;
                 let dz = (k1.z + 2.0 * k2.z + 2.0 * k3.z + k4.z) / 6.0;
-                Point3::new(
-                    state.x + dx * dt,
-                    state.y + dy * dt,
-                    state.z + dz * dt,
-                )
+                Point3::new(state.x + dx * dt, state.y + dy * dt, state.z + dz * dt)
             }
         }
     }
@@ -261,12 +257,16 @@ impl AttractorRenderer {
         }
 
         // Compute bounding box.
-        let (min_x, max_x) = points.iter().fold((f64::MAX, f64::MIN), |(mn, mx), (x, _)| {
-            (mn.min(*x), mx.max(*x))
-        });
-        let (min_y, max_y) = points.iter().fold((f64::MAX, f64::MIN), |(mn, mx), (_, y)| {
-            (mn.min(*y), mx.max(*y))
-        });
+        let (min_x, max_x) = points
+            .iter()
+            .fold((f64::MAX, f64::MIN), |(mn, mx), (x, _)| {
+                (mn.min(*x), mx.max(*x))
+            });
+        let (min_y, max_y) = points
+            .iter()
+            .fold((f64::MAX, f64::MIN), |(mn, mx), (_, y)| {
+                (mn.min(*y), mx.max(*y))
+            });
 
         let range_x = (max_x - min_x).max(1e-10);
         let range_y = (max_y - min_y).max(1e-10);
@@ -281,7 +281,12 @@ impl AttractorRenderer {
             density[row][col] = density[row][col].saturating_add(1);
         }
 
-        let max_density = density.iter().flat_map(|r| r.iter()).copied().max().unwrap_or(1);
+        let max_density = density
+            .iter()
+            .flat_map(|r| r.iter())
+            .copied()
+            .max()
+            .unwrap_or(1);
         let log_max = (max_density as f64 + 1.0).ln();
 
         density
@@ -307,12 +312,16 @@ impl AttractorRenderer {
             return String::new();
         }
 
-        let (min_x, max_x) = points.iter().fold((f64::MAX, f64::MIN), |(mn, mx), (x, _)| {
-            (mn.min(*x), mx.max(*x))
-        });
-        let (min_y, max_y) = points.iter().fold((f64::MAX, f64::MIN), |(mn, mx), (_, y)| {
-            (mn.min(*y), mx.max(*y))
-        });
+        let (min_x, max_x) = points
+            .iter()
+            .fold((f64::MAX, f64::MIN), |(mn, mx), (x, _)| {
+                (mn.min(*x), mx.max(*x))
+            });
+        let (min_y, max_y) = points
+            .iter()
+            .fold((f64::MAX, f64::MIN), |(mn, mx), (_, y)| {
+                (mn.min(*y), mx.max(*y))
+            });
 
         let range_x = (max_x - min_x).max(1e-10);
         let range_y = (max_y - min_y).max(1e-10);

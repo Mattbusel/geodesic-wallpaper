@@ -69,7 +69,10 @@ pub struct BandSplitter {
 
 impl BandSplitter {
     pub fn new(sample_rate: f32, fft_size: usize) -> Self {
-        Self { sample_rate, fft_size: fft_size.max(64) }
+        Self {
+            sample_rate,
+            fft_size: fft_size.max(64),
+        }
     }
 
     /// Frequency in Hz at bin `k`.
@@ -85,10 +88,7 @@ impl BandSplitter {
         if hi_bin <= lo_bin {
             return 0.0;
         }
-        let sum_sq: f32 = magnitudes[lo_bin..hi_bin]
-            .iter()
-            .map(|&m| m * m)
-            .sum();
+        let sum_sq: f32 = magnitudes[lo_bin..hi_bin].iter().map(|&m| m * m).sum();
         let rms = (sum_sq / (hi_bin - lo_bin) as f32).sqrt();
         rms
     }
@@ -124,8 +124,8 @@ impl EnergySmoother {
     /// Feed new raw energies and return the smoothed output.
     pub fn update(&mut self, raw: BandEnergies) -> BandEnergies {
         let a = self.alpha;
-        self.smoothed.bass  = (1.0 - a) * self.smoothed.bass  + a * raw.bass;
-        self.smoothed.mids  = (1.0 - a) * self.smoothed.mids  + a * raw.mids;
+        self.smoothed.bass = (1.0 - a) * self.smoothed.bass + a * raw.bass;
+        self.smoothed.mids = (1.0 - a) * self.smoothed.mids + a * raw.mids;
         self.smoothed.highs = (1.0 - a) * self.smoothed.highs + a * raw.highs;
         self.smoothed
     }
@@ -197,10 +197,7 @@ impl Default for AudioCaptureConfig {
 /// # Errors
 ///
 /// Returns an error string if the background thread cannot be spawned.
-pub fn start_capture(
-    config: AudioCaptureConfig,
-    energies: SharedEnergies,
-) -> Result<(), String> {
+pub fn start_capture(config: AudioCaptureConfig, energies: SharedEnergies) -> Result<(), String> {
     let smooth_alpha = config.smooth_alpha;
     let energies_thread = Arc::clone(&energies);
 
@@ -214,13 +211,15 @@ pub fn start_capture(
             loop {
                 let t = start.elapsed().as_secs_f32();
                 let raw = BandEnergies {
-                    bass:  0.5 + 0.4 * (t * 0.3).sin(),
-                    mids:  0.5 + 0.4 * (t * 0.7).sin(),
+                    bass: 0.5 + 0.4 * (t * 0.3).sin(),
+                    mids: 0.5 + 0.4 * (t * 0.7).sin(),
                     highs: 0.5 + 0.4 * (t * 1.3).sin(),
                 };
                 let smoothed = smoother.update(raw);
                 {
-                    let Ok(mut e) = energies_thread.lock() else { break };
+                    let Ok(mut e) = energies_thread.lock() else {
+                        break;
+                    };
                     *e = smoothed;
                 }
                 std::thread::sleep(std::time::Duration::from_millis(16));
@@ -245,15 +244,25 @@ mod tests {
         // Flat spectrum at unit magnitude.
         let mags = vec![1.0f32; 512];
         let bands = splitter.split(&mags);
-        assert!(bands.bass > 0.0, "bass should be non-zero for flat spectrum");
-        assert!(bands.mids > 0.0, "mids should be non-zero for flat spectrum");
+        assert!(
+            bands.bass > 0.0,
+            "bass should be non-zero for flat spectrum"
+        );
+        assert!(
+            bands.mids > 0.0,
+            "mids should be non-zero for flat spectrum"
+        );
     }
 
     #[test]
     fn test_energy_smoother_converges() {
         let mut smoother = EnergySmoother::new(0.5);
         for _ in 0..20 {
-            smoother.update(BandEnergies { bass: 1.0, mids: 1.0, highs: 1.0 });
+            smoother.update(BandEnergies {
+                bass: 1.0,
+                mids: 1.0,
+                highs: 1.0,
+            });
         }
         let c = smoother.current();
         assert!(c.bass > 0.99, "smoother should converge to 1.0: {}", c.bass);
@@ -261,24 +270,48 @@ mod tests {
 
     #[test]
     fn test_band_energies_curvature_range() {
-        let e = BandEnergies { bass: 0.0, mids: 0.5, highs: 1.0 };
+        let e = BandEnergies {
+            bass: 0.0,
+            mids: 0.5,
+            highs: 1.0,
+        };
         assert!((e.curvature() - 0.5).abs() < 1e-4);
-        let e2 = BandEnergies { bass: 1.0, mids: 0.0, highs: 0.0 };
+        let e2 = BandEnergies {
+            bass: 1.0,
+            mids: 0.0,
+            highs: 0.0,
+        };
         assert!((e2.curvature() - 3.0).abs() < 1e-4);
     }
 
     #[test]
     fn test_band_energies_trail_length_range() {
-        let e_min = BandEnergies { bass: 0.0, mids: 0.0, highs: 0.0 };
-        let e_max = BandEnergies { bass: 0.0, mids: 1.0, highs: 0.0 };
+        let e_min = BandEnergies {
+            bass: 0.0,
+            mids: 0.0,
+            highs: 0.0,
+        };
+        let e_max = BandEnergies {
+            bass: 0.0,
+            mids: 1.0,
+            highs: 0.0,
+        };
         assert_eq!(e_min.trail_length_frames(), 30);
         assert_eq!(e_max.trail_length_frames(), 600);
     }
 
     #[test]
     fn test_band_energies_particle_speed_range() {
-        let e_min = BandEnergies { bass: 0.0, mids: 0.0, highs: 0.0 };
-        let e_max = BandEnergies { bass: 0.0, mids: 0.0, highs: 1.0 };
+        let e_min = BandEnergies {
+            bass: 0.0,
+            mids: 0.0,
+            highs: 0.0,
+        };
+        let e_max = BandEnergies {
+            bass: 0.0,
+            mids: 0.0,
+            highs: 1.0,
+        };
         assert!((e_min.particle_speed() - 0.5).abs() < 1e-4);
         assert!((e_max.particle_speed() - 4.0).abs() < 1e-4);
     }

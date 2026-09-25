@@ -1,67 +1,112 @@
 name: Release
 
+# Push a tag like v1.5.0 to build the Windows wallpaper and attach it to a
+# GitHub Release. Windows only: the app is a Win32 desktop wallpaper (it pins a
+# window behind the desktop icons via the Win32 API), so there is nothing to run
+# on macOS or Linux. Publishing to crates.io stays manual.
 on:
   push:
     tags:
-      - 'v*'
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  # Build-only dry run when this workflow itself changes (nothing is released).
+  pull_request:
+    paths:
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build, e.g. v1.5.0"
+        required: true
 
 permissions:
   contents: write
 
-jobs:
-  build-windows:
-    name: Build Windows .exe
-    runs-on: windows-latest
+env:
+  CARGO_TERM_COLOR: always
+  TAG: ${{ github.event_name == 'pull_request' && 'pr-test' || github.event.inputs.tag || github.ref_name }}
 
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-msvc
+          ref: ${{ github.event_name == 'pull_request' && github.sha || env.TAG }}
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          targets: ${{ matrix.target }}
 
-      - name: Build release binary
-        run: cargo build --release --target x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
 
-      - name: Copy config alongside exe
+      - name: Build
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Smoke test
+        shell: pwsh
         run: |
-          mkdir dist
-          copy target\x86_64-pc-windows-msvc\release\geodesic-wallpaper.exe dist\
-          copy config.toml dist\
+          & "target/${{ matrix.target }}/release/geodesic-wallpaper.exe" --version
+          & "target/${{ matrix.target }}/release/geodesic-wallpaper.exe" --help
 
-      - name: Zip release
+      - name: Package (Windows)
+        shell: pwsh
         run: |
-          Compress-Archive -Path dist\* -DestinationPath geodesic-wallpaper-windows.zip
+          $name = "geodesic-wallpaper-$env:TAG-${{ matrix.target }}"
+          New-Item -ItemType Directory $name | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/geodesic-wallpaper.exe", README.md, LICENSE, config.toml $name
+          Copy-Item -Recurse presets "$name/presets"
+          Compress-Archive -Path $name -DestinationPath "$name.zip"
+          $hash = (Get-FileHash "$name.zip" -Algorithm SHA256).Hash.ToLower()
+          "$hash  $name.zip" | Out-File -Encoding ascii "$name.zip.sha256"
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - uses: actions/upload-artifact@v4
         with:
-          name: "Geodesic Wallpaper ${{ github.ref_name }}"
-          body: |
-            ## Geodesic Flow — Live Desktop Wallpaper ${{ github.ref_name }}
+          name: ${{ matrix.target }}
+          path: geodesic-wallpaper-*.zip*
 
-            ### Download
-            - **`geodesic-wallpaper-windows.zip`** — extract and run `geodesic-wallpaper.exe`
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
 
-            ### What's included
-            - `geodesic-wallpaper.exe` — the wallpaper application
-            - `config.toml` — edit this to change surface, colors, trail length, etc.
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum *.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
 
-            ### Requirements
-            - Windows 10 or 11
-            - Any modern GPU (DirectX 12 / Vulkan supported)
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ls -l dist
+          cat > notes.md <<NOTES
+          Animated geodesic-flow desktop wallpaper for Windows 10/11.
 
-            See the [README](https://github.com/${{ github.repository }}#readme) for full configuration docs.
-          files: geodesic-wallpaper-windows.zip
-          draft: false
-          prerelease: false
+          **Download:** \`geodesic-wallpaper-${TAG}-x86_64-pc-windows-msvc.zip\`, extract it, and run \`geodesic-wallpaper.exe\`. The zip also holds a sample \`config.toml\` and the \`presets/\` folder.
+
+          The exe is unsigned, so Windows SmartScreen may say "unknown publisher": click **More info**, then **Run anyway**. Verify the download against \`SHA256SUMS.txt\`.
+
+          Windows only: this is a Win32 desktop wallpaper. See CHANGELOG.md for what changed.
+          NOTES
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* --title "Geodesic Wallpaper $TAG" --notes-file notes.md
+          fi

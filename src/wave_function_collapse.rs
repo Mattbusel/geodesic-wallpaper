@@ -36,11 +36,24 @@ impl TileRules {
 /// Create simple checkerboard-compatible rules (3 tiles: empty, wall, floor)
 pub fn default_rules() -> TileRules {
     TileRules::new(3)
-        .allow(0, 0, 0).allow(0, 1, 0).allow(0, 2, 0).allow(0, 3, 0)
-        .allow(1, 0, 1).allow(1, 1, 1).allow(1, 2, 1).allow(1, 3, 1)
-        .allow(2, 0, 2).allow(2, 1, 2).allow(2, 2, 2).allow(2, 3, 2)
-        .allow(0, 0, 2).allow(0, 1, 2).allow(0, 2, 2).allow(0, 3, 2)
-        .allow(1, 1, 2).allow(1, 3, 2)
+        .allow(0, 0, 0)
+        .allow(0, 1, 0)
+        .allow(0, 2, 0)
+        .allow(0, 3, 0)
+        .allow(1, 0, 1)
+        .allow(1, 1, 1)
+        .allow(1, 2, 1)
+        .allow(1, 3, 1)
+        .allow(2, 0, 2)
+        .allow(2, 1, 2)
+        .allow(2, 2, 2)
+        .allow(2, 3, 2)
+        .allow(0, 0, 2)
+        .allow(0, 1, 2)
+        .allow(0, 2, 2)
+        .allow(0, 3, 2)
+        .allow(1, 1, 2)
+        .allow(1, 3, 2)
 }
 
 pub struct WfcGrid {
@@ -63,18 +76,32 @@ impl WfcGrid {
         }
     }
 
-    fn idx(&self, x: usize, y: usize) -> usize { y * self.width + x }
+    fn idx(&self, x: usize, y: usize) -> usize {
+        y * self.width + x
+    }
 
     /// Shannon entropy for a cell
     fn entropy(&self, x: usize, y: usize) -> f64 {
         let possibilities = &self.cells[self.idx(x, y)];
-        if possibilities.len() <= 1 { return 0.0; }
-        let weights: Vec<f64> = possibilities.iter().map(|&t| self.rules.tile_weights[t]).collect();
+        if possibilities.len() <= 1 {
+            return 0.0;
+        }
+        let weights: Vec<f64> = possibilities
+            .iter()
+            .map(|&t| self.rules.tile_weights[t])
+            .collect();
         let total: f64 = weights.iter().sum();
-        -weights.iter().map(|&w| {
-            let p = w / total;
-            if p > 0.0 { p * p.ln() } else { 0.0 }
-        }).sum::<f64>()
+        -weights
+            .iter()
+            .map(|&w| {
+                let p = w / total;
+                if p > 0.0 {
+                    p * p.ln()
+                } else {
+                    0.0
+                }
+            })
+            .sum::<f64>()
     }
 
     /// Find cell with lowest non-zero entropy
@@ -86,13 +113,20 @@ impl WfcGrid {
                 if !self.collapsed[self.idx(x, y)] {
                     let e = self.entropy(x, y);
                     if e > 0.0 {
-                        if e < best - 1e-10 { best = e; best_cells.clear(); }
-                        if (e - best).abs() < 1e-10 { best_cells.push((x, y)); }
+                        if e < best - 1e-10 {
+                            best = e;
+                            best_cells.clear();
+                        }
+                        if (e - best).abs() < 1e-10 {
+                            best_cells.push((x, y));
+                        }
                     }
                 }
             }
         }
-        if best_cells.is_empty() { return None; }
+        if best_cells.is_empty() {
+            return None;
+        }
         Some(best_cells[seed as usize % best_cells.len()])
     }
 
@@ -100,11 +134,19 @@ impl WfcGrid {
     fn collapse_cell(&mut self, x: usize, y: usize, seed: u64) {
         let idx = self.idx(x, y);
         let possibilities = &self.cells[idx];
-        let weights: Vec<f64> = possibilities.iter().map(|&t| self.rules.tile_weights[t]).collect();
+        let weights: Vec<f64> = possibilities
+            .iter()
+            .map(|&t| self.rules.tile_weights[t])
+            .collect();
         let total: f64 = weights.iter().sum();
         let mut r = (seed as f64 / u64::MAX as f64) * total;
-        let chosen = possibilities.iter().zip(weights.iter())
-            .find(|(_, &w)| { r -= w; r <= 0.0 })
+        let chosen = possibilities
+            .iter()
+            .zip(weights.iter())
+            .find(|(_, &w)| {
+                r -= w;
+                r <= 0.0
+            })
             .map(|(&t, _)| t)
             .unwrap_or(possibilities[0]);
         self.cells[idx] = vec![chosen];
@@ -119,13 +161,19 @@ impl WfcGrid {
         while let Some((cx, cy)) = queue.pop_front() {
             let neighbors: Vec<(usize, usize, usize)> = [
                 (cy.wrapping_sub(1), cx, 0), // North: (y-1, x, dir=0)
-                (cy, cx + 1, 1),              // East
-                (cy + 1, cx, 2),              // South
-                (cy, cx.wrapping_sub(1), 3),  // West
-            ].iter().filter_map(|&(ny, nx, dir)| {
-                if nx < self.width && ny < self.height { Some((nx, ny, dir)) }
-                else { None }
-            }).collect();
+                (cy, cx + 1, 1),             // East
+                (cy + 1, cx, 2),             // South
+                (cy, cx.wrapping_sub(1), 3), // West
+            ]
+            .iter()
+            .filter_map(|&(ny, nx, dir)| {
+                if nx < self.width && ny < self.height {
+                    Some((nx, ny, dir))
+                } else {
+                    None
+                }
+            })
+            .collect();
 
             for (nx, ny, dir) in neighbors {
                 let ni = self.idx(nx, ny);
@@ -134,11 +182,17 @@ impl WfcGrid {
 
                 let before_len = self.cells[ni].len();
                 self.cells[ni].retain(|&neighbor_tile| {
-                    current_tiles.iter().any(|&ct| self.rules.allowed_neighbors[ct][dir].contains(&neighbor_tile))
+                    current_tiles
+                        .iter()
+                        .any(|&ct| self.rules.allowed_neighbors[ct][dir].contains(&neighbor_tile))
                 });
 
-                if self.cells[ni].is_empty() { return false; } // contradiction
-                if self.cells[ni].len() < before_len { queue.push_back((nx, ny)); }
+                if self.cells[ni].is_empty() {
+                    return false;
+                } // contradiction
+                if self.cells[ni].len() < before_len {
+                    queue.push_back((nx, ny));
+                }
             }
         }
         true
@@ -148,12 +202,16 @@ impl WfcGrid {
     pub fn run(&mut self, seed: u64) -> bool {
         let mut state = seed;
         loop {
-            state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             match self.min_entropy_cell(state) {
                 None => return true, // all collapsed
                 Some((x, y)) => {
                     self.collapse_cell(x, y, state >> 11);
-                    if !self.propagate(x, y) { return false; } // contradiction
+                    if !self.propagate(x, y) {
+                        return false;
+                    } // contradiction
                 }
             }
         }
@@ -161,7 +219,10 @@ impl WfcGrid {
 
     /// Get final tile map (returns 0 if cell has no possibilities)
     pub fn result(&self) -> Vec<usize> {
-        self.cells.iter().map(|c| c.first().copied().unwrap_or(0)).collect()
+        self.cells
+            .iter()
+            .map(|c| c.first().copied().unwrap_or(0))
+            .collect()
     }
 
     /// Render as RGBA pixels with tile colors
@@ -173,14 +234,20 @@ impl WfcGrid {
         for cy in 0..self.height {
             for cx in 0..self.width {
                 let tile = tiles[self.idx(cx, cy)];
-                let (r, g, b) = colors.get(tile % colors.len()).copied().unwrap_or((128, 128, 128));
+                let (r, g, b) = colors
+                    .get(tile % colors.len())
+                    .copied()
+                    .unwrap_or((128, 128, 128));
                 for ty in 0..tile_size {
                     for tx in 0..tile_size {
                         let px = cx as u32 * tile_size + tx;
                         let py = cy as u32 * tile_size + ty;
                         let pi = ((py * pw + px) * 4) as usize;
                         if pi + 3 < pixels.len() {
-                            pixels[pi] = r; pixels[pi+1] = g; pixels[pi+2] = b; pixels[pi+3] = 255;
+                            pixels[pi] = r;
+                            pixels[pi + 1] = g;
+                            pixels[pi + 2] = b;
+                            pixels[pi + 3] = 255;
                         }
                     }
                 }

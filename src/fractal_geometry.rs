@@ -21,7 +21,10 @@ pub struct IfsTransform {
 impl IfsTransform {
     /// Apply the affine transform to a point.
     pub fn apply(&self, x: f64, y: f64) -> (f64, f64) {
-        (self.a * x + self.b * y + self.e, self.c * x + self.d * y + self.f)
+        (
+            self.a * x + self.b * y + self.e,
+            self.c * x + self.d * y + self.f,
+        )
     }
 }
 
@@ -36,10 +39,42 @@ impl IteratedFunctionSystem {
     pub fn barnsley_fern() -> Self {
         Self {
             transforms: vec![
-                IfsTransform { a: 0.0,  b: 0.0,   c: 0.0,  d: 0.16, e: 0.0, f: 0.0,  probability: 0.01 },
-                IfsTransform { a: 0.85, b: 0.04,  c: -0.04,d: 0.85, e: 0.0, f: 1.6,  probability: 0.85 },
-                IfsTransform { a: 0.2,  b: -0.26, c: 0.23, d: 0.22, e: 0.0, f: 1.6,  probability: 0.07 },
-                IfsTransform { a: -0.15,b: 0.28,  c: 0.26, d: 0.24, e: 0.0, f: 0.44, probability: 0.07 },
+                IfsTransform {
+                    a: 0.0,
+                    b: 0.0,
+                    c: 0.0,
+                    d: 0.16,
+                    e: 0.0,
+                    f: 0.0,
+                    probability: 0.01,
+                },
+                IfsTransform {
+                    a: 0.85,
+                    b: 0.04,
+                    c: -0.04,
+                    d: 0.85,
+                    e: 0.0,
+                    f: 1.6,
+                    probability: 0.85,
+                },
+                IfsTransform {
+                    a: 0.2,
+                    b: -0.26,
+                    c: 0.23,
+                    d: 0.22,
+                    e: 0.0,
+                    f: 1.6,
+                    probability: 0.07,
+                },
+                IfsTransform {
+                    a: -0.15,
+                    b: 0.28,
+                    c: 0.26,
+                    d: 0.24,
+                    e: 0.0,
+                    f: 0.44,
+                    probability: 0.07,
+                },
             ],
         }
     }
@@ -48,9 +83,33 @@ impl IteratedFunctionSystem {
     pub fn sierpinski_gasket() -> Self {
         Self {
             transforms: vec![
-                IfsTransform { a: 0.5, b: 0.0, c: 0.0, d: 0.5, e: 0.0,  f: 0.0,  probability: 1.0 / 3.0 },
-                IfsTransform { a: 0.5, b: 0.0, c: 0.0, d: 0.5, e: 0.5,  f: 0.0,  probability: 1.0 / 3.0 },
-                IfsTransform { a: 0.5, b: 0.0, c: 0.0, d: 0.5, e: 0.25, f: 0.43, probability: 1.0 / 3.0 },
+                IfsTransform {
+                    a: 0.5,
+                    b: 0.0,
+                    c: 0.0,
+                    d: 0.5,
+                    e: 0.0,
+                    f: 0.0,
+                    probability: 1.0 / 3.0,
+                },
+                IfsTransform {
+                    a: 0.5,
+                    b: 0.0,
+                    c: 0.0,
+                    d: 0.5,
+                    e: 0.5,
+                    f: 0.0,
+                    probability: 1.0 / 3.0,
+                },
+                IfsTransform {
+                    a: 0.5,
+                    b: 0.0,
+                    c: 0.0,
+                    d: 0.5,
+                    e: 0.25,
+                    f: 0.43,
+                    probability: 1.0 / 3.0,
+                },
             ],
         }
     }
@@ -59,8 +118,24 @@ impl IteratedFunctionSystem {
     pub fn dragon() -> Self {
         Self {
             transforms: vec![
-                IfsTransform { a: 0.5,  b: -0.5, c: 0.5,  d: 0.5, e: 0.0, f: 0.0, probability: 0.5 },
-                IfsTransform { a: -0.5, b: -0.5, c: 0.5,  d: -0.5, e: 1.0, f: 0.0, probability: 0.5 },
+                IfsTransform {
+                    a: 0.5,
+                    b: -0.5,
+                    c: 0.5,
+                    d: 0.5,
+                    e: 0.0,
+                    f: 0.0,
+                    probability: 0.5,
+                },
+                IfsTransform {
+                    a: -0.5,
+                    b: -0.5,
+                    c: 0.5,
+                    d: -0.5,
+                    e: 1.0,
+                    f: 0.0,
+                    probability: 0.5,
+                },
             ],
         }
     }
@@ -90,14 +165,19 @@ impl IteratedFunctionSystem {
         let mut pts = Vec::with_capacity(n_points);
         for _ in 0..n_points {
             let r = rng.next_f64();
-            let idx = cumulative.iter().position(|&c| r <= c).unwrap_or(self.transforms.len() - 1);
+            let idx = cumulative
+                .iter()
+                .position(|&c| r <= c)
+                .unwrap_or(self.transforms.len() - 1);
             let (nx, ny) = self.transforms[idx].apply(x, y);
             x = nx;
             y = ny;
             pts.push((x, y));
         }
 
-        if pts.is_empty() { return pixels; }
+        if pts.is_empty() {
+            return pixels;
+        }
 
         let min_x = pts.iter().map(|p| p.0).fold(f64::INFINITY, f64::min);
         let max_x = pts.iter().map(|p| p.0).fold(f64::NEG_INFINITY, f64::max);
@@ -133,12 +213,7 @@ impl NewtonFractal {
     ///
     /// The polynomial is `prod(z - root_k)` and its derivative is approximated
     /// numerically.
-    pub fn iterate(
-        z_re: f64,
-        z_im: f64,
-        roots: &[(f64, f64)],
-        max_iter: u32,
-    ) -> (u32, usize) {
+    pub fn iterate(z_re: f64, z_im: f64, roots: &[(f64, f64)], max_iter: u32) -> (u32, usize) {
         if roots.is_empty() {
             return (max_iter, 0);
         }
@@ -149,8 +224,10 @@ impl NewtonFractal {
 
         for iter in 0..max_iter {
             // Evaluate p(z) and p'(z) using product form
-            let mut pr = 1.0f64; let mut pi = 0.0f64; // p(z)
-            let mut dpr = 0.0f64; let mut dpi = 0.0f64; // p'(z)
+            let mut pr = 1.0f64;
+            let mut pi = 0.0f64; // p(z)
+            let mut dpr = 0.0f64;
+            let mut dpi = 0.0f64; // p'(z)
 
             for (i, &(rr, ri)) in roots.iter().enumerate() {
                 // factor = (z - root)
@@ -181,7 +258,9 @@ impl NewtonFractal {
 
             // z = z - p(z)/p'(z)
             let d_mag2 = dpr * dpr + dpi * dpi;
-            if d_mag2 < 1e-18 { break; }
+            if d_mag2 < 1e-18 {
+                break;
+            }
             let ratio_r = (pr * dpr + pi * dpi) / d_mag2;
             let ratio_i = (pi * dpr - pr * dpi) / d_mag2;
             zr -= ratio_r;
@@ -198,11 +277,16 @@ impl NewtonFractal {
         }
 
         // Find nearest root
-        let nearest = roots.iter().enumerate().min_by(|(_, &(ar, ai)), (_, &(br, bi))| {
-            let da = (zr - ar) * (zr - ar) + (zi - ai) * (zi - ai);
-            let db = (zr - br) * (zr - br) + (zi - bi) * (zi - bi);
-            da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
-        }).map(|(i, _)| i).unwrap_or(0);
+        let nearest = roots
+            .iter()
+            .enumerate()
+            .min_by(|(_, &(ar, ai)), (_, &(br, bi))| {
+                let da = (zr - ar) * (zr - ar) + (zi - ai) * (zi - ai);
+                let db = (zr - br) * (zr - br) + (zi - bi) * (zi - bi);
+                da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .map(|(i, _)| i)
+            .unwrap_or(0);
 
         (max_iter, nearest)
     }
@@ -219,27 +303,33 @@ impl NewtonFractal {
         let n_roots = roots.len().max(1);
 
         // Assign a distinct hue to each root
-        let root_colors: Vec<[u8; 3]> = (0..n_roots).map(|i| {
-            let hue = (i as f64 / n_roots as f64) * 360.0;
-            let (r, g, b) = hsv_to_rgb(hue, 0.85, 0.95);
-            [(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]
-        }).collect();
+        let root_colors: Vec<[u8; 3]> = (0..n_roots)
+            .map(|i| {
+                let hue = (i as f64 / n_roots as f64) * 360.0;
+                let (r, g, b) = hsv_to_rgb(hue, 0.85, 0.95);
+                [(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]
+            })
+            .collect();
 
-        (0..height).map(|py| {
-            (0..width).map(|px| {
-                let zr = x_min + (px as f64 / width as f64) * (x_max - x_min);
-                let zi = y_min + (py as f64 / height as f64) * (y_max - y_min);
-                let (iters, root_idx) = Self::iterate(zr, zi, roots, max_iter);
-                let base = root_colors[root_idx % n_roots];
-                // Shade by iteration count (darker = slower convergence)
-                let shade = 1.0 - (iters as f64 / max_iter as f64) * 0.7;
-                [
-                    (base[0] as f64 * shade) as u8,
-                    (base[1] as f64 * shade) as u8,
-                    (base[2] as f64 * shade) as u8,
-                ]
-            }).collect()
-        }).collect()
+        (0..height)
+            .map(|py| {
+                (0..width)
+                    .map(|px| {
+                        let zr = x_min + (px as f64 / width as f64) * (x_max - x_min);
+                        let zi = y_min + (py as f64 / height as f64) * (y_max - y_min);
+                        let (iters, root_idx) = Self::iterate(zr, zi, roots, max_iter);
+                        let base = root_colors[root_idx % n_roots];
+                        // Shade by iteration count (darker = slower convergence)
+                        let shade = 1.0 - (iters as f64 / max_iter as f64) * 0.7;
+                        [
+                            (base[0] as f64 * shade) as u8,
+                            (base[1] as f64 * shade) as u8,
+                            (base[2] as f64 * shade) as u8,
+                        ]
+                    })
+                    .collect()
+            })
+            .collect()
     }
 
     /// The three cube roots of unity: 1, ω, ω².
@@ -278,29 +368,29 @@ impl BurningShip {
     }
 
     /// Render the Burning Ship fractal.
-    pub fn render(
-        width: u32,
-        height: u32,
-        view: (f64, f64, f64, f64),
-    ) -> Vec<Vec<[u8; 3]>> {
+    pub fn render(width: u32, height: u32, view: (f64, f64, f64, f64)) -> Vec<Vec<[u8; 3]>> {
         let (x_min, x_max, y_min, y_max) = view;
         let max_iter = 256u32;
 
-        (0..height).map(|py| {
-            (0..width).map(|px| {
-                let c_re = x_min + (px as f64 / width as f64) * (x_max - x_min);
-                let c_im = y_min + (py as f64 / height as f64) * (y_max - y_min);
-                let iters = Self::iterate(c_re, c_im, max_iter);
-                if iters == max_iter {
-                    [0u8, 0, 0]
-                } else {
-                    let t = iters as f64 / max_iter as f64;
-                    let hue = t * 300.0 + 30.0;
-                    let (r, g, b) = hsv_to_rgb(hue, 0.9, 1.0);
-                    [(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]
-                }
-            }).collect()
-        }).collect()
+        (0..height)
+            .map(|py| {
+                (0..width)
+                    .map(|px| {
+                        let c_re = x_min + (px as f64 / width as f64) * (x_max - x_min);
+                        let c_im = y_min + (py as f64 / height as f64) * (y_max - y_min);
+                        let iters = Self::iterate(c_re, c_im, max_iter);
+                        if iters == max_iter {
+                            [0u8, 0, 0]
+                        } else {
+                            let t = iters as f64 / max_iter as f64;
+                            let hue = t * 300.0 + 30.0;
+                            let (r, g, b) = hsv_to_rgb(hue, 0.9, 1.0);
+                            [(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]
+                        }
+                    })
+                    .collect()
+            })
+            .collect()
     }
 }
 
@@ -338,38 +428,37 @@ impl PhoenixFractal {
     }
 
     /// Render the Phoenix fractal over a 2D grid of starting z values.
-    pub fn render(
-        c: (f64, f64),
-        p: (f64, f64),
-        width: u32,
-        height: u32,
-    ) -> Vec<Vec<[u8; 3]>> {
+    pub fn render(c: (f64, f64), p: (f64, f64), width: u32, height: u32) -> Vec<Vec<[u8; 3]>> {
         let max_iter = 128u32;
         // Standard view: z in [-1.5, 1.5] × [-1.5, 1.5]
         let (x_min, x_max) = (-1.5, 1.5);
         let (y_min, y_max) = (-1.5, 1.5);
 
-        (0..height).map(|py| {
-            (0..width).map(|px| {
-                // We vary the initial z (re, im) across the grid
-                let _z_re = x_min + (px as f64 / width as f64) * (x_max - x_min);
-                let _z_im = y_min + (py as f64 / height as f64) * (y_max - y_min);
-                // For Phoenix, conventionally c is fixed and we vary initial z
-                // by using (x, y) as c and p constant
-                let vary_c = (_z_re, _z_im);
-                let iters = Self::iterate(vary_c, p, max_iter);
-                if iters == max_iter {
-                    [0u8, 0, 0]
-                } else {
-                    let t = iters as f64 / max_iter as f64;
-                    let hue = (1.0 - t) * 270.0;
-                    let (r, g, b) = hsv_to_rgb(hue, 0.8, 1.0);
-                    // Use c to avoid dead-code warning
-                    let _ = c;
-                    [(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]
-                }
-            }).collect()
-        }).collect()
+        (0..height)
+            .map(|py| {
+                (0..width)
+                    .map(|px| {
+                        // We vary the initial z (re, im) across the grid
+                        let _z_re = x_min + (px as f64 / width as f64) * (x_max - x_min);
+                        let _z_im = y_min + (py as f64 / height as f64) * (y_max - y_min);
+                        // For Phoenix, conventionally c is fixed and we vary initial z
+                        // by using (x, y) as c and p constant
+                        let vary_c = (_z_re, _z_im);
+                        let iters = Self::iterate(vary_c, p, max_iter);
+                        if iters == max_iter {
+                            [0u8, 0, 0]
+                        } else {
+                            let t = iters as f64 / max_iter as f64;
+                            let hue = (1.0 - t) * 270.0;
+                            let (r, g, b) = hsv_to_rgb(hue, 0.8, 1.0);
+                            // Use c to avoid dead-code warning
+                            let _ = c;
+                            [(r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8]
+                        }
+                    })
+                    .collect()
+            })
+            .collect()
     }
 }
 
@@ -382,12 +471,19 @@ fn hsv_to_rgb(h: f64, s: f64, v: f64) -> (f64, f64, f64) {
     let c = v * s;
     let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
     let m = v - c;
-    let (r1, g1, b1) = if h < 60.0 { (c, x, 0.0) }
-        else if h < 120.0 { (x, c, 0.0) }
-        else if h < 180.0 { (0.0, c, x) }
-        else if h < 240.0 { (0.0, x, c) }
-        else if h < 300.0 { (x, 0.0, c) }
-        else { (c, 0.0, x) };
+    let (r1, g1, b1) = if h < 60.0 {
+        (c, x, 0.0)
+    } else if h < 120.0 {
+        (x, c, 0.0)
+    } else if h < 180.0 {
+        (0.0, c, x)
+    } else if h < 240.0 {
+        (0.0, x, c)
+    } else if h < 300.0 {
+        (x, 0.0, c)
+    } else {
+        (c, 0.0, x)
+    };
     (r1 + m, g1 + m, b1 + m)
 }
 
@@ -399,7 +495,10 @@ impl LcgRng {
         Self(seed.wrapping_add(1))
     }
     fn next(&mut self) -> u64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         self.0
     }
     fn next_f64(&mut self) -> f64 {
@@ -417,7 +516,15 @@ mod tests {
 
     #[test]
     fn test_ifs_transform_apply() {
-        let t = IfsTransform { a: 0.5, b: 0.0, c: 0.0, d: 0.5, e: 0.0, f: 0.0, probability: 1.0 };
+        let t = IfsTransform {
+            a: 0.5,
+            b: 0.0,
+            c: 0.0,
+            d: 0.5,
+            e: 0.0,
+            f: 0.0,
+            probability: 1.0,
+        };
         let (x, y) = t.apply(2.0, 4.0);
         assert!((x - 1.0).abs() < 1e-10);
         assert!((y - 2.0).abs() < 1e-10);
@@ -444,7 +551,11 @@ mod tests {
         // Each root should have magnitude ≈ 1
         for (r, i) in &roots {
             let mag = (r * r + i * i).sqrt();
-            assert!((mag - 1.0).abs() < 1e-6, "Root magnitude should be 1, got {}", mag);
+            assert!(
+                (mag - 1.0).abs() < 1e-6,
+                "Root magnitude should be 1, got {}",
+                mag
+            );
         }
     }
 

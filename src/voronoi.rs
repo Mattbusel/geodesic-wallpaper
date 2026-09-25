@@ -55,19 +55,22 @@ pub struct VoronoiDiagram {
 
 impl VoronoiDiagram {
     /// Create a new diagram.
-    pub fn new(
-        width: usize,
-        height: usize,
-        sites: Vec<Point>,
-        colors: Vec<(u8, u8, u8)>,
-    ) -> Self {
-        assert_eq!(sites.len(), colors.len(), "sites and colors must have equal length");
+    pub fn new(width: usize, height: usize, sites: Vec<Point>, colors: Vec<(u8, u8, u8)>) -> Self {
+        assert_eq!(
+            sites.len(),
+            colors.len(),
+            "sites and colors must have equal length"
+        );
         let cells = sites
             .into_iter()
             .zip(colors)
             .map(|(site, color)| VoronoiCell { site, color })
             .collect();
-        Self { width, height, cells }
+        Self {
+            width,
+            height,
+            cells,
+        }
     }
 
     /// Render the diagram: for each pixel, assign the colour of the nearest site.
@@ -153,12 +156,7 @@ impl LloydRelaxation {
     /// Relax `sites` by `iterations` rounds within the given bounding box.
     ///
     /// Uses a pixel-space approach at 1-pixel resolution for speed.
-    pub fn relax(
-        sites: &[Point],
-        width: f64,
-        height: f64,
-        iterations: usize,
-    ) -> Vec<Point> {
+    pub fn relax(sites: &[Point], width: f64, height: f64, iterations: usize) -> Vec<Point> {
         let w = width as usize;
         let h = height as usize;
         let n = sites.len();
@@ -191,10 +189,7 @@ impl LloydRelaxation {
             // Move each site to centroid; if count==0, keep position.
             for i in 0..n {
                 if count[i] > 0 {
-                    current[i] = Point::new(
-                        sum_x[i] / count[i] as f64,
-                        sum_y[i] / count[i] as f64,
-                    );
+                    current[i] = Point::new(sum_x[i] / count[i] as f64, sum_y[i] / count[i] as f64);
                 }
             }
         }
@@ -221,7 +216,9 @@ pub fn generate_poisson_disk(width: f64, height: f64, min_dist: f64, seed: u64) 
     let mut rng = seed.wrapping_add(1);
 
     let lcg_next = |rng: &mut u64| -> f64 {
-        *rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        *rng = rng
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         (*rng >> 11) as f64 / (1u64 << 53) as f64
     };
 
@@ -260,8 +257,10 @@ pub fn generate_poisson_disk(width: f64, height: f64, min_dist: f64, seed: u64) 
                 parent.y + radius * angle.sin(),
             );
 
-            if candidate.x < 0.0 || candidate.x >= width
-                || candidate.y < 0.0 || candidate.y >= height
+            if candidate.x < 0.0
+                || candidate.x >= width
+                || candidate.y < 0.0
+                || candidate.y >= height
             {
                 continue;
             }
@@ -376,16 +375,15 @@ mod tests {
 
     #[test]
     fn lloyd_relaxation_sites_move() {
-        let sites = vec![
-            Point::new(1.0, 1.0),
-            Point::new(99.0, 99.0),
-        ];
+        let sites = vec![Point::new(1.0, 1.0), Point::new(99.0, 99.0)];
         let relaxed = LloydRelaxation::relax(&sites, 100.0, 100.0, 3);
         assert_eq!(relaxed.len(), 2);
         // Sites should have moved toward centroids.
         assert!(
-            relaxed[0].x != sites[0].x || relaxed[0].y != sites[0].y
-                || relaxed[1].x != sites[1].x || relaxed[1].y != sites[1].y,
+            relaxed[0].x != sites[0].x
+                || relaxed[0].y != sites[0].y
+                || relaxed[1].x != sites[1].x
+                || relaxed[1].y != sites[1].y,
             "sites should move during Lloyd relaxation"
         );
     }
@@ -408,7 +406,10 @@ mod tests {
                 assert!(
                     d >= min_dist - 1e-9,
                     "points {} and {} are too close: {:.4} < {:.4}",
-                    i, j, d, min_dist
+                    i,
+                    j,
+                    d,
+                    min_dist
                 );
             }
         }

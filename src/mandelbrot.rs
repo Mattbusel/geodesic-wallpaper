@@ -23,7 +23,10 @@ impl ComplexNum {
     /// Complex addition.
     #[inline]
     pub fn add(self, other: Self) -> Self {
-        Self { re: self.re + other.re, im: self.im + other.im }
+        Self {
+            re: self.re + other.re,
+            im: self.im + other.im,
+        }
     }
 
     /// Complex multiplication.
@@ -263,7 +266,11 @@ mod tests {
 
     #[test]
     fn render_mandelbrot_dimensions() {
-        let cfg = MandelbrotConfig { width: 8, height: 6, ..Default::default() };
+        let cfg = MandelbrotConfig {
+            width: 8,
+            height: 6,
+            ..Default::default()
+        };
         let grid = render_mandelbrot(&cfg);
         assert_eq!(grid.len(), 6);
         assert_eq!(grid[0].len(), 8);
@@ -287,7 +294,11 @@ mod tests {
 
     #[test]
     fn render_julia_dimensions() {
-        let cfg = MandelbrotConfig { width: 10, height: 8, ..Default::default() };
+        let cfg = MandelbrotConfig {
+            width: 10,
+            height: 8,
+            ..Default::default()
+        };
         let c = ComplexNum::new(-0.7, 0.27);
         let grid = render_julia(c, &cfg);
         assert_eq!(grid.len(), 8);

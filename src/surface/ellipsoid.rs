@@ -37,11 +37,7 @@ impl Ellipsoid {
 
     /// `∂φ/∂u = (-a sin(v) sin(u),  b sin(v) cos(u),  0)`.
     fn d_du(&self, u: f32, v: f32) -> Vec3 {
-        Vec3::new(
-            -self.a * v.sin() * u.sin(),
-            self.b * v.sin() * u.cos(),
-            0.0,
-        )
+        Vec3::new(-self.a * v.sin() * u.sin(), self.b * v.sin() * u.cos(), 0.0)
     }
 
     /// `∂φ/∂v = (a cos(v) cos(u),  b cos(v) sin(u),  -c sin(v))`.
@@ -116,10 +112,7 @@ impl Surface for Ellipsoid {
             for i in 0..2 {
                 for j in 0..2 {
                     let sum: f32 = (0..2)
-                        .map(|l| {
-                            ginv(k, l)
-                                * (dg(l, j, i) + dg(l, i, j) - dg(i, j, l))
-                        })
+                        .map(|l| ginv(k, l) * (dg(l, j, i) + dg(l, i, j) - dg(i, j, l)))
                         .sum();
                     gamma[k][i][j] = 0.5 * sum;
                 }

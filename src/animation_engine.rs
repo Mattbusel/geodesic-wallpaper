@@ -29,10 +29,18 @@ impl EasingFunction {
             EasingFunction::EaseIn => t * t,
             EasingFunction::EaseOut => 1.0 - (1.0 - t) * (1.0 - t),
             EasingFunction::EaseInOut => {
-                if t < 0.5 { 2.0 * t * t } else { 1.0 - (-2.0 * t + 2.0).powi(2) / 2.0 }
+                if t < 0.5 {
+                    2.0 * t * t
+                } else {
+                    1.0 - (-2.0 * t + 2.0).powi(2) / 2.0
+                }
             }
             EasingFunction::Cubic => {
-                if t < 0.5 { 4.0 * t * t * t } else { 1.0 - (-2.0 * t + 2.0).powi(3) / 2.0 }
+                if t < 0.5 {
+                    4.0 * t * t * t
+                } else {
+                    1.0 - (-2.0 * t + 2.0).powi(3) / 2.0
+                }
             }
             EasingFunction::Bounce => {
                 // Ease-out bounce
@@ -103,12 +111,16 @@ pub struct AnimTrack {
 
 impl AnimTrack {
     pub fn new(property: impl Into<String>) -> Self {
-        Self { property: property.into(), keyframes: Vec::new() }
+        Self {
+            property: property.into(),
+            keyframes: Vec::new(),
+        }
     }
 
     pub fn add_keyframe(&mut self, kf: Keyframe) {
         self.keyframes.push(kf);
-        self.keyframes.sort_by(|a, b| a.time_secs.partial_cmp(&b.time_secs).unwrap());
+        self.keyframes
+            .sort_by(|a, b| a.time_secs.partial_cmp(&b.time_secs).unwrap());
     }
 
     /// Interpolate the track value at `time_secs`.
@@ -132,7 +144,11 @@ impl AnimTrack {
             let b = &self.keyframes[i + 1];
             if time_secs >= a.time_secs && time_secs <= b.time_secs {
                 let span = b.time_secs - a.time_secs;
-                let raw_t = if span < 1e-12 { 1.0 } else { (time_secs - a.time_secs) / span };
+                let raw_t = if span < 1e-12 {
+                    1.0
+                } else {
+                    (time_secs - a.time_secs) / span
+                };
                 let t = EasingFunction::apply(raw_t, &b.easing);
                 return Some(Self::lerp_tween(&a.value, &b.value, t));
             }
@@ -156,7 +172,13 @@ impl AnimTrack {
                 TweenTarget::Vec2(ax + (bx - ax) * t, ay + (by - ay) * t)
             }
             // Mismatched types: snap to b at t ≥ 0.5.
-            _ => if t >= 0.5 { b.clone() } else { a.clone() },
+            _ => {
+                if t >= 0.5 {
+                    b.clone()
+                } else {
+                    a.clone()
+                }
+            }
         }
     }
 }
@@ -176,7 +198,12 @@ pub struct AnimClip {
 
 impl AnimClip {
     pub fn new(name: impl Into<String>, duration_secs: f64, loop_: bool) -> Self {
-        Self { name: name.into(), duration_secs, tracks: Vec::new(), loop_ }
+        Self {
+            name: name.into(),
+            duration_secs,
+            tracks: Vec::new(),
+            loop_,
+        }
     }
 
     pub fn add_track(&mut self, track: AnimTrack) {
@@ -242,7 +269,12 @@ pub struct AnimationEngine {
 
 impl AnimationEngine {
     pub fn new(fps: f64, width: u32, height: u32) -> Self {
-        Self { clips: Vec::new(), fps, width, height }
+        Self {
+            clips: Vec::new(),
+            fps,
+            width,
+            height,
+        }
     }
 
     pub fn add_clip(&mut self, clip: AnimClip) {
@@ -290,9 +322,8 @@ impl AnimationEngine {
         let mut out = String::new();
         for row in frame {
             for pixel in row {
-                let lum = 0.299 * pixel[0] as f64
-                    + 0.587 * pixel[1] as f64
-                    + 0.114 * pixel[2] as f64;
+                let lum =
+                    0.299 * pixel[0] as f64 + 0.587 * pixel[1] as f64 + 0.114 * pixel[2] as f64;
                 let idx = ((lum / 255.0) * (RAMP.len() - 1) as f64).round() as usize;
                 out.push(RAMP[idx.min(RAMP.len() - 1)]);
             }
@@ -422,7 +453,7 @@ mod tests {
         clip.add_track(float_track("v", 0.0, 1.0, 1.0));
         let s0 = clip.state_at(0.0);
         let s1 = clip.state_at(1.0); // same as 0.0 with looping
-        // At t=1.0 mod 1.0 = 0.0 → value should be 0.0
+                                     // At t=1.0 mod 1.0 = 0.0 → value should be 0.0
         assert_eq!(s0.get("v"), s1.get("v"));
     }
 }

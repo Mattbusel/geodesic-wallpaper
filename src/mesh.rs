@@ -102,7 +102,11 @@ impl Mesh {
             0.5 + pos.z.atan2(pos.x) / (2.0 * PI),
             0.5 - pos.y.asin() / PI,
         );
-        Vertex { position: pos, normal, uv }
+        Vertex {
+            position: pos,
+            normal,
+            uv,
+        }
     }
 
     /// Regular tetrahedron inscribed in the unit sphere.
@@ -123,7 +127,10 @@ impl Mesh {
             Triangle { a: 0, b: 3, c: 1 },
             Triangle { a: 1, b: 3, c: 2 },
         ];
-        Mesh { vertices, triangles }
+        Mesh {
+            vertices,
+            triangles,
+        }
     }
 
     /// Axis-aligned unit cube (8 vertices, 12 triangles).
@@ -131,30 +138,39 @@ impl Mesh {
         let s = 0.5f64;
         let positions = vec![
             Vec3::new(-s, -s, -s), // 0
-            Vec3::new( s, -s, -s), // 1
-            Vec3::new( s,  s, -s), // 2
-            Vec3::new(-s,  s, -s), // 3
-            Vec3::new(-s, -s,  s), // 4
-            Vec3::new( s, -s,  s), // 5
-            Vec3::new( s,  s,  s), // 6
-            Vec3::new(-s,  s,  s), // 7
+            Vec3::new(s, -s, -s),  // 1
+            Vec3::new(s, s, -s),   // 2
+            Vec3::new(-s, s, -s),  // 3
+            Vec3::new(-s, -s, s),  // 4
+            Vec3::new(s, -s, s),   // 5
+            Vec3::new(s, s, s),    // 6
+            Vec3::new(-s, s, s),   // 7
         ];
         let vertices = positions.iter().map(|&p| Self::vertex(p)).collect();
         let triangles = vec![
             // Front (-z)
-            Triangle { a: 0, b: 2, c: 1 }, Triangle { a: 0, b: 3, c: 2 },
+            Triangle { a: 0, b: 2, c: 1 },
+            Triangle { a: 0, b: 3, c: 2 },
             // Back (+z)
-            Triangle { a: 4, b: 5, c: 6 }, Triangle { a: 4, b: 6, c: 7 },
+            Triangle { a: 4, b: 5, c: 6 },
+            Triangle { a: 4, b: 6, c: 7 },
             // Left (-x)
-            Triangle { a: 0, b: 7, c: 3 }, Triangle { a: 0, b: 4, c: 7 },
+            Triangle { a: 0, b: 7, c: 3 },
+            Triangle { a: 0, b: 4, c: 7 },
             // Right (+x)
-            Triangle { a: 1, b: 2, c: 6 }, Triangle { a: 1, b: 6, c: 5 },
+            Triangle { a: 1, b: 2, c: 6 },
+            Triangle { a: 1, b: 6, c: 5 },
             // Bottom (-y)
-            Triangle { a: 0, b: 1, c: 5 }, Triangle { a: 0, b: 5, c: 4 },
+            Triangle { a: 0, b: 1, c: 5 },
+            Triangle { a: 0, b: 5, c: 4 },
             // Top (+y)
-            Triangle { a: 3, b: 6, c: 2 }, Triangle { a: 3, b: 7, c: 6 },
+            Triangle { a: 3, b: 6, c: 2 },
+            Triangle { a: 3, b: 7, c: 6 },
         ];
-        Mesh { vertices, triangles }
+        Mesh {
+            vertices,
+            triangles,
+        }
     }
 
     /// Regular icosahedron inscribed in the unit sphere (12 vertices, 20 faces).
@@ -162,18 +178,18 @@ impl Mesh {
         let phi = (1.0 + 5.0f64.sqrt()) / 2.0;
         let norm = (1.0 + phi * phi).sqrt();
         let positions: Vec<Vec3> = vec![
-            Vec3::new(-1.0,  phi,  0.0),
-            Vec3::new( 1.0,  phi,  0.0),
-            Vec3::new(-1.0, -phi,  0.0),
-            Vec3::new( 1.0, -phi,  0.0),
-            Vec3::new( 0.0, -1.0,  phi),
-            Vec3::new( 0.0,  1.0,  phi),
-            Vec3::new( 0.0, -1.0, -phi),
-            Vec3::new( 0.0,  1.0, -phi),
-            Vec3::new( phi,  0.0, -1.0),
-            Vec3::new( phi,  0.0,  1.0),
-            Vec3::new(-phi,  0.0, -1.0),
-            Vec3::new(-phi,  0.0,  1.0),
+            Vec3::new(-1.0, phi, 0.0),
+            Vec3::new(1.0, phi, 0.0),
+            Vec3::new(-1.0, -phi, 0.0),
+            Vec3::new(1.0, -phi, 0.0),
+            Vec3::new(0.0, -1.0, phi),
+            Vec3::new(0.0, 1.0, phi),
+            Vec3::new(0.0, -1.0, -phi),
+            Vec3::new(0.0, 1.0, -phi),
+            Vec3::new(phi, 0.0, -1.0),
+            Vec3::new(phi, 0.0, 1.0),
+            Vec3::new(-phi, 0.0, -1.0),
+            Vec3::new(-phi, 0.0, 1.0),
         ]
         .into_iter()
         .map(|v| v.scale(1.0 / norm))
@@ -182,27 +198,30 @@ impl Mesh {
         let vertices = positions.iter().map(|&p| Self::vertex(p)).collect();
         let triangles = vec![
             Triangle { a: 0, b: 11, c: 5 },
-            Triangle { a: 0, b:  5, c: 1 },
-            Triangle { a: 0, b:  1, c: 7 },
-            Triangle { a: 0, b:  7, c: 10 },
+            Triangle { a: 0, b: 5, c: 1 },
+            Triangle { a: 0, b: 1, c: 7 },
+            Triangle { a: 0, b: 7, c: 10 },
             Triangle { a: 0, b: 10, c: 11 },
-            Triangle { a: 1, b:  5, c: 9 },
+            Triangle { a: 1, b: 5, c: 9 },
             Triangle { a: 5, b: 11, c: 4 },
             Triangle { a: 11, b: 10, c: 2 },
             Triangle { a: 10, b: 7, c: 6 },
-            Triangle { a: 7, b:  1, c: 8 },
-            Triangle { a: 3, b:  9, c: 4 },
-            Triangle { a: 3, b:  4, c: 2 },
-            Triangle { a: 3, b:  2, c: 6 },
-            Triangle { a: 3, b:  6, c: 8 },
-            Triangle { a: 3, b:  8, c: 9 },
-            Triangle { a: 4, b:  9, c: 5 },
-            Triangle { a: 2, b:  4, c: 11 },
-            Triangle { a: 6, b:  2, c: 10 },
-            Triangle { a: 8, b:  6, c: 7 },
-            Triangle { a: 9, b:  8, c: 1 },
+            Triangle { a: 7, b: 1, c: 8 },
+            Triangle { a: 3, b: 9, c: 4 },
+            Triangle { a: 3, b: 4, c: 2 },
+            Triangle { a: 3, b: 2, c: 6 },
+            Triangle { a: 3, b: 6, c: 8 },
+            Triangle { a: 3, b: 8, c: 9 },
+            Triangle { a: 4, b: 9, c: 5 },
+            Triangle { a: 2, b: 4, c: 11 },
+            Triangle { a: 6, b: 2, c: 10 },
+            Triangle { a: 8, b: 6, c: 7 },
+            Triangle { a: 9, b: 8, c: 1 },
         ];
-        Mesh { vertices, triangles }
+        Mesh {
+            vertices,
+            triangles,
+        }
     }
 
     /// Geodesic sphere: icosahedron with `subdivisions` levels of midpoint subdivision.
@@ -237,14 +256,33 @@ impl Mesh {
             let ab = get_mid(tri.a, tri.b, &mut positions);
             let bc = get_mid(tri.b, tri.c, &mut positions);
             let ca = get_mid(tri.c, tri.a, &mut positions);
-            triangles.push(Triangle { a: tri.a, b: ab, c: ca });
-            triangles.push(Triangle { a: tri.b, b: bc, c: ab });
-            triangles.push(Triangle { a: tri.c, b: ca, c: bc });
-            triangles.push(Triangle { a: ab, b: bc, c: ca });
+            triangles.push(Triangle {
+                a: tri.a,
+                b: ab,
+                c: ca,
+            });
+            triangles.push(Triangle {
+                a: tri.b,
+                b: bc,
+                c: ab,
+            });
+            triangles.push(Triangle {
+                a: tri.c,
+                b: ca,
+                c: bc,
+            });
+            triangles.push(Triangle {
+                a: ab,
+                b: bc,
+                c: ca,
+            });
         }
 
         let vertices = positions.iter().map(|&p| Self::vertex(p)).collect();
-        Mesh { vertices, triangles }
+        Mesh {
+            vertices,
+            triangles,
+        }
     }
 
     /// Rotate all vertices around the Y axis by `rotation_y` radians, then scale.
@@ -263,7 +301,10 @@ impl Mesh {
                 Self::vertex(pos)
             })
             .collect();
-        Mesh { vertices, triangles: self.triangles.clone() }
+        Mesh {
+            vertices,
+            triangles: self.triangles.clone(),
+        }
     }
 }
 
@@ -283,7 +324,13 @@ pub struct Camera {
 
 impl Camera {
     pub fn new(position: Vec3, target: Vec3, fov_deg: f64) -> Self {
-        Camera { position, target, fov_deg, near: 0.01, far: 1000.0 }
+        Camera {
+            position,
+            target,
+            fov_deg,
+            near: 0.01,
+            far: 1000.0,
+        }
     }
 }
 
@@ -457,11 +504,7 @@ mod tests {
 
     #[test]
     fn perspective_projection_returns_none_behind_camera() {
-        let camera = Camera::new(
-            Vec3::new(0.0, 0.0, 5.0),
-            Vec3::new(0.0, 0.0, 0.0),
-            60.0,
-        );
+        let camera = Camera::new(Vec3::new(0.0, 0.0, 5.0), Vec3::new(0.0, 0.0, 0.0), 60.0);
         // Vertex behind the camera.
         let v = Vec3::new(0.0, 0.0, 10.0);
         let result = project_perspective(&v, &camera, 800, 600);
@@ -471,11 +514,7 @@ mod tests {
     #[test]
     fn rasterize_wireframe_correct_buffer_size() {
         let mesh = Mesh::cube().transform(0.3, 1.0);
-        let camera = Camera::new(
-            Vec3::new(0.0, 0.0, 3.0),
-            Vec3::new(0.0, 0.0, 0.0),
-            60.0,
-        );
+        let camera = Camera::new(Vec3::new(0.0, 0.0, 3.0), Vec3::new(0.0, 0.0, 0.0), 60.0);
         let buf = rasterize_wireframe(&mesh, &camera, 64, 48, (255, 255, 255));
         assert_eq!(buf.len(), 64 * 48 * 3);
     }
