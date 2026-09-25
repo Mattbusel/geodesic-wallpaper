@@ -1,71 +1,63 @@
-# Geodesic Flow -- Live Desktop Wallpaper
+# Geodesic Flow: live desktop wallpaper
 
 [![CI](https://github.com/Mattbusel/geodesic-wallpaper/actions/workflows/ci.yml/badge.svg)](https://github.com/Mattbusel/geodesic-wallpaper/actions/workflows/ci.yml)
 [![Release](https://github.com/Mattbusel/geodesic-wallpaper/actions/workflows/release.yml/badge.svg)](https://github.com/Mattbusel/geodesic-wallpaper/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Rust 1.75+](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
 
-**geodesic-wallpaper** is a real-time animated desktop wallpaper for Windows that renders families of geodesic curves flowing across parameterised Riemannian surfaces. Curves are integrated with a fourth-order Runge-Kutta (RK4) scheme using analytically-computed Christoffel symbols for **fourteen built-in surfaces** (torus, sphere, saddle, catenoid, helicoid, hyperboloid, hyperbolic paraboloid, ellipsoid, Enneper, Klein bottle, Boy surface, torus knot, **pseudosphere**, **trefoil tube**). The window sits below all application windows via a Win32 WM_WINDOWPOSCHANGING hook so desktop icons remain fully accessible. Optional modules let you drive the animation from live financial market data and assign a different surface to each physical monitor.
+**An animated Windows wallpaper that draws geodesics, the "straightest possible" paths, flowing across curved surfaces in real time. Rust, wgpu, and an RK4 integrator on exact Christoffel symbols.**
 
----
+A geodesic on a torus, a saddle or a Klein bottle behaves very differently from a straight line on a plane: it spirals, precesses, closes up or fills the surface densely depending on the curvature. This project turns that into ambient art. Dozens of colored trails wind across one of fourteen analytic surfaces while the camera slowly orbits, and the window sits behind your desktop icons so it behaves like a normal wallpaper.
 
-## What does it look like?
+## Features
 
-```
-          . . . * * * * . . .
-       . *   __-------__   * .
-      * /  /    ~~~~    \  \ *
-     * |  | ((  .  .  )) |  | *
-     . |  |  \\  \_/  //  |  | .
-     * |  |   \\  |  //   |  | *
-      * \  \    ``---''    /  / *
-       . *   -----------   * .
-          . . . * * * * . . .
+- **Fourteen surfaces** with analytic metrics and Christoffel symbols: torus, sphere, saddle, catenoid, helicoid, hyperboloid, hyperbolic paraboloid, ellipsoid, Enneper, Klein bottle, Boy's surface, torus knot, pseudosphere and trefoil tube.
+- **RK4 integration** of the geodesic equation in parameter space, with trails that fade by a configurable power law.
+- **Real wallpaper behavior**: a borderless Win32 window pinned below all application windows, so desktop icons stay usable. Choose the primary monitor, a specific monitor, or span all of them.
+- **Hot-reloaded `config.toml`**: edit and save, and the running wallpaper picks up the change.
+- **Presets** (`--preset cosmic`, `fire`, `matrix`, `neon`, `ocean`) loaded from `presets/`.
+- **Headless render** to PNG for thumbnails or CI (`--headless`).
+- **System tray icon** and keyboard controls.
 
-  Geodesic curves flowing across a torus surface.
-  Each coloured trail fades from opaque at the head
-  to transparent at the tail (quadratic alpha decay).
-```
+## Quick start
 
-Surfaces range from the familiar torus and sphere to exotic objects like the non-orientable Klein bottle, the self-intersecting Enneper minimal surface, and the trefoil torus-knot tube.
+**Prebuilt:** download `geodesic-wallpaper-windows.zip` from the [latest release](https://github.com/Mattbusel/geodesic-wallpaper/releases/latest), extract it, and run `geodesic-wallpaper.exe`. The zip contains the exe and a sample `config.toml`. Requires Windows 10 or 11 and a GPU with DirectX 12 or Vulkan.
 
----
-
-## 5-minute quickstart
-
-### Binary (no build required)
-
-1. Download `geodesic-wallpaper-windows.zip` from the [Releases](../../releases/latest) page.
-2. Extract the ZIP — you will find `geodesic-wallpaper.exe` and a sample `config.toml`.
-3. Double-click `geodesic-wallpaper.exe`, or run from a terminal:
+**From source:**
 
 ```powershell
-.\geodesic-wallpaper.exe
+git clone https://github.com/Mattbusel/geodesic-wallpaper.git
+cd geodesic-wallpaper
+cargo run --release                      # uses ./config.toml
+cargo run --release -- --preset cosmic   # presets/cosmic.toml over config.toml
+cargo run --release -- --headless --frames 300 --output shot.png
+cargo test --lib                         # no GPU needed
 ```
 
-Requirements: Windows 10 or 11, any GPU with DirectX 12 or Vulkan support. No installer, no runtime dependencies.
+`--preset` reads `presets/<name>.toml` relative to the working directory, so run from the repo root or copy the `presets/` folder next to the exe.
 
-### Quickstart with a named preset
+## Controls
 
-```powershell
-.\geodesic-wallpaper.exe --preset cosmic
-.\geodesic-wallpaper.exe --preset ocean
-.\geodesic-wallpaper.exe --preset ember
-```
+| Key | Action |
+| --- | --- |
+| `]` / `[` | Next / previous surface |
+| `+` / `-` | Speed up / slow down |
+| `R` | Reset all geodesics |
+| `F` | Toggle FPS overlay |
+| `Space` | Pause |
+| `P` | Save a screenshot |
 
-See the [Scene Presets](#scene-presets) section for the full list.
+Right-click the tray icon for the tray menu.
 
----
-
-## Configuration reference
+## Configuration
 
 All fields are optional. Missing fields revert to the defaults shown.
 
-Place `config.toml` in the same directory as the executable. The file is hot-reloaded automatically whenever it changes on disk — no restart required.
+Place `config.toml` in the same directory as the executable. The file is hot-reloaded automatically whenever it changes on disk, no restart required.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `surface` | string | `"torus"` | Surface to render. See [Supported Surfaces](#supported-surfaces). |
+| `surface` | string | `"torus"` | Surface to render. See [Supported surfaces](#supported-surfaces). |
 | `num_geodesics` | integer | `30` | Number of simultaneous geodesic curves. |
 | `trail_length` | integer | `300` | Frames a trail persists before respawning. |
 | `rotation_speed` | float | `0.001047` | Camera orbit speed in radians per second. |
@@ -90,11 +82,9 @@ Place `config.toml` in the same directory as the executable. The file is hot-rel
 | `target_fps` | integer | `30` | Target frame rate. |
 | `background_color` | string | `"#050510"` | Background clear colour as CSS hex. |
 | `color_mode` | string | `"cycle"` | `"cycle"` or `"random"` colour assignment. |
-| `gallery_mode` | bool | `false` | Auto-cycle through all surfaces. |
-| `gallery_duration_s` | integer | `30` | Seconds per surface in gallery mode. |
-| `lua_script` | string | — | Path to a Lua surface script (requires `--features lua`). |
+| `monitor` | string | `"primary"` | `"primary"`, `"all"` (span every monitor) or a monitor index such as `"1"`. |
 
-### Minimal config.toml example
+Minimal example:
 
 ```toml
 surface          = "torus"
@@ -105,155 +95,16 @@ background_color = "#050510"
 color_palette    = ["#4488FF", "#88DDFF", "#FFD700", "#88FF88", "#FF88CC"]
 ```
 
----
+## Command-line flags
 
-## Multi-monitor setup
-
-When you have more than one physical monitor connected, `multi_monitor::MultiMonitorManager` assigns a different surface and colour scheme to each display automatically.
-
-### How it works
-
-At startup the manager enumerates monitors via Win32 `EnumDisplayMonitors`, then cycles through the twelve built-in surfaces in order — monitor 0 gets the torus, monitor 1 gets the sphere, and so on.
-
-### Configure via `config.toml`
-
-The simplest option is to launch with `--preset` per monitor from separate instances, or define per-monitor overrides programmatically:
-
-```rust
-use geodesic_wallpaper::multi_monitor::{MonitorConfig, MultiMonitorManager};
-
-let manager = MultiMonitorManager::from_config(vec![
-    MonitorConfig {
-        monitor_index: 0,
-        surface: "torus".into(),
-        color_scheme: "cosmic".into(),
-        geodesic_count: 35,
-        speed: 1.0,
-    },
-    MonitorConfig {
-        monitor_index: 1,
-        surface: "sphere".into(),
-        color_scheme: "ocean".into(),
-        geodesic_count: 25,
-        speed: 0.8,
-    },
-]);
-
-println!("{} monitors configured", manager.monitor_count());
-```
-
-### Defaults
-
-If no explicit configuration is provided, `MultiMonitorManager::new()` auto-assigns surfaces:
-
-| Monitor | Surface | Colour scheme |
-|---------|---------|---------------|
-| 0 | torus | cosmic |
-| 1 | sphere | ocean |
-| 2 | saddle | ember |
-| 3 | hyperboloid | forest |
-| 4 | klein\_bottle | aurora |
-| 5+ | cycles back | cycles back |
-
----
-
-## Financial data driver
-
-The `finance_driver::FinanceDriver` maps OHLCV market data to geodesic animation parameters in real time.
-
-| Market signal | Geodesic parameter |
-|---------------|--------------------|
-| Realized volatility (stddev of log-returns) | `speed_multiplier` — geodesics accelerate in volatile markets |
-| Trend direction (OLS slope of close prices) | `theta_velocity` — positive in uptrends, negative in downtrends |
-| Normalized volume | `trail_width` and `phi_velocity` |
-| Trend mapped to \[0, 0.33\] | `color_hue` — red in downtrends, green in uptrends |
-
-### Push bars manually
-
-```rust
-use geodesic_wallpaper::finance_driver::{FinanceDriver, MarketBar};
-
-let mut driver = FinanceDriver::new(20); // 20-bar rolling window
-
-driver.push_bar(MarketBar {
-    open: 150.00, high: 152.30, low: 149.10, close: 151.80,
-    volume: 1_234_567.0, timestamp: 1_700_000_000,
-});
-
-let params = driver.compute_params();
-println!("Speed multiplier: {:.3}", params.speed_multiplier);
-println!("Trail width: {:.1}px", params.trail_width);
-println!("Color hue: {:.3}", params.color_hue);
-```
-
-### Load from CSV
-
-The CSV format is `timestamp,open,high,low,close,volume` with no header row. Lines starting with `#` are treated as comments.
-
-```rust
-use geodesic_wallpaper::finance_driver::FinanceDriver;
-
-let csv = std::fs::read_to_string("prices.csv").unwrap();
-let mut driver = FinanceDriver::new(50);
-let loaded = driver.load_csv(&csv);
-println!("Loaded {loaded} bars");
-
-let params = driver.compute_params();
-```
-
-Sample `prices.csv`:
-
-```csv
-# timestamp,open,high,low,close,volume
-1700000000,100.00,102.50,99.20,101.75,980000
-1700000060,101.75,103.00,101.00,102.40,1150000
-1700000120,102.40,102.80,100.50,100.90,870000
-```
-
----
-
-## Scene presets
-
-The `scene_presets::PresetLibrary` ships with 10 built-in named configurations.
-
-| Name | Surface | Mood |
-|------|---------|------|
-| `cosmic` | torus | Deep-space: gold geodesics through an indigo void |
-| `ocean` | sphere | Ocean depths: cyan great-circle flows |
-| `ember` | saddle | Volcanic: orange-red streaks across a hyperbolic saddle |
-| `forest` | hyperboloid | Canopy: lush greens on a one-sheeted hyperboloid |
-| `aurora` | torus\_knot | Arctic: shimmering green-blue trefoil traces |
-| `neon` | klein\_bottle | City night: hot pink and electric blue on the Klein bottle |
-| `dusk` | ellipsoid | Twilight: rose-to-purple sweeps |
-| `ice` | catenoid | Crystal cave: steel-blue spirals around the catenoid waist |
-| `lava` | boy\_surface | Volcanic: molten yellow-red on Boy's surface |
-| `void` | enneper | Deep nothing: slow teal traces on the Enneper surface |
-
-### Use from command line
-
-```powershell
-.\geodesic-wallpaper.exe --preset aurora
-.\geodesic-wallpaper.exe --preset neon
-```
-
-### Use from code
-
-```rust
-use geodesic_wallpaper::scene_presets::PresetLibrary;
-
-let mut lib = PresetLibrary::with_defaults();
-
-// Navigate presets.
-let next = lib.next();
-println!("Switched to: {} — {}", next.name, next.description);
-
-// Look up by name.
-if let Some(p) = lib.by_name("cosmic") {
-    println!("Background: {}", p.background_hex());
-}
-```
-
----
+| Flag | Effect |
+| --- | --- |
+| `--preset NAME` | Merge `presets/NAME.toml` over `config.toml` |
+| `--headless [--frames N] [--output FILE] [--output-format png\|ppm\|bmp\|svg]` | Simulate N frames without a window and save the last one |
+| `--preview` | Print an ASCII block preview of the pattern and exit |
+| `--animate [--frames N] [--fps N] [--out-dir DIR]` | Exercise the frame exporter; currently writes gradient test frames, not wallpaper renders |
+| `--palette TYPE[:HUE] [--palette-steps N]` | Print a generated palette (rainbow, monochromatic, complementary, triadic, analogous) |
+| `--gradient`, `--colorspace`, `--fractal`, `--tile` | Print diagnostics from the gradient, color space, fractal and tiling modules |
 
 ## Supported surfaces
 
@@ -273,221 +124,8 @@ All surfaces implement the `Surface` trait: `position()`, `normal()`, `metric()`
 | Klein bottle | `"klein_bottle"` | Non-orientable | Figure-8 immersion in ℝ³ |
 | Boy's surface | `"boy_surface"` | Non-orientable | RP² with 3-fold symmetry (Apery form) |
 | Torus knot | `"torus_knot"` | Positive (tube) | Default T(2,3) trefoil |
-| **Pseudosphere** | `"pseudosphere"` | **Constant negative K = −1** | Tractricoid; geodesics diverge exponentially — the hyperbolic plane's classic model surface |
+| **Pseudosphere** | `"pseudosphere"` | **Constant negative K = −1** | Tractricoid; geodesics diverge exponentially; the hyperbolic plane's classic model surface |
 | **Trefoil tube** | `"trefoil"` | Positive (tube) | Circular cross-section swept around the trefoil knot curve; geodesics precess across all three lobes |
-
----
-
-## Mouse and keyboard controls
-
-### Keyboard
-
-| Key | Action |
-|-----|--------|
-| `S` | Cycle to next surface |
-| `G` | Toggle gallery mode |
-| `LEFT` | Previous surface (gallery mode) |
-| `RIGHT` | Next surface (gallery mode) |
-| `+` / `=` | Increase rotation speed ×1.1 |
-| `-` | Decrease rotation speed ×0.9 |
-| `R` | Reset all geodesics |
-| `H` | Toggle FPS HUD overlay |
-| `[` | Select previous tunable parameter |
-| `]` | Select next tunable parameter |
-| `Shift+R` | Start / stop phase portrait recording |
-
-### Mouse
-
-| Action | Effect |
-|--------|--------|
-| Left-click | Shoot a new geodesic from the clicked surface point |
-| Right-click | Remove all geodesics and reset |
-| Middle-click | Cycle to the next surface |
-| Scroll up | Increase geodesic speed ×1.1 per notch |
-| Scroll down | Decrease geodesic speed ×0.9 per notch |
-
----
-
-## Gallery mode
-
-Gallery mode cycles through all fourteen built-in surfaces automatically with a smooth cross-fade transition. It acts as a mathematical screensaver, showing each surface for a configurable interval before smoothly transitioning to the next.
-
-### Enable in `config.toml`
-
-```toml
-gallery_mode       = true
-gallery_duration_s = 30   # seconds per surface (default 30, minimum 1)
-```
-
-### CLI flag
-
-```powershell
-.\geodesic-wallpaper.exe --gallery
-```
-
-### Keyboard controls (gallery mode)
-
-| Key | Action |
-|-----|--------|
-| `G` | Toggle gallery mode on / off |
-| `RIGHT` / `SPACE` | Skip to next surface immediately |
-| `LEFT` | Skip to previous surface |
-
-### Transition
-
-Each surface change is accompanied by a brief cross-fade (0.75 s fade-out, 0.75 s fade-in). The caller reads `GalleryMode::transition_alpha()` each frame and multiplies scene opacity accordingly.
-
-### Surface cycle order
-
-```
-torus → sphere → saddle → enneper → catenoid → helicoid →
-hyperboloid → hyperbolic_paraboloid → ellipsoid → (wraps)
-```
-
-### Use from code
-
-```rust
-use geodesic_wallpaper::gallery::GalleryMode;
-
-// Create, enabled from the start, 45 seconds per surface.
-let mut gallery = GalleryMode::new(true, 45);
-
-// In the render loop:
-let surface_changed = gallery.update();
-let alpha = gallery.transition_alpha();  // multiply scene opacity by this
-if surface_changed {
-    let name = gallery.current_surface();
-    println!("Now showing: {name}");
-    // switch the renderer to this surface
-}
-```
-
-### `GalleryConfig` struct
-
-```rust
-pub struct GalleryConfig {
-    pub surfaces: Vec<SurfaceKind>,   // subset to cycle (default: all 14)
-    pub interval_secs: f32,           // seconds per surface
-    pub transition_secs: f32,         // fade half-duration
-}
-```
-
----
-
-## Lua custom surfaces
-
-Build with `--features lua` to define entirely custom Riemannian surfaces in Lua.
-
-```powershell
-cargo build --release --features lua
-```
-
-```lua
--- my_surface.lua
-function metric(u, v)
-  return { g_uu=1.0, g_uv=0.0, g_vu=0.0, g_vv=math.sin(u)^2 }
-end
-```
-
-```toml
-surface    = "lua"
-lua_script = "my_surface.lua"
-```
-
-The script is hot-reloaded whenever `config.toml` changes. Invalid scripts fall back to the torus.
-
----
-
-## Live parameter tuning
-
-```toml
-[tuning]
-[[tuning.parameters]]
-name    = "rotation_speed"
-min     = 0.0
-max     = 0.1
-current = 0.001047
-step    = 0.0001
-```
-
-Use `[` / `]` to select a parameter and `-` / `=` to adjust its value live. Updated values are written back to `config.toml` on exit.
-
----
-
-## Phase portrait recording
-
-Press **Shift+R** to record. Frames are saved as PNGs and assembled into `geodesic-recording.gif` when recording stops. Default: 10 seconds at 30 fps.
-
----
-
-## Geodesic field visualization
-
-Instead of rendering a fixed set of individual geodesic trails, the **geodesic field** mode fills the entire parameter domain `(u, v)` with a dense grid of small coloured arrows — one per grid cell — each pointing in the geodesic direction and coloured by the long-term fate of that geodesic.
-
-### Basin classification
-
-Each grid cell seeds a geodesic and integrates it for `fate_steps` RK4 steps. The final state determines the colour:
-
-| Fate | Condition | Arrow colour |
-|------|-----------|-------------|
-| `Bounded` | Stays within `escape_radius` for all steps | Blue |
-| `Escaping` | Exceeds `escape_radius` | Red |
-| `Looping` | Returns within `loop_epsilon` of start | Green |
-
-The resulting image reveals the **basin structure** of geodesic flow: which starting directions lead to bounded wandering, which ones escape the parameterisation domain, and which form closed loops.
-
-### `FieldConfig`
-
-```rust
-pub struct FieldConfig {
-    pub grid_n: usize,          // grid cells per axis (default 40, total = 40²= 1600)
-    pub u_range: [f64; 2],      // parameter u range (default [-π, π])
-    pub v_range: [f64; 2],      // parameter v range (default [-π, π])
-    pub fate_steps: usize,       // integration steps per cell (default 200)
-    pub fate_dt: f64,            // RK4 timestep for fate integration (default 0.04)
-    pub escape_radius: f64,      // escape threshold (default 8.0)
-    pub loop_epsilon: f64,       // loop detection radius (default 0.3)
-    pub arrow_length: f32,       // arrow display length (default 0.04)
-    pub arrow_alpha: f32,        // arrow opacity (default 0.7)
-}
-```
-
-### Usage
-
-```rust
-use geodesic_wallpaper::field::{FieldConfig, FieldRenderer};
-
-let cfg = FieldConfig { grid_n: 60, ..Default::default() };
-let renderer = FieldRenderer::new(cfg);
-
-// Provide your RK4 geodesic step function.
-let field = renderer.compute(|u, v, du, dv| {
-    // one step of the geodesic ODE on your surface
-    (new_u, new_v, new_du, new_dv)
-});
-
-println!("{} arrows, {} bounded, {} escaping, {} looping",
-    field.arrows.len(),
-    field.fate_counts[0], field.fate_counts[1], field.fate_counts[2]);
-
-// Upload field.arrows as an instanced vertex buffer for GPU rendering.
-```
-
-The computation is parallelised with rayon across all `grid_n²` cells, so a 60×60 grid (3 600 cells × 200 steps) completes in well under a second on a modern CPU.
-
-### `FlowArrow` GPU instance layout
-
-Each `FlowArrow` is `repr(C)` and implements `bytemuck::Pod`:
-
-```rust
-pub struct FlowArrow {
-    pub origin:    [f32; 2],   // (u, v) base position
-    pub direction: [f32; 2],   // normalised direction vector
-    pub length:    f32,        // display length
-    pub color:     [f32; 4],   // RGBA
-    pub fate:      u32,        // 0=Bounded 1=Escaping 2=Looping
-}
-```
 
 ---
 
@@ -507,11 +145,11 @@ where `Γⁱⱼₖ = ½ gⁱˡ (∂ⱼgₗₖ + ∂ₖgₗⱼ − ∂ₗgⱼₖ)
 
 | Surface | Gaussian curvature K | Geodesic character |
 |---------|---------------------|-------------------|
-| Sphere | K = +1/R² (constant) | Great circles — all geodesics are closed |
+| Sphere | K = +1/R² (constant) | Great circles: all geodesics are closed |
 | Torus | Mixed (positive outer, negative inner) | Depends on winding ratio: rational = periodic, irrational = dense (ergodic) |
 | Saddle / flat | K = 0 | Straight lines in parameter space |
 | Catenoid / helicoid | K < 0 (minimal) | Geodesics spiral and diverge |
-| Pseudosphere | K = −1 (constant) | Maximal divergence — model of the hyperbolic plane |
+| Pseudosphere | K = −1 (constant) | Maximal divergence: model of the hyperbolic plane |
 | Hyperboloid | K < 0 | Asymptotic geodesics along the rulings |
 
 ### Gauss-Bonnet theorem
@@ -529,371 +167,22 @@ where `χ` is the Euler characteristic. This connects the local curvature of eac
 ## Architecture
 
 | Module | Responsibility |
-|--------|----------------|
-| `config` | Load and hot-reload `config.toml`; parse CSS hex colours |
-| `error` | Typed error enum covering all subsystems |
-| `surface` | `Surface` trait + 14 implementations |
+| --- | --- |
+| `surface/` | `Surface` trait and the fourteen implementations, plus procedural and user-defined surfaces |
 | `geodesic` | RK4 integrator for the geodesic ODE |
-| `field` | Dense geodesic field (basin visualization, `FlowArrow` instances) |
-| `interactive` | Mouse event handling; geodesic shooting |
-| `trail` | Fixed-capacity ring buffer with quadratic alpha fade |
-| `renderer` | wgpu render pipelines (surface wireframe + trail lines) |
-| `wallpaper` | Win32 borderless window pinned below all app windows |
-| `gallery` | Auto-cycle through surfaces in gallery mode with cross-fade |
-| `parameter_tuner` | Runtime keyboard-driven parameter adjustment |
-| `recorder` | Phase portrait PNG/GIF recording |
-| `multi_monitor` | Per-monitor surface assignment and configuration |
-| `finance_driver` | Maps OHLCV market data to geodesic parameters |
-| `scene_presets` | Named scene configurations with sequential navigation |
-| `main` | Application entry point, message loop, hot-reload watcher |
+| `trail` | Fixed-capacity ring buffer with power-law alpha fade |
+| `renderer/` | wgpu pipelines and WGSL shaders for the surface wireframe and trails, camera |
+| `wallpaper` | Win32 window pinned below app windows, keyboard input, monitor enumeration |
+| `config` | `config.toml` loading, profiles and hot reload |
+| `tray` | System tray icon |
+| `main` | CLI, message loop, render loop, headless path |
 
----
+The crate is also a library (`geodesic_wallpaper`) with a large set of additional modules that are unit tested but **not yet wired into the wallpaper binary**: gallery mode, a live parameter tuner, phase portrait recording, mouse-driven geodesic shooting, a geodesic field (basin) view, per-monitor surface assignment, a financial OHLCV data driver, Lua-scripted surfaces (`--features lua`), scene presets, and generative-art modules (wallpaper symmetry groups, Penrose and Escher tilings, reaction-diffusion, L-systems, strange attractors, Voronoi, fractals, color spaces and export formats). Their `config.toml` keys (for example `gallery_mode`) parse but currently have no effect on the running wallpaper.
 
-## Building from source
+## Status
 
-Requirements: Rust stable 1.75+, Windows 10 or 11, GPU with DirectX 12 or Vulkan support.
-
-```powershell
-git clone https://github.com/Mattbusel/geodesic-wallpaper.git
-cd geodesic-wallpaper
-cargo build --release
-.\target\release\geodesic-wallpaper.exe
-```
-
-To run tests (no GPU required):
-
-```powershell
-cargo test --lib
-```
-
-To build with Lua scripting support:
-
-```powershell
-cargo build --release --features lua
-```
-
----
-
-## Contributing
-
-1. Fork the repository.
-2. Create a feature branch: `git checkout -b my-feature`.
-3. Ensure `cargo fmt`, `cargo clippy -- -D warnings`, and `cargo test --lib` all pass.
-4. Open a pull request against `main`.
-
-CI enforces formatting, Clippy warnings-as-errors, the full test suite, and a release build before merging.
-
----
-
-## Animation Export (`src/animation.rs`)
-
-Export a sequence of PNG frames by interpolating one or more parameters over time.
-
-### CLI
-
-```bash
-geodesic-wallpaper --animate --frames 60 --fps 30 --out-dir ./frames
-```
-
-Frames are written as `frames/frame_0000.png` through `frames/frame_0059.png`.
-
-### Animated parameters
-
-| `AnimationParameter` | Description |
-|---------------------|-------------|
-| `RotationAngle` | Camera orbit angle (radians) |
-| `Scale` | Scene scale factor |
-| `ColorHue` | Hue rotation of the color palette (degrees) |
-| `WindingNumber` | Symmetry winding number |
-
-### Interpolation modes
-
-| Mode | Formula |
-|------|---------|
-| `Linear` | `start + (end - start) * t` |
-| `Sinusoidal` | `start + (end - start) * 0.5 * (1 - cos(π·t))` |
-
-### API example
-
-```rust
-use geodesic_wallpaper::animation::{
-    AnimationConfig, AnimationExporter, AnimationParameter, FrameInterpolator, InterpolationMode,
-};
-use std::path::PathBuf;
-
-let config = AnimationConfig {
-    frames: 60, fps: 30, width: 1920, height: 1080,
-    output_dir: PathBuf::from("./frames"),
-};
-let interp = FrameInterpolator::new(
-    AnimationParameter::RotationAngle, 0.0, std::f64::consts::TAU, InterpolationMode::Linear,
-);
-let exporter = AnimationExporter::new(config, vec![interp]);
-let stats = exporter.export(|frame_idx, params, path| {
-    // render frame to path
-    Ok(())
-}).unwrap();
-println!("{} frames in {}ms", stats.frames_written, stats.duration_ms);
-```
-
----
-
-## Wallpaper Symmetry Groups (`src/symmetry.rs`)
-
-Two high-complexity wallpaper groups — **p4g** and **p6m** — are now implemented.
-Each maps any 2D coordinate to a canonical fundamental domain, enabling symmetric
-texture and color mapping for geodesic surfaces.
-
-### p4g — Square lattice with glide reflections (8 operations)
-
-```rust
-use geodesic_wallpaper::symmetry::{P4g, SymmetryGroup};
-
-let p4g = P4g::new(1.0);
-let (u, v) = p4g.to_fundamental_domain(1.3, 2.7);
-let orbit = p4g.orbit(0.4, 0.2); // 8 symmetry copies
-let color = p4g.color_value(0.7, 0.3); // 0..=1 for palette indexing
-```
-
-Symmetry operations: 4 rotations (0°, 90°, 180°, 270°) + 4 diagonal glide reflections.
-
-### p6m — Hexagonal lattice with all reflections (12 operations)
-
-```rust
-use geodesic_wallpaper::symmetry::{P6m, SymmetryGroup};
-
-let p6m = P6m::new(1.0);
-let (u, v) = p6m.to_fundamental_domain(0.5, 0.8);
-let orbit = p6m.orbit(1.0, 0.0); // 12 symmetry copies
-```
-
-Symmetry operations: 6 rotations (0°–300° in 60° steps) + 6 reflections.
-
-### Pattern sampling
-
-```rust
-use geodesic_wallpaper::symmetry::{P6m, sample_pattern};
-
-let p6m = P6m::new(1.0);
-let grid = sample_pattern(&p6m, 256, 256, (-2.0, 2.0), (-2.0, 2.0));
-// grid is a 256×256 flat Vec<f32> with values in [0, 1]
-```
-
----
-
-## Color Palette Generator (`src/palette.rs`)
-
-Generate HSL-based color palettes using classical color theory.
-
-### CLI
-
-```bash
-geodesic-wallpaper --palette triadic:240 --palette-steps 8
-geodesic-wallpaper --palette rainbow --palette-steps 12
-geodesic-wallpaper --palette monochromatic:120 --palette-steps 6
-```
-
-### Palette types
-
-| Type | Description |
-|------|-------------|
-| `rainbow` | Evenly spread hues across the full 360° wheel |
-| `monochromatic:HUE` | Shades of a single hue (varying lightness) |
-| `complementary:HUE` | Two opposing hues (180° apart) |
-| `triadic:HUE` | Three equidistant hues (120° apart) |
-| `analogous:HUE` | Adjacent hues (±30° from base) |
-
-### API example
-
-```rust
-use geodesic_wallpaper::palette::{PaletteGenerator, PaletteType, hsl_to_rgb};
-
-// Generate a triadic palette with 6 colors based at hue 240° (blue)
-let palette = PaletteGenerator::generate(PaletteType::Triadic(240.0), 6);
-println!("Palette: {}", palette.name);
-for hex in palette.to_hex_strings() {
-    println!("  {}", hex);
-}
-
-// Parse a palette spec from a string (e.g. from CLI)
-let p = PaletteGenerator::from_spec("analogous:60", 8).unwrap();
-
-// HSL to RGB conversion
-let [r, g, b] = hsl_to_rgb(120.0, 0.8, 0.5); // green
-```
-
----
-
-## Interactive TUI Tuner (`src/preview.rs`)
-
-`src/preview.rs` provides a parameter-tuning preview that renders the current
-wallpaper pattern to the terminal as Unicode block characters (`░▒▓█`).
-
-### CLI
-
-```bash
-# Render a 40×20 ASCII preview of the current pattern and exit
-geodesic-wallpaper --preview
-```
-
-The preview shows a 40×20 block-character grid with a header row listing
-the current symmetry group, scale, rotation, hue offset, and animation speed.
-
-### API
-
-```rust
-use geodesic_wallpaper::preview::{WallpaperParams, AsciiPreview, TuiApp};
-
-// Adjust parameters
-let mut params = WallpaperParams::default();
-params.scale = 2.0;
-params.hue_offset = 90.0;
-params.cycle_symmetry_group(); // cycle p1 → p2 → ... → p6m → p1
-params.clamp(); // clamp all values to valid ranges
-
-// Render to a buffer
-let mut buf = Vec::new();
-AsciiPreview::render(&params, 40, 20, &mut buf).unwrap();
-
-// Full-app one-shot render
-let app = TuiApp::new();
-let result = app.run().unwrap(); // prints to stdout
-println!("saved: {}", result.saved);
-```
-
----
-
-## Gradient Textures (`src/gradient.rs`)
-
-`src/gradient.rs` generates smooth color gradients mapped over the wallpaper
-pattern via a `pattern_fn(x, y) -> f32` that returns a value in [0, 1].
-
-### CLI
-
-```bash
-geodesic-wallpaper --gradient sunset
-geodesic-wallpaper --gradient ocean
-geodesic-wallpaper --gradient plasma --headless --output gradient_preview.png
-```
-
-### Built-in presets
-
-| Preset | Description |
-|--------|-------------|
-| `sunset` | Dark blue → magenta → orange → light gold |
-| `ocean` | Deep navy → mid-ocean blue → cyan → pale sky |
-| `forest` | Dark green → vivid green → light lime |
-| `plasma` | Deep violet → purple → pink → orange → yellow |
-| `greyscale` | Black → white |
-
-### API example
-
-```rust
-use geodesic_wallpaper::gradient::{Gradient, GradientPreset, GradientStop, GradientTexture};
-
-// Use a built-in preset
-let gradient = GradientPreset::Sunset.into_gradient();
-let color = gradient.sample(0.5); // [r, g, b]
-
-// Custom gradient
-let custom = Gradient::new(vec![
-    GradientStop::new(0.0, [0, 0, 128]),
-    GradientStop::new(0.5, [0, 200, 200]),
-    GradientStop::new(1.0, [255, 255, 255]),
-]);
-
-// Generate a texture
-let pixels: Vec<[u8; 3]> = GradientTexture::generate(
-    1920, 1080,
-    |x, y| (x as f32 + y as f32) / (1920.0 + 1080.0),
-    &custom,
-);
-```
-
----
-
-## Color Spaces (`src/colorspace.rs`)
-
-Full color space conversion and interpolation library — RGB, HSV, CIE Lab (D65), and Oklab.
-
-```rust
-use geodesic_wallpaper::colorspace::{
-    Rgb, Hsv, Lab, Oklab,
-    rgb_to_hsv, hsv_to_rgb,
-    rgb_to_lab, lab_to_rgb,
-    rgb_to_oklab, oklab_to_rgb,
-    ColorInterpolator,
-};
-
-let red = Rgb { r: 255, g: 0, b: 0 };
-let blue = Rgb { r: 0, g: 0, b: 255 };
-
-// Conversions
-let hsv = rgb_to_hsv(red);           // Hsv { h: 0.0, s: 1.0, v: 1.0 }
-let back = hsv_to_rgb(hsv);          // Rgb { r: 255, g: 0, b: 0 }
-
-let lab = rgb_to_lab(red);           // CIE Lab D65
-let ok  = rgb_to_oklab(red);         // Oklab perceptual
-
-// Color space interpolation
-let mid_rgb   = ColorInterpolator::lerp_rgb(red, blue, 0.5);   // sRGB blend
-let mid_hsv   = ColorInterpolator::lerp_hsv(red, blue, 0.5);   // hue-aware (shortest arc)
-let mid_oklab = ColorInterpolator::lerp_oklab(red, blue, 0.5); // perceptually uniform
-```
-
-**CLI:** `--colorspace oklab` — demonstrates interpolation on a red→blue gradient. Works with `rgb`, `hsv`, `lab`, `oklab`.
-
-**Supported conversions:**
-- `rgb_to_hsv` / `hsv_to_rgb` — hue-aware shortest-arc interpolation
-- `rgb_to_lab` / `lab_to_rgb` — via D65 XYZ white point
-- `rgb_to_oklab` / `oklab_to_rgb` — Björn Ottosson's matrix (perceptually uniform)
-- `ColorInterpolator::lerp_rgb`, `lerp_hsv`, `lerp_oklab`
-
----
-
-## Export Formats (`src/export.rs`)
-
-Export wallpaper images in PNG, PPM (P6 binary), 24-bit BMP, and SVG formats.
-
-```rust
-use geodesic_wallpaper::export::{ExportFormat, ImageExporter};
-use std::path::Path;
-
-// Generate some pixel data (row-major, RGB triplets)
-let width = 800u32;
-let height = 600u32;
-let pixels: Vec<[u8; 3]> = (0..width * height)
-    .map(|i| [(i % 256) as u8, ((i / 256) % 256) as u8, 128])
-    .collect();
-
-// Export as PPM
-let stats = ImageExporter::export(
-    &pixels, width, height, ExportFormat::Ppm, Path::new("output.ppm")
-).unwrap();
-println!("wrote {} bytes in {}ms", stats.bytes_written, stats.elapsed_ms);
-
-// Export as BMP (no external deps — manual BITMAPFILEHEADER + BITMAPINFOHEADER)
-ImageExporter::export(&pixels, width, height, ExportFormat::Bmp, Path::new("output.bmp")).unwrap();
-
-// Export as SVG (rect elements per tile cell)
-ImageExporter::export(&pixels, width, height, ExportFormat::Svg, Path::new("output.svg")).unwrap();
-
-// Export as PNG (stdlib-only encoder shared with animation.rs)
-ImageExporter::export(&pixels, width, height, ExportFormat::Png, Path::new("output.png")).unwrap();
-```
-
-**CLI:** `--output-format png|ppm|bmp|svg` — selects the export format for headless screenshots.
-
-**Format details:**
-- `Ppm`: `P6 {width} {height} 255\n{binary RGB data}` — trivially simple, universally readable
-- `Bmp`: 24-bit BMP with BITMAPFILEHEADER + BITMAPINFOHEADER, BGR byte order, bottom-up rows
-- `Svg`: `<rect>` elements with fill colors; 8×8 tile size for large images to keep file size manageable
-- `Png`: stdlib-only DEFLATE-stored encoder (no external PNG crate needed in export path)
-
-`ExportStats { bytes_written, format, width, height, elapsed_ms }` is returned on success.
-
----
+Working Windows wallpaper, version 1.4.0 in `Cargo.toml` (latest GitHub release: v1.2.2). The CI workflow is currently failing; `cargo test --lib` is the quickest local check. Contributions: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+MIT, see [LICENSE](LICENSE).
