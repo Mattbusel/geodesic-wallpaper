@@ -146,12 +146,17 @@ impl PhasePortraitRecorder {
         if self.width == 0 || self.height == 0 {
             return Err(RecorderError::InvalidDimensions);
         }
+        // Unique per process and per recording, so two recorders started in
+        // the same second never share (and overwrite) a frames directory.
+        static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let dir = std::env::temp_dir().join(format!(
-            "geodesic-rec-{}",
+            "geodesic-rec-{}-{}-{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
-                .as_secs()
+                .as_secs(),
+            std::process::id(),
+            NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         ));
         std::fs::create_dir_all(&dir)?;
         self.frames_dir = Some(dir);

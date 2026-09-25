@@ -284,10 +284,13 @@ impl ColorReduction {
                 .zip(&counts)
                 .enumerate()
                 .map(|(i, (s, &c))| {
-                    if c == 0 {
-                        centres[i]
-                    } else {
-                        [(s[0] / c) as u8, (s[1] / c) as u8, (s[2] / c) as u8]
+                    match (
+                        s[0].checked_div(c),
+                        s[1].checked_div(c),
+                        s[2].checked_div(c),
+                    ) {
+                        (Some(r), Some(g), Some(b)) => [r as u8, g as u8, b as u8],
+                        _ => centres[i],
                     }
                 })
                 .collect();
