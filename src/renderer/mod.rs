@@ -733,11 +733,13 @@ impl Renderer {
                 }),
                 ..Default::default()
             });
-            rp.set_pipeline(&self.surface_pipeline);
-            rp.set_bind_group(0, &self.bind_group, &[]);
-            rp.set_vertex_buffer(0, self.surface_vbuf.slice(..));
-            rp.set_index_buffer(self.surface_ibuf.slice(..), wgpu::IndexFormat::Uint32);
-            rp.draw_indexed(0..self.surface_index_count, 0, 0..1);
+            if self.show_wireframe {
+                rp.set_pipeline(&self.surface_pipeline);
+                rp.set_bind_group(0, &self.bind_group, &[]);
+                rp.set_vertex_buffer(0, self.surface_vbuf.slice(..));
+                rp.set_index_buffer(self.surface_ibuf.slice(..), wgpu::IndexFormat::Uint32);
+                rp.draw_indexed(0..self.surface_index_count, 0, 0..1);
+            }
 
             rp.set_pipeline(&self.trail_pipeline);
             rp.set_bind_group(0, &self.bind_group, &[]);

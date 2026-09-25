@@ -1,67 +1,68 @@
-# Geodesic Flow: live desktop wallpaper
+<p align="center"><img src="https://raw.githubusercontent.com/Mattbusel/geodesic-wallpaper/master/assets/banner.png" alt="Geodesic Flow: live wallpaper for Windows" width="100%"></p>
+
+# geodesic-wallpaper
+
+**An animated wallpaper for Windows: glowing lines flow over slowly turning 3D shapes (a donut, a knot, a Klein bottle) behind your desktop icons.**
+
+<p align="center"><img src="https://raw.githubusercontent.com/Mattbusel/geodesic-wallpaper/master/assets/hero.gif" alt="Real frames from the wallpaper renderer: torus, torus knot, ocean preset, fire preset, catenoid" width="900"></p>
+<p align="center"><sub>Real frames from the app's own renderer (<code>--headless --record</code>), 15 fps. <a href="https://raw.githubusercontent.com/Mattbusel/geodesic-wallpaper/master/assets/demo.mp4">Download the 15 s MP4</a>.</sub></p>
 
 [![CI](https://github.com/Mattbusel/geodesic-wallpaper/actions/workflows/ci.yml/badge.svg)](https://github.com/Mattbusel/geodesic-wallpaper/actions/workflows/ci.yml)
-[![Release](https://github.com/Mattbusel/geodesic-wallpaper/actions/workflows/release.yml/badge.svg)](https://github.com/Mattbusel/geodesic-wallpaper/actions/workflows/release.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Rust 1.75+](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
+[![crates.io](https://img.shields.io/crates/v/geodesic-wallpaper.svg)](https://crates.io/crates/geodesic-wallpaper)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Mattbusel/geodesic-wallpaper/blob/master/LICENSE)
 
-**An animated Windows wallpaper that draws geodesics, the "straightest possible" paths, flowing across curved surfaces in real time. Rust, wgpu, and an RK4 integrator on exact Christoffel symbols.**
+## Install (Windows 10 or 11)
 
-A geodesic on a torus, a saddle or a Klein bottle behaves very differently from a straight line on a plane: it spirals, precesses, closes up or fills the surface densely depending on the curvature. This project turns that into ambient art. Dozens of colored trails wind across one of fourteen analytic surfaces while the camera slowly orbits, and the window sits behind your desktop icons so it behaves like a normal wallpaper.
-
-## Features
-
-- **Fourteen surfaces** with analytic metrics and Christoffel symbols: torus, sphere, saddle, catenoid, helicoid, hyperboloid, hyperbolic paraboloid, ellipsoid, Enneper, Klein bottle, Boy's surface, torus knot, pseudosphere and trefoil tube.
-- **RK4 integration** of the geodesic equation in parameter space, with trails that fade by a configurable power law.
-- **Real wallpaper behavior**: a borderless Win32 window pinned below all application windows, so desktop icons stay usable. Choose the primary monitor, a specific monitor, or span all of them.
-- **Hot-reloaded `config.toml`**: edit and save, and the running wallpaper picks up the change.
-- **Presets** (`--preset cosmic`, `fire`, `matrix`, `neon`, `ocean`) loaded from `presets/`.
-- **Headless render** to PNG for thumbnails or CI (`--headless`).
-- **System tray icon** and keyboard controls.
-
-## Quick start
-
-### Download (Windows)
-
-1. Open the [latest release](https://github.com/Mattbusel/geodesic-wallpaper/releases/latest) and download `geodesic-wallpaper-vX.Y.Z-x86_64-pc-windows-msvc.zip`.
-2. Extract it and run `geodesic-wallpaper.exe`. The zip also holds a sample `config.toml` and the `presets/` folder.
-3. The exe is unsigned, so Windows SmartScreen may say "unknown publisher": click **More info**, then **Run anyway**. You can check the download against `SHA256SUMS.txt` on the release page.
-
-Requires Windows 10 or 11 and a GPU with DirectX 12 or Vulkan. There are no macOS or Linux builds: the app is a Win32 desktop wallpaper.
-
-### Install with Cargo (Windows)
-
-```powershell
-cargo install geodesic-wallpaper
-```
-
-### Build from source
-
-```powershell
-git clone https://github.com/Mattbusel/geodesic-wallpaper.git
-cd geodesic-wallpaper
-cargo run --release                      # uses ./config.toml
-cargo run --release -- --preset cosmic   # presets/cosmic.toml over config.toml
-cargo run --release -- --headless --frames 300 --output shot.png
-cargo test --lib                         # no GPU needed
-```
-
-`--preset` reads `presets/<name>.toml` relative to the working directory, so run from the repo root or copy the `presets/` folder next to the exe.
-
-## Controls
-
-| Key | Action |
+| How | Command |
 | --- | --- |
-| `]` / `[` | Next / previous surface |
-| `+` / `-` | Speed up / slow down |
-| `R` | Reset all geodesics |
-| `F` | Toggle FPS overlay |
-| `Space` | Pause |
-| `P` | Save a screenshot |
+| **PowerShell one-liner** (easiest) | `irm https://raw.githubusercontent.com/Mattbusel/geodesic-wallpaper/master/install.ps1 \| iex` |
+| Scoop | `scoop bucket add mattbusel https://github.com/Mattbusel/scoop-bucket; scoop install mattbusel/geodesic-wallpaper` |
+| Zip download | [Latest release](https://github.com/Mattbusel/geodesic-wallpaper/releases/latest): extract, run `geodesic-wallpaper.exe` |
+| cargo-binstall (prebuilt) | `cargo binstall geodesic-wallpaper` |
+| Cargo (build from source) | `cargo install geodesic-wallpaper` |
 
-Right-click the tray icon for the tray menu.
+The one-liner checks the download's SHA-256, installs to `%LOCALAPPDATA%\Programs\geodesic-wallpaper`, adds it to your PATH and makes a Start Menu shortcut. It does not start the wallpaper. The exe is unsigned, so SmartScreen may say "unknown publisher": click **More info**, then **Run anyway**. Needs a GPU with DirectX 12 or Vulkan. There are no macOS or Linux builds: it is a Win32 desktop wallpaper.
 
-## Configuration
+## Use it in 3 steps
+
+1. **Start it.** Open **Geodesic Wallpaper** from the Start Menu, or run `geodesic-wallpaper` in a terminal. After a photosensitivity notice (shown at each start; set `epilepsy_warning = false` in `config.toml` to skip it), the animation replaces your desktop background and sits behind your icons. A tray icon appears.
+2. **Pick a look.** Run `geodesic-wallpaper --preset ocean` (also `cosmic`, `fire`, `matrix`, `neon`), or open `config.toml` next to the exe, change `surface = "torus"` to `"torus_knot"`, `"klein_bottle"`, `"pseudosphere"` and so on, and save. The running wallpaper reloads the file by itself.
+3. **Stop it.** Right-click the tray icon and choose **Quit**. Your normal wallpaper comes back.
+
+Want a still or a clip without touching your desktop? Headless mode renders offscreen, straight to files:
+
+```powershell
+geodesic-wallpaper --headless --output shot.png        # one 1920x1080 PNG
+geodesic-wallpaper --headless --frames 240 --record frames --record-start 150 --record-every 2
+ffmpeg -framerate 15 -i frames/frame_%05d.png -pix_fmt yuv420p clip.mp4
+```
+
+## Results
+
+Six of the fourteen surfaces, rendered today by headless mode at 960x540 with the default palette (the GIF above shows four more):
+
+<p align="center"><img src="https://raw.githubusercontent.com/Mattbusel/geodesic-wallpaper/master/assets/surfaces.png" alt="Klein bottle, pseudosphere, catenoid, Enneper surface, Boy's surface and hyperboloid renders" width="900"></p>
+
+Real output of the recording command (the frames behind the GIF):
+
+```text
+> geodesic-wallpaper --headless --frames 240 --record rec_torus --record-start 150 --record-every 2 --width 900 --height 506
+Recorded 45 frames (900x506) to rec_torus
+Make a video: ffmpeg -framerate 15 -i rec_torus/frame_%05d.png -pix_fmt yuv420p out.mp4
+```
+
+Each line is one particle sliding along the surface under the geodesic equation, integrated with RK4 using exact (analytic) Christoffel symbols; the trail behind it fades by a power law. On a sphere the paths close into great circles, on a torus they wind forever without repeating, and on the pseudosphere neighbours spread apart exponentially.
+
+## What it does
+
+- **Fourteen surfaces**: torus, sphere, saddle, catenoid, helicoid, hyperboloid, hyperbolic paraboloid, ellipsoid, Enneper, Klein bottle, Boy's surface, torus knot, pseudosphere and trefoil tube.
+- **Behaves like a wallpaper**: a borderless window pinned below all apps, so icons stay clickable. Primary monitor, a chosen monitor, or all of them.
+- **Live config**: edit `config.toml` and save; the change shows up without a restart. Five presets ship in `presets/`.
+- **Offscreen rendering** to PNG, PPM, BMP or SVG, plus numbered PNG frames for GIFs and videos, with no window at all.
+- **A Rust library** too: the surfaces and the RK4 integrator work on their own ([docs.rs](https://docs.rs/geodesic-wallpaper)).
+
+<details>
+<summary><b>Configuration reference (<code>config.toml</code>)</b></summary>
 
 All fields are optional. Missing fields revert to the defaults shown.
 
@@ -107,23 +108,52 @@ background_color = "#050510"
 color_palette    = ["#4488FF", "#88DDFF", "#FFD700", "#88FF88", "#FF88CC"]
 ```
 
-## Command-line flags
+`config.toml` and `presets/` are read from the current folder first, then from the folder that holds the exe.
+
+</details>
+
+<details>
+<summary><b>Command-line flags</b></summary>
 
 | Flag | Effect |
 | --- | --- |
 | `--preset NAME` | Merge `presets/NAME.toml` over `config.toml` |
-| `--headless [--frames N] [--output FILE] [--output-format png\|ppm\|bmp\|svg]` | Simulate N frames without a window and save the last one |
+| `--headless [--frames N] [--output FILE] [--output-format png\|ppm\|bmp\|svg]` | Simulate N frames offscreen (no window) and save the last one |
+| `--record DIR [--record-start N] [--record-every N]` | With `--headless`: also save frames as `DIR/frame_00000.png`, ... |
+| `--width N --height N` | Size of headless renders (default 1920x1080) |
 | `--preview` | Print an ASCII block preview of the pattern and exit |
-| `--animate [--frames N] [--fps N] [--out-dir DIR]` | Exercise the frame exporter; currently writes gradient test frames, not wallpaper renders |
+| `--animate [--frames N] [--fps N] [--out-dir DIR]` | Exercise the frame exporter; writes gradient test frames, not wallpaper renders |
 | `--palette TYPE[:HUE] [--palette-steps N]` | Print a generated palette (rainbow, monochromatic, complementary, triadic, analogous) |
 | `--gradient`, `--colorspace`, `--fractal`, `--tile` | Print diagnostics from the gradient, color space, fractal and tiling modules |
+| `--version`, `--help` | Version, and help with examples |
 
-## Supported surfaces
+Set `NO_COLOR=1` for plain log output and `RUST_LOG=debug` for more detail.
+
+</details>
+
+<details>
+<summary><b>Keyboard and tray</b></summary>
+
+| Key | Action |
+| --- | --- |
+| `]` / `[` | Next / previous surface |
+| `+` / `-` | Speed up / slow down |
+| `R` | Reset all geodesics |
+| `F` | Toggle FPS overlay |
+| `Space` | Pause |
+| `P` | Save a screenshot |
+
+The wallpaper window is created so that it never steals focus, so the tray menu (right-click the tray icon) is the dependable way to switch surface or quit.
+
+</details>
+
+<details>
+<summary><b>Supported surfaces</b></summary>
 
 All surfaces implement the `Surface` trait: `position()`, `normal()`, `metric()`, `christoffel()`, `wrap()`, `random_position()`, `random_tangent()`, and `mesh_vertices()`.
 
 | Surface | Config name | Curvature | Notes |
-|---------|-------------|-----------|-------|
+||-|--|-|
 | Torus | `"torus"` | Mixed | Analytic Christoffels; ergodic irrational windings |
 | Sphere | `"sphere"` | Constant positive K = 1/R² | All geodesics are great circles |
 | Saddle | `"saddle"` | Zero (flat chart) | Straight-line geodesics |
@@ -139,11 +169,12 @@ All surfaces implement the `Surface` trait: `position()`, `normal()`, `metric()`
 | **Pseudosphere** | `"pseudosphere"` | **Constant negative K = −1** | Tractricoid; geodesics diverge exponentially; the hyperbolic plane's classic model surface |
 | **Trefoil tube** | `"trefoil"` | Positive (tube) | Circular cross-section swept around the trefoil knot curve; geodesics precess across all three lobes |
 
----
+</details>
 
-## Mathematical background
+<details>
+<summary><b>The math</b></summary>
 
-### Geodesic equations
+#### Geodesic equations
 
 On a Riemannian surface with metric `g_{ij}` a geodesic `γ(t)` satisfies:
 
@@ -153,10 +184,10 @@ d²uⁱ/dt² + Γⁱⱼₖ (duʲ/dt)(duᵏ/dt) = 0
 
 where `Γⁱⱼₖ = ½ gⁱˡ (∂ⱼgₗₖ + ∂ₖgₗⱼ − ∂ₗgⱼₖ)` are the Christoffel symbols of the second kind. All fourteen built-in surfaces provide analytic `christoffel()` implementations so that the RK4 integrator never approximates these symbols numerically.
 
-### Curvature comparison
+#### Curvature comparison
 
 | Surface | Gaussian curvature K | Geodesic character |
-|---------|---------------------|-------------------|
+|||-|
 | Sphere | K = +1/R² (constant) | Great circles: all geodesics are closed |
 | Torus | Mixed (positive outer, negative inner) | Depends on winding ratio: rational = periodic, irrational = dense (ergodic) |
 | Saddle / flat | K = 0 | Straight lines in parameter space |
@@ -164,7 +195,7 @@ where `Γⁱⱼₖ = ½ gⁱˡ (∂ⱼgₗₖ + ∂ₖgₗⱼ − ∂ₗgⱼₖ)
 | Pseudosphere | K = −1 (constant) | Maximal divergence: model of the hyperbolic plane |
 | Hyperboloid | K < 0 | Asymptotic geodesics along the rulings |
 
-### Gauss-Bonnet theorem
+#### Gauss-Bonnet theorem
 
 For any compact surface `Σ` without boundary:
 
@@ -174,9 +205,10 @@ For any compact surface `Σ` without boundary:
 
 where `χ` is the Euler characteristic. This connects the local curvature of each built-in surface to its global topology (sphere: χ=2, torus: χ=0, Klein bottle: χ=0, RP²: χ=1).
 
----
+</details>
 
-## Architecture
+<details>
+<summary><b>Architecture and library use</b></summary>
 
 | Module | Responsibility |
 | --- | --- |
@@ -191,10 +223,20 @@ where `χ` is the Euler characteristic. This connects the local curvature of eac
 
 The crate is also a library (`geodesic_wallpaper`) with a large set of additional modules that are unit tested but **not yet wired into the wallpaper binary**: gallery mode, a live parameter tuner, phase portrait recording, mouse-driven geodesic shooting, a geodesic field (basin) view, per-monitor surface assignment, a financial OHLCV data driver, Lua-scripted surfaces (`--features lua`), scene presets, and generative-art modules (wallpaper symmetry groups, Penrose and Escher tilings, reaction-diffusion, L-systems, strange attractors, Voronoi, fractals, color spaces and export formats). Their `config.toml` keys (for example `gallery_mode`) parse but currently have no effect on the running wallpaper.
 
-## Status
+</details>
 
-Working Windows wallpaper, version 1.5.0. `cargo test --lib` is the quickest local check. Contributions: see [CONTRIBUTING.md](CONTRIBUTING.md).
+## Build from source
+
+```powershell
+git clone https://github.com/Mattbusel/geodesic-wallpaper.git
+cd geodesic-wallpaper
+cargo run --release                      # the live wallpaper, reads ./config.toml
+cargo run --release -- --headless --output shot.png
+cargo test --lib                         # no GPU needed
+```
+
+Contributing: [CONTRIBUTING.md](https://github.com/Mattbusel/geodesic-wallpaper/blob/master/CONTRIBUTING.md). Changes: [CHANGELOG.md](https://github.com/Mattbusel/geodesic-wallpaper/blob/master/CHANGELOG.md).
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+MIT, see [LICENSE](https://github.com/Mattbusel/geodesic-wallpaper/blob/master/LICENSE).

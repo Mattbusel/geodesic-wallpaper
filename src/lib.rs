@@ -1,4 +1,40 @@
-//! Library façade exposing all public modules for integration tests and `cargo doc`.
+//! Trace geodesics (the straightest possible paths) across curved 3D surfaces;
+//! the engine behind the `geodesic-wallpaper` animated Windows wallpaper.
+//!
+//! ![geodesic-wallpaper rendering a torus, a torus knot and two presets](https://raw.githubusercontent.com/Mattbusel/geodesic-wallpaper/master/assets/hero.gif)
+//!
+//! Most people want the app, not the library: download it from the
+//! [latest release](https://github.com/Mattbusel/geodesic-wallpaper/releases/latest)
+//! or run `cargo install geodesic-wallpaper` on Windows.
+//!
+//! # Example: follow one geodesic on a torus
+//!
+//! ```
+//! use geodesic_wallpaper::geodesic::Geodesic;
+//! use geodesic_wallpaper::surface::{torus::Torus, Surface};
+//!
+//! let torus = Torus::new(2.0, 0.7);
+//! // Start at (u, v) = (0, 0) heading in direction (1, 0.3); live 300 steps.
+//! let mut g = Geodesic::new(0.0, 0.0, 1.0, 0.3, 300, 0);
+//! for _ in 0..100 {
+//!     g.step(&torus, 0.016); // one RK4 step of the geodesic equation
+//! }
+//! let p = torus.position(g.u, g.v); // back to a 3D point
+//! assert!(p.length() > 1.0 && p.length() < 3.0);
+//! ```
+//!
+//! # Main types
+//!
+//! - [`surface::Surface`]: the trait every surface implements (metric,
+//!   Christoffel symbols, embedding). Implementations live in [`surface`],
+//!   for example [`surface::torus::Torus`] and [`surface::pseudosphere::Pseudosphere`].
+//! - [`geodesic::Geodesic`]: one particle integrated with RK4 along the surface.
+//! - [`trail::TrailBuffer`]: the fading ring buffer drawn behind each geodesic.
+//! - [`config::Config`]: everything `config.toml` can set.
+//! - [`renderer::Renderer`]: the wgpu renderer (window or offscreen).
+//!
+//! Many other modules (tilings, fractals, reaction-diffusion and so on) are
+//! library-only experiments that the wallpaper binary does not use yet.
 
 // Many of the generative-art modules below are library-only experiments that
 // the wallpaper binary does not call. Keep CI's `clippy -D warnings` gate
