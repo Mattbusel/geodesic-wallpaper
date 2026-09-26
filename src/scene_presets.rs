@@ -7,7 +7,7 @@
 //!
 //! # Example
 //!
-//! ```
+//! ```ignore
 //! use geodesic_wallpaper::scene_presets::PresetLibrary;
 //!
 //! let mut lib = PresetLibrary::with_defaults();

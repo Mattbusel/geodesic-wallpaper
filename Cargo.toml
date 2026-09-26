@@ -1,20 +1,32 @@
 [package]
 name = "geodesic-wallpaper"
-version = "1.5.0"
+version = "1.5.1"
 edition = "2021"
 rust-version = "1.75"
-description = "Real-time geodesic flow live desktop wallpaper for Windows, powered by wgpu and RK4 integration on analytic Riemannian surfaces."
+description = "Animated Windows desktop wallpaper that draws glowing geodesics flowing over curved 3D surfaces (torus, Klein bottle, pseudosphere and more), rendered with wgpu."
 license = "MIT"
 repository = "https://github.com/Mattbusel/geodesic-wallpaper"
 homepage = "https://github.com/Mattbusel/geodesic-wallpaper"
+documentation = "https://docs.rs/geodesic-wallpaper"
 readme = "README.md"
-keywords = ["wallpaper", "geodesic", "wgpu", "windows", "riemannian"]
+keywords = ["wallpaper", "live-wallpaper", "geodesic", "wgpu", "generative-art"]
 categories = ["graphics", "visualization", "rendering"]
-exclude = [".github/", "*.png", "*.gif"]
+exclude = [".github/", ".claude/", "assets/", "packaging/", "*.png", "*.gif", "*.mp4"]
 
 [package.metadata]
 msrv = "1.75.0"
 platform = "windows"
+
+[package.metadata.docs.rs]
+default-target = "x86_64-pc-windows-msvc"
+targets = ["x86_64-pc-windows-msvc"]
+
+# `cargo binstall geodesic-wallpaper` downloads the prebuilt Windows zip from
+# GitHub Releases instead of compiling. Windows only.
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-v{ version }-{ target }.zip"
+bin-dir = "{ name }-v{ version }-{ target }/{ bin }{ binary-ext }"
+pkg-fmt = "zip"
 
 [lib]
 name = "geodesic_wallpaper"

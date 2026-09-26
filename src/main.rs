@@ -34,7 +34,21 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 /// Command-line arguments.
 #[derive(Parser)]
-#[command(version, about = "Geodesic wallpaper")]
+#[command(
+    version,
+    about = "Animated Windows wallpaper: colored geodesics flowing over curved 3D surfaces.",
+    after_help = "Examples:
+  geodesic-wallpaper                          Start the live wallpaper (reads config.toml)
+  geodesic-wallpaper --preset ocean           Use presets/ocean.toml (also: cosmic, fire, matrix, neon)
+  geodesic-wallpaper --headless --output shot.png
+                                              Render one 1920x1080 image, no window
+  geodesic-wallpaper --headless --frames 240 --record frames --record-start 150 --record-every 2
+                                              Save 45 frames as PNGs for a GIF or video
+
+config.toml and presets/ are read from the current folder first, then from the
+folder that holds the exe. Edit config.toml while it runs and it reloads.
+Quit from the tray icon (right-click). Keys: ] [ surface, + - speed, Space pause."
+)]
 struct Args {
     /// Run headless, render N frames and save screenshot.
     #[arg(long)]
@@ -45,14 +59,30 @@ struct Args {
     /// Number of frames to simulate in headless mode.
     #[arg(long, default_value_t = 300)]
     frames: u32,
+    /// With --headless: also save frames as numbered PNGs into this folder
+    /// (frame_00000.png, ...), for turning into a GIF or video. No window is opened.
+    #[arg(long, value_name = "DIR")]
+    record: Option<String>,
+    /// With --record: first simulated frame to save (lets trails build up first).
+    #[arg(long, default_value_t = 0, value_name = "N")]
+    record_start: u32,
+    /// With --record: save every Nth frame (2 at 30 fps wallpaper speed gives 15 fps).
+    #[arg(long, default_value_t = 1, value_name = "N")]
+    record_every: u32,
+    /// Width in pixels of headless renders.
+    #[arg(long, default_value_t = 1920)]
+    width: u32,
+    /// Height in pixels of headless renders.
+    #[arg(long, default_value_t = 1080)]
+    height: u32,
     /// Load a named preset from the `presets/` directory (e.g. `cosmic`, `ocean`).
     ///
     /// Merges preset values on top of `config.toml` defaults.
     #[arg(long)]
     preset: Option<String>,
 
-    /// Export an animation sequence of PNG frames.
-    /// Use with --frames, --fps, and --out-dir.
+    /// Test the frame exporter: writes gradient test frames, not wallpaper
+    /// renders. For real frames use --headless --record DIR.
     #[arg(long)]
     animate: bool,
 
@@ -181,12 +211,32 @@ fn build_surface_by_name(name: &str) -> Arc<dyn Surface> {
     }
 }
 
+/// Find a data file (`config.toml`, `presets/NAME.toml`): the current folder
+/// wins, then the folder holding the exe, so an installed copy on PATH still
+/// finds the config and presets shipped next to it.
+fn data_path(rel: &str) -> PathBuf {
+    let here = PathBuf::from(rel);
+    if here.exists() {
+        return here;
+    }
+    if let Some(dir) = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+    {
+        let beside = dir.join(rel);
+        if beside.exists() {
+            return beside;
+        }
+    }
+    here
+}
+
 /// Load a preset TOML from `presets/<name>.toml` and merge it on top of `base`.
 ///
 /// Missing files are silently ignored (returns `base` unchanged).  Parse errors
 /// are logged as warnings and also return `base` unchanged.
 fn load_preset(base: &Config, name: &str) -> Config {
-    let path = PathBuf::from(format!("presets/{name}.toml"));
+    let path = data_path(&format!("presets/{name}.toml"));
     let text = match std::fs::read_to_string(&path) {
         Ok(t) => t,
         Err(_) => {
@@ -320,10 +370,22 @@ fn hsv_to_rgb(hsv: [f32; 3]) -> [f32; 4] {
     [r, g, b, 1.0]
 }
 
-/// Parse a CSS hex colour string to `(r, g, b)` in `f64` linear range 0–1.
+/// Parse a CSS hex colour string to linear `(r, g, b)` in range 0 to 1.
+///
+/// The render target is sRGB, and wgpu clear colors are linear, so the hex
+/// value is converted from sRGB to linear here; otherwise `#050510` would be
+/// shown as a much lighter navy.
 fn parse_bg_color(hex: &str) -> (f64, f64, f64) {
     let c = Config::parse_color(hex);
-    (c[0] as f64, c[1] as f64, c[2] as f64)
+    let lin = |v: f32| -> f64 {
+        let v = v as f64;
+        if v <= 0.04045 {
+            v / 12.92
+        } else {
+            ((v + 0.055) / 1.055).powf(2.4)
+        }
+    };
+    (lin(c[0]), lin(c[1]), lin(c[2]))
 }
 
 /// Query monitor resolution according to the `monitor` config option.
@@ -393,9 +455,11 @@ fn show_epilepsy_warning() {
 
 fn main() {
     tracing_subscriber::fmt()
+        .with_ansi(std::env::var_os("NO_COLOR").is_none())
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                tracing_subscriber::EnvFilter::new("info,wgpu_core=error,wgpu_hal=error,naga=warn")
+            }),
         )
         .init();
 
@@ -404,7 +468,7 @@ fn main() {
     // --preview: render ASCII block preview and exit
     if args.preview {
         use geodesic_wallpaper::preview::{TuiApp, WallpaperParams};
-        let config = geodesic_wallpaper::config::Config::load(std::path::Path::new("config.toml"));
+        let config = geodesic_wallpaper::config::Config::load(&data_path("config.toml"));
         let mut params = WallpaperParams {
             scale: (1.0_f32 / config.time_step.max(1e-6) * 0.01).clamp(0.1, 10.0),
             rotation: config.rotation_speed * 10000.0,
@@ -634,7 +698,7 @@ fn main() {
     }
 
     if args.headless {
-        let config_path = PathBuf::from("config.toml");
+        let config_path = data_path("config.toml");
         let mut cfg = Config::load(&config_path).resolve_profile();
         if let Some(ref preset_name) = args.preset {
             cfg = load_preset(&cfg, preset_name);
@@ -679,8 +743,8 @@ fn run_headless(args: &Args, cfg: &Config) -> Result<(), GeodesicError> {
     let surf = build_surface(cfg);
     let (mesh_verts, mesh_indices) = surf.mesh_vertices(40, 40);
 
-    let width = 1920u32;
-    let height = 1080u32;
+    let width = args.width.max(16);
+    let height = args.height.max(16);
 
     let (mut renderer, offscreen_tex) = pollster::block_on(Renderer::new_headless(
         width,
@@ -695,6 +759,31 @@ fn run_headless(args: &Args, cfg: &Config) -> Result<(), GeodesicError> {
         renderer.set_background(br, bg, bb);
     }
     renderer.light_dir = cfg.light_dir;
+    renderer.show_wireframe = cfg.show_wireframe;
+    // Use the same camera as the live wallpaper.
+    renderer.camera = geodesic_wallpaper::renderer::camera::Camera::new_with_params(
+        width as f32 / height as f32,
+        cfg.camera_distance,
+        cfg.camera_elevation,
+        cfg.camera_fov,
+        cfg.camera_elevation_speed,
+    );
+
+    let record_dir = match &args.record {
+        Some(d) => {
+            let dir = PathBuf::from(d);
+            std::fs::create_dir_all(&dir).map_err(|e| {
+                GeodesicError::render(format!(
+                    "could not create --record folder {}: {e}",
+                    dir.display()
+                ))
+            })?;
+            Some(dir)
+        }
+        None => None,
+    };
+    let record_every = args.record_every.max(1);
+    let mut recorded = 0u32;
 
     let mut rng = match cfg.seed {
         Some(s) => StdRng::seed_from_u64(s),
@@ -719,8 +808,9 @@ fn run_headless(args: &Args, cfg: &Config) -> Result<(), GeodesicError> {
     let dt = cfg.time_step;
 
     // Simulate frames.
-    for _frame in 0..args.frames {
+    for frame in 0..args.frames {
         renderer.camera.orbit(cfg.rotation_speed * dt);
+        renderer.camera.drift_elevation(dt);
 
         let surf_ref = &*surf;
         geodesics
@@ -746,23 +836,35 @@ fn run_headless(args: &Args, cfg: &Config) -> Result<(), GeodesicError> {
                 trails[i].color = colors[ci];
             }
         }
+
+        if let Some(dir) = &record_dir {
+            if frame >= args.record_start && (frame - args.record_start) % record_every == 0 {
+                let (verts, lens) = collect_trail_verts(&trails, &geodesics, &colors);
+                let px = renderer.render_to_texture(&offscreen_tex, &verts, &lens)?;
+                let path = dir.join(format!("frame_{recorded:05}.png"));
+                image::save_buffer(&path, &px, width, height, image::ColorType::Rgba8)
+                    .map_err(|e| GeodesicError::render(format!("image save failed: {e}")))?;
+                recorded += 1;
+            }
+        }
+    }
+
+    if let Some(dir) = &record_dir {
+        eprintln!(
+            "Recorded {recorded} frames ({width}x{height}) to {}",
+            dir.display()
+        );
+        if recorded > 0 {
+            eprintln!(
+                "Make a video: ffmpeg -framerate {} -i {}/frame_%05d.png -pix_fmt yuv420p out.mp4",
+                (30 / record_every).max(1),
+                dir.display()
+            );
+        }
     }
 
     // Collect trail vertices for the final frame render.
-    let mut all_verts = Vec::new();
-    let mut seg_lens = Vec::new();
-    for (trail_idx, trail) in trails.iter().enumerate() {
-        let ci = geodesics[trail_idx].color_idx % colors.len().max(1);
-        let [dr, dg, db, _] = colors[ci];
-        let mut v = trail.ordered_vertices();
-        for vert in &mut v {
-            vert.color[0] = dr;
-            vert.color[1] = dg;
-            vert.color[2] = db;
-        }
-        seg_lens.push(v.len());
-        all_verts.extend(v);
-    }
+    let (all_verts, seg_lens) = collect_trail_verts(&trails, &geodesics, &colors);
 
     // Render to offscreen texture and read back pixels.
     let pixels = renderer.render_to_texture(&offscreen_tex, &all_verts, &seg_lens)?;
@@ -812,10 +914,34 @@ fn run_headless(args: &Args, cfg: &Config) -> Result<(), GeodesicError> {
     Ok(())
 }
 
+/// Flatten every trail into one vertex list plus per-trail segment lengths,
+/// coloring each trail with its geodesic's palette color.
+fn collect_trail_verts(
+    trails: &[TrailBuffer],
+    geodesics: &[Geodesic],
+    colors: &[[f32; 4]],
+) -> (Vec<geodesic_wallpaper::trail::TrailVertex>, Vec<usize>) {
+    let mut all_verts = Vec::new();
+    let mut seg_lens = Vec::new();
+    for (trail_idx, trail) in trails.iter().enumerate() {
+        let ci = geodesics[trail_idx].color_idx % colors.len().max(1);
+        let [dr, dg, db, _] = colors[ci];
+        let mut v = trail.ordered_vertices();
+        for vert in &mut v {
+            vert.color[0] = dr;
+            vert.color[1] = dg;
+            vert.color[2] = db;
+        }
+        seg_lens.push(v.len());
+        all_verts.extend(v);
+    }
+    (all_verts, seg_lens)
+}
+
 /// Application body returning a typed error on failure.
 #[tracing::instrument(skip(args))]
 fn run(args: &Args) -> Result<(), GeodesicError> {
-    let config_path = PathBuf::from("config.toml");
+    let config_path = data_path("config.toml");
     let base_cfg = Config::load(&config_path).resolve_profile();
     let cfg = if let Some(ref preset_name) = args.preset {
         load_preset(&base_cfg, preset_name)

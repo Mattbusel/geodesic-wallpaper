@@ -9,9 +9,26 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- No changes pending.
+
+---
+
+## [1.5.1] - 2026-09-25
+
+### Fixed
+
+- The renderer failed wgpu validation on its first frame ("Buffer is bound with size 96 where the shader expects 112"), so the wallpaper and `--headless` exited at start. The WGSL uniform padding now matches the Rust struct.
+- `background_color` is converted from sRGB, so `#050510` shows as that color instead of a lighter navy.
+- Headless renders now use the configured camera and `show_wireframe`, matching the live wallpaper.
+- `klein_bottle`, `boy_surface`, `torus_knot`, `pseudosphere` and `trefoil` no longer print an "unrecognised surface" warning.
+
 ### Added
 
-- No changes pending.
+- `--record DIR`, `--record-start N`, `--record-every N`, `--width`, `--height`: save real headless frames as numbered PNGs for GIFs and videos, with no window.
+- `config.toml` and `presets/` are found next to the exe when they are not in the current folder, so an installed copy works from any terminal.
+- `install.ps1` one-line installer, Scoop manifest, `cargo binstall` metadata, winget manifests in `packaging/winget/`.
+- `--help` examples; `NO_COLOR` respected; quieter default logging.
+- README with a GIF, install table and results; banner and social preview.
 
 ---
 

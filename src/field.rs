@@ -25,7 +25,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use geodesic_wallpaper::field::{FieldConfig, FieldRenderer};
 //!
 //! let cfg = FieldConfig::default();

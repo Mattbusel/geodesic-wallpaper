@@ -2,7 +2,11 @@ struct Uniforms {
     view_proj: mat4x4<f32>,
     light_dir: vec4<f32>,
     time: f32,
-    _pad: vec3<f32>,
+    // Three scalars, not vec3: a vec3 would align to 16 bytes and make the
+    // struct 112 bytes, while the Rust `Uniforms` is 96.
+    _pad0: f32,
+    _pad1: f32,
+    _pad2: f32,
 }
 
 @group(0) @binding(0)

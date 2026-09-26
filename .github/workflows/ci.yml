@@ -60,7 +60,9 @@ jobs:
           key: windows-cargo-test-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: windows-cargo-test-
       - name: Run lib tests
-        run: cargo test --lib
+        run: |
+          cargo test --lib
+          cargo test --doc
 
   doc:
     name: cargo doc --no-deps

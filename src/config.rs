@@ -676,10 +676,15 @@ impl Config {
             "hyperboloid",
             "hyperbolic_paraboloid",
             "ellipsoid",
+            "klein_bottle",
+            "boy_surface",
+            "torus_knot",
+            "pseudosphere",
+            "trefoil",
         ];
         if !known_surfaces.contains(&self.surface.as_str()) {
             warnings.push(format!(
-                "surface '{}' is unrecognised — known values: {}; defaulting to 'torus'",
+                "surface '{}' is unrecognised (known values: {}); defaulting to 'torus'",
                 self.surface,
                 known_surfaces.join(", ")
             ));
