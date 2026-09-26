@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+PackageIdentifier: Mattbusel.GeodesicWallpaper
+PackageVersion: 1.5.1
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+  - RelativeFilePath: geodesic-wallpaper-v1.5.1-x86_64-pc-windows-msvc\geodesic-wallpaper.exe
+    PortableCommandAlias: geodesic-wallpaper
+MinimumOSVersion: 10.0.17763.0
+ReleaseDate: 2026-09-26
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/Mattbusel/geodesic-wallpaper/releases/download/v1.5.1/geodesic-wallpaper-v1.5.1-x86_64-pc-windows-msvc.zip
+    InstallerSha256: 4B52FF124A3C74754F6756331D68B72AD52B6DA031447AE27E42B816774BDF3B
+ManifestType: installer
+ManifestVersion: 1.6.0

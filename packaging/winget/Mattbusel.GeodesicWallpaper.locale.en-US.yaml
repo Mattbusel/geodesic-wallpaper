@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+PackageIdentifier: Mattbusel.GeodesicWallpaper
+PackageVersion: 1.5.1
+PackageLocale: en-US
+Publisher: Mattbusel
+PublisherUrl: https://github.com/Mattbusel
+PublisherSupportUrl: https://github.com/Mattbusel/geodesic-wallpaper/issues
+PackageName: Geodesic Wallpaper
+PackageUrl: https://github.com/Mattbusel/geodesic-wallpaper
+License: MIT
+LicenseUrl: https://github.com/Mattbusel/geodesic-wallpaper/blob/master/LICENSE
+ShortDescription: Animated Windows wallpaper of glowing geodesics flowing over curved 3D surfaces.
+Description: |-
+  geodesic-wallpaper draws geodesics, the straightest possible paths, flowing over a slowly turning torus, torus knot,
+  Klein bottle, pseudosphere and ten other surfaces, in a window pinned behind the desktop icons. Configure it with a
+  hot-reloaded config.toml or presets, and render stills or frame sequences offscreen with --headless.
+Moniker: geodesic-wallpaper
+Tags:
+  - wallpaper
+  - live-wallpaper
+  - animated-wallpaper
+  - generative-art
+  - geometry
+  - wgpu
+ReleaseNotesUrl: https://github.com/Mattbusel/geodesic-wallpaper/releases/tag/v1.5.1
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0
