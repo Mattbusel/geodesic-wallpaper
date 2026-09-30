@@ -1,10 +1,10 @@
 //! Trace geodesics (the straightest possible paths) across curved 3D surfaces;
 //! the engine behind the `geodesic-wallpaper` animated Windows wallpaper.
 //!
-//! ![geodesic-wallpaper rendering a torus, a torus knot and two presets](https://raw.githubusercontent.com/Mattbusel/geodesic-wallpaper/master/assets/hero.gif)
+//! ![geodesic-wallpaper rendering a torus, a torus knot and two presets](https://gitlab.com/mattbusel/geodesic-wallpaper/-/raw/master/assets/hero.gif)
 //!
 //! Most people want the app, not the library: download it from the
-//! [latest release](https://github.com/Mattbusel/geodesic-wallpaper/releases/latest)
+//! [latest release](https://gitlab.com/mattbusel/geodesic-wallpaper/-/releases)
 //! or run `cargo install geodesic-wallpaper` on Windows.
 //!
 //! # Example: follow one geodesic on a torus

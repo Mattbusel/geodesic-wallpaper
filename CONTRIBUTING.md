@@ -17,7 +17,7 @@ opening a pull request.
 ## Building
 
 ```powershell
-git clone https://github.com/Mattbusel/geodesic-wallpaper.git
+git clone https://gitlab.com/mattbusel/geodesic-wallpaper.git
 cd geodesic-wallpaper
 cargo build --release
 ```

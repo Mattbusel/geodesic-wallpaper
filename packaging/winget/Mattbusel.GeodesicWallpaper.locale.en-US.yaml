@@ -3,12 +3,12 @@ PackageIdentifier: Mattbusel.GeodesicWallpaper
 PackageVersion: 1.5.1
 PackageLocale: en-US
 Publisher: Mattbusel
-PublisherUrl: https://github.com/Mattbusel
-PublisherSupportUrl: https://github.com/Mattbusel/geodesic-wallpaper/issues
+PublisherUrl: https://gitlab.com/mattbusel
+PublisherSupportUrl: https://gitlab.com/mattbusel/geodesic-wallpaper/-/issues
 PackageName: Geodesic Wallpaper
-PackageUrl: https://github.com/Mattbusel/geodesic-wallpaper
+PackageUrl: https://gitlab.com/mattbusel/geodesic-wallpaper
 License: MIT
-LicenseUrl: https://github.com/Mattbusel/geodesic-wallpaper/blob/master/LICENSE
+LicenseUrl: https://gitlab.com/mattbusel/geodesic-wallpaper/-/blob/master/LICENSE
 ShortDescription: Animated Windows wallpaper of glowing geodesics flowing over curved 3D surfaces.
 Description: |-
   geodesic-wallpaper draws geodesics, the straightest possible paths, flowing over a slowly turning torus, torus knot,
@@ -22,6 +22,6 @@ Tags:
   - generative-art
   - geometry
   - wgpu
-ReleaseNotesUrl: https://github.com/Mattbusel/geodesic-wallpaper/releases/tag/v1.5.1
+ReleaseNotesUrl: https://gitlab.com/mattbusel/geodesic-wallpaper/-/releases
 ManifestType: defaultLocale
 ManifestVersion: 1.6.0

@@ -8,15 +8,15 @@
 <p align="center"><sub>Real frames from the app's own renderer (<code>--headless --record</code>), 15 fps. <a href="https://gitlab.com/mattbusel/geodesic-wallpaper/-/raw/master/assets/demo.mp4">Download the 15 s MP4</a>.</sub></p>
 
 [![crates.io](https://img.shields.io/crates/v/geodesic-wallpaper.svg)](https://crates.io/crates/geodesic-wallpaper)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Mattbusel/geodesic-wallpaper/blob/master/LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://gitlab.com/mattbusel/geodesic-wallpaper/-/blob/master/LICENSE)
 
 ## Install (Windows 10 or 11)
 
 | How | Command |
 | --- | --- |
 | **PowerShell one-liner** (easiest) | `irm https://gitlab.com/mattbusel/geodesic-wallpaper/-/raw/master/install.ps1 \| iex` |
-| Scoop | `scoop bucket add mattbusel https://github.com/Mattbusel/scoop-bucket; scoop install mattbusel/geodesic-wallpaper` |
-| Zip download | [Latest release](https://github.com/Mattbusel/geodesic-wallpaper/releases/latest): extract, run `geodesic-wallpaper.exe` |
+| Scoop | `scoop bucket add mattbusel https://gitlab.com/mattbusel/scoop-bucket; scoop install mattbusel/geodesic-wallpaper` |
+| Zip download | [Latest release](https://gitlab.com/mattbusel/geodesic-wallpaper/-/releases): extract, run `geodesic-wallpaper.exe` |
 | cargo-binstall (prebuilt) | `cargo binstall geodesic-wallpaper` |
 | Cargo (build from source) | `cargo install geodesic-wallpaper` |
 
@@ -227,15 +227,15 @@ The crate is also a library (`geodesic_wallpaper`) with a large set of additiona
 ## Build from source
 
 ```powershell
-git clone https://github.com/Mattbusel/geodesic-wallpaper.git
+git clone https://gitlab.com/mattbusel/geodesic-wallpaper.git
 cd geodesic-wallpaper
 cargo run --release                      # the live wallpaper, reads ./config.toml
 cargo run --release -- --headless --output shot.png
 cargo test --lib                         # no GPU needed
 ```
 
-Contributing: [CONTRIBUTING.md](https://github.com/Mattbusel/geodesic-wallpaper/blob/master/CONTRIBUTING.md). Changes: [CHANGELOG.md](https://github.com/Mattbusel/geodesic-wallpaper/blob/master/CHANGELOG.md).
+Contributing: [CONTRIBUTING.md](https://gitlab.com/mattbusel/geodesic-wallpaper/-/blob/master/CONTRIBUTING.md). Changes: [CHANGELOG.md](https://gitlab.com/mattbusel/geodesic-wallpaper/-/blob/master/CHANGELOG.md).
 
 ## License
 
-MIT, see [LICENSE](https://github.com/Mattbusel/geodesic-wallpaper/blob/master/LICENSE).
+MIT, see [LICENSE](https://gitlab.com/mattbusel/geodesic-wallpaper/-/blob/master/LICENSE).
