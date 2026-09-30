@@ -1,13 +1,12 @@
-<p align="center"><img src="https://raw.githubusercontent.com/Mattbusel/geodesic-wallpaper/master/assets/banner.png" alt="Geodesic Flow: live wallpaper for Windows" width="100%"></p>
+<p align="center"><img src="assets/banner.png" alt="Geodesic Flow: live wallpaper for Windows" width="100%"></p>
 
 # geodesic-wallpaper
 
 **An animated wallpaper for Windows: glowing lines flow over slowly turning 3D shapes (a donut, a knot, a Klein bottle) behind your desktop icons.**
 
-<p align="center"><img src="https://raw.githubusercontent.com/Mattbusel/geodesic-wallpaper/master/assets/hero.gif" alt="Real frames from the wallpaper renderer: torus, torus knot, ocean preset, fire preset, catenoid" width="900"></p>
-<p align="center"><sub>Real frames from the app's own renderer (<code>--headless --record</code>), 15 fps. <a href="https://raw.githubusercontent.com/Mattbusel/geodesic-wallpaper/master/assets/demo.mp4">Download the 15 s MP4</a>.</sub></p>
+<p align="center"><img src="assets/hero.gif" alt="Real frames from the wallpaper renderer: torus, torus knot, ocean preset, fire preset, catenoid" width="900"></p>
+<p align="center"><sub>Real frames from the app's own renderer (<code>--headless --record</code>), 15 fps. <a href="https://gitlab.com/mattbusel/geodesic-wallpaper/-/raw/master/assets/demo.mp4">Download the 15 s MP4</a>.</sub></p>
 
-[![CI](https://github.com/Mattbusel/geodesic-wallpaper/actions/workflows/ci.yml/badge.svg)](https://github.com/Mattbusel/geodesic-wallpaper/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/geodesic-wallpaper.svg)](https://crates.io/crates/geodesic-wallpaper)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Mattbusel/geodesic-wallpaper/blob/master/LICENSE)
 
@@ -15,7 +14,7 @@
 
 | How | Command |
 | --- | --- |
-| **PowerShell one-liner** (easiest) | `irm https://raw.githubusercontent.com/Mattbusel/geodesic-wallpaper/master/install.ps1 \| iex` |
+| **PowerShell one-liner** (easiest) | `irm https://gitlab.com/mattbusel/geodesic-wallpaper/-/raw/master/install.ps1 \| iex` |
 | Scoop | `scoop bucket add mattbusel https://github.com/Mattbusel/scoop-bucket; scoop install mattbusel/geodesic-wallpaper` |
 | Zip download | [Latest release](https://github.com/Mattbusel/geodesic-wallpaper/releases/latest): extract, run `geodesic-wallpaper.exe` |
 | cargo-binstall (prebuilt) | `cargo binstall geodesic-wallpaper` |
@@ -41,7 +40,7 @@ ffmpeg -framerate 15 -i frames/frame_%05d.png -pix_fmt yuv420p clip.mp4
 
 Six of the fourteen surfaces, rendered today by headless mode at 960x540 with the default palette (the GIF above shows four more):
 
-<p align="center"><img src="https://raw.githubusercontent.com/Mattbusel/geodesic-wallpaper/master/assets/surfaces.png" alt="Klein bottle, pseudosphere, catenoid, Enneper surface, Boy's surface and hyperboloid renders" width="900"></p>
+<p align="center"><img src="assets/surfaces.png" alt="Klein bottle, pseudosphere, catenoid, Enneper surface, Boy's surface and hyperboloid renders" width="900"></p>
 
 Real output of the recording command (the frames behind the GIF):
 
