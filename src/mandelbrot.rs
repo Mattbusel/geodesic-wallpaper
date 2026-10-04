@@ -11,11 +11,14 @@
 /// A complex number stored as (re, im) f64 components.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ComplexNum {
+    /// Real part.
     pub re: f64,
+    /// Imaginary part.
     pub im: f64,
 }
 
 impl ComplexNum {
+    /// Create a complex number from its real and imaginary parts.
     pub fn new(re: f64, im: f64) -> Self {
         Self { re, im }
     }
@@ -52,7 +55,9 @@ impl ComplexNum {
 /// Configuration for a Mandelbrot or Julia set render.
 #[derive(Debug, Clone)]
 pub struct MandelbrotConfig {
+    /// Image width in pixels.
     pub width: u32,
+    /// Image height in pixels.
     pub height: u32,
     /// Real part of the viewport centre.
     pub center_re: f64,

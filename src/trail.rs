@@ -90,28 +90,56 @@ impl TrailBuffer {
     }
 
     /// Return all stored samples in chronological order (oldest first) with
-    /// quadratic fade alpha applied.
+    /// fade alpha applied.
     ///
-    /// Alpha is `(i / count)^2` where `i = 0` is the oldest sample and
-    /// `i = count - 1` is the newest, making the tail transparent and the head
-    /// fully opaque.
+    /// Alpha is `(i / count)^fade_power` where `i = 0` is the oldest sample
+    /// and `i = count - 1` is the newest, making the tail transparent and the
+    /// head fully opaque. Allocates a new `Vec`; the render loop uses
+    /// [`TrailBuffer::append_ordered`] instead to reuse one buffer.
     pub fn ordered_vertices(&self) -> Vec<TrailVertex> {
         let mut out = Vec::with_capacity(self.count);
-        for i in 0..self.count {
-            let age_frac = i as f32 / self.count.max(1) as f32; // 0 = oldest, 1 = newest
-            let alpha = age_frac.powf(self.fade_power);
-            let idx = if self.count == self.capacity {
-                (self.head + i) % self.capacity
+        self.append_ordered(&mut out, None);
+        out
+    }
+
+    /// Append the samples in chronological order with fade alpha to `out`,
+    /// optionally replacing the RGB of every vertex with `rgb`.
+    ///
+    /// Same result as [`TrailBuffer::ordered_vertices`] but without a
+    /// per-call allocation, without a modulo per vertex, and with the common
+    /// `fade_power == 2.0` (and `1.0`) cases computed without `powf`.
+    pub fn append_ordered(&self, out: &mut Vec<TrailVertex>, rgb: Option<[f32; 3]>) {
+        let n = self.count;
+        if n == 0 {
+            return;
+        }
+        // Oldest sample first: when full, the oldest is at `head`.
+        let (older, newer) = if n == self.capacity {
+            let (a, b) = self.vertices.split_at(self.head);
+            (b, a)
+        } else {
+            (&self.vertices[..n], &self.vertices[..0])
+        };
+        let inv = 1.0 / n as f32;
+        let power = self.fade_power;
+        let fade = |i: usize| -> f32 {
+            let x = i as f32 * inv;
+            if power == 2.0 {
+                x * x
+            } else if power == 1.0 {
+                x
             } else {
-                i
-            };
-            let v = self.vertices[idx];
+                x.powf(power)
+            }
+        };
+        out.reserve(n);
+        for (i, v) in older.iter().chain(newer.iter()).enumerate() {
+            let [r, g, b] = rgb.unwrap_or([v.color[0], v.color[1], v.color[2]]);
             out.push(TrailVertex {
                 position: v.position,
-                color: [v.color[0], v.color[1], v.color[2], alpha],
+                color: [r, g, b, fade(i)],
             });
         }
-        out
     }
 }
 
@@ -245,5 +273,52 @@ mod tests {
             v3[mid].color[3],
             v2[mid].color[3]
         );
+    }
+
+    /// The allocation-free path gives exactly the same vertices as the old
+    /// modulo-and-powf loop, for partial and wrapped buffers and any power.
+    #[test]
+    fn append_ordered_matches_reference() {
+        fn reference(t: &TrailBuffer) -> Vec<([f32; 3], [f32; 4])> {
+            (0..t.count)
+                .map(|i| {
+                    let alpha = (i as f32 / t.count.max(1) as f32).powf(t.fade_power);
+                    let idx = if t.count == t.capacity {
+                        (t.head + i) % t.capacity
+                    } else {
+                        i
+                    };
+                    let v = t.vertices[idx];
+                    (v.position, [v.color[0], v.color[1], v.color[2], alpha])
+                })
+                .collect()
+        }
+        for power in [1.0f32, 2.0, 2.5, 3.0] {
+            for pushes in [0usize, 1, 4, 7, 8, 9, 23] {
+                let mut t = TrailBuffer::new(8, [0.2, 0.4, 0.6, 1.0], power);
+                for k in 0..pushes {
+                    t.push([k as f32, -(k as f32), 0.5]);
+                }
+                let got: Vec<_> = t
+                    .ordered_vertices()
+                    .iter()
+                    .map(|v| (v.position, v.color))
+                    .collect();
+                let want = reference(&t);
+                assert_eq!(got.len(), want.len());
+                for (g, w) in got.iter().zip(&want) {
+                    assert_eq!(g.0, w.0);
+                    for c in 0..4 {
+                        assert!(
+                            (g.1[c] - w.1[c]).abs() < 1e-6,
+                            "power {power} pushes {pushes}"
+                        );
+                    }
+                }
+                let mut buf = vec![];
+                t.append_ordered(&mut buf, Some([1.0, 0.0, 0.0]));
+                assert!(buf.iter().all(|v| v.color[..3] == [1.0, 0.0, 0.0]));
+            }
+        }
     }
 }

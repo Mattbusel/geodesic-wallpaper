@@ -32,9 +32,13 @@ struct Uniforms {
 /// geodesic trail lines. All GPU buffers are pre-allocated at construction
 /// time; no per-frame heap allocation occurs on the hot path.
 pub struct Renderer {
+    /// Size and format of the window surface (a 1x1 placeholder for headless renderers).
     pub surface_config: wgpu::SurfaceConfiguration,
+    /// The wgpu device all buffers and pipelines are created on.
     pub device: wgpu::Device,
+    /// Queue used to upload buffers and submit frames.
     pub queue: wgpu::Queue,
+    /// The window surface frames are presented to.
     pub wgpu_surface: wgpu::Surface<'static>,
     surface_pipeline: wgpu::RenderPipeline,
     surface_vbuf: wgpu::Buffer,
@@ -45,6 +49,7 @@ pub struct Renderer {
     trail_vbuf_capacity: usize,
     uniform_buf: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
+    /// Orbiting camera that sets the view and projection each frame.
     pub camera: Camera,
     depth_texture: wgpu::Texture,
     depth_view: wgpu::TextureView,
@@ -620,7 +625,8 @@ impl Renderer {
         //
         // Final decision: use the `unsafe` surface path with a null hwnd (HWND(1))
         // as a placeholder. This is equivalent to what wgpu's own test helpers do.
-        let placeholder_hwnd = windows::Win32::Foundation::HWND(1 as *mut core::ffi::c_void);
+        let placeholder_hwnd =
+            windows::Win32::Foundation::HWND(std::ptr::dangling_mut::<core::ffi::c_void>());
         let raw = RawHwnd(placeholder_hwnd.0 as isize);
         let wgpu_surface =
             unsafe {
@@ -813,7 +819,7 @@ impl Renderer {
             let start = (row * padded_row) as usize;
             let row_data = &data[start..start + unpadded_row as usize];
             // BGRA → RGBA swap
-            for px in row_data.chunks_exact(4) {
+            for px in row_data.as_chunks::<4>().0 {
                 pixels.push(px[2]); // R
                 pixels.push(px[1]); // G
                 pixels.push(px[0]); // B
@@ -1111,7 +1117,7 @@ impl Renderer {
             let start = (row * padded_row) as usize;
             let row_data = &data[start..start + unpadded_row as usize];
             // BGRA → RGBA
-            for px in row_data.chunks_exact(4) {
+            for px in row_data.as_chunks::<4>().0 {
                 pixels.push(px[2]); // R
                 pixels.push(px[1]); // G
                 pixels.push(px[0]); // B

@@ -12,17 +12,24 @@ use std::f64::consts::PI;
 /// Which Escher-inspired tessellation style to produce.
 #[derive(Debug, Clone, PartialEq)]
 pub enum TessellationType {
+    /// Plain polygon lattice in the spirit of Escher's regular divisions.
     RegularDivision,
+    /// Simplified interlocking lizard shapes.
     LizardPattern,
+    /// Fish-shaped tiles.
     FishPattern,
+    /// Bird-shaped tiles.
     BirdPattern,
+    /// Tiling driven by a wallpaper symmetry group, identified by number.
     SymmetryGroup(u8),
 }
 
 /// A single tile shape: a polygon with a fill colour.
 #[derive(Debug, Clone)]
 pub struct TileShape {
+    /// Polygon vertices in pixels, in order.
     pub vertices: Vec<(f64, f64)>,
+    /// Fill colour (RGB).
     pub color: [u8; 3],
 }
 
@@ -30,9 +37,11 @@ pub struct TileShape {
 // EscherGenerator
 // ---------------------------------------------------------------------------
 
+/// Generates Escher-style tessellations as lists of polygons.
 pub struct EscherGenerator;
 
 impl EscherGenerator {
+    /// Create a generator.
     pub fn new() -> Self {
         Self
     }

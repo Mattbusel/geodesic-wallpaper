@@ -17,7 +17,7 @@
 //! WASAPI loopback requires no special driver installation and captures the
 //! mixed system audio at the device's native sample rate.  We use the `cpal`
 //! crate's WASAPI backend because it exposes loopback capture on Windows
-//! via [`cpal::platform::Device::default_output_device`].
+//! via `cpal`'s default output device.
 //!
 //! # Fallback
 //!
@@ -63,11 +63,14 @@ impl BandEnergies {
 
 /// Splits an FFT magnitude spectrum into bass / mids / highs.
 pub struct BandSplitter {
+    /// Sample rate of the analysed audio in Hz.
     pub sample_rate: f32,
+    /// FFT length in samples (at least 64); bin k covers k * sample_rate / fft_size Hz.
     pub fft_size: usize,
 }
 
 impl BandSplitter {
+    /// Create a splitter for the given sample rate and FFT size (raised to at least 64).
     pub fn new(sample_rate: f32, fft_size: usize) -> Self {
         Self {
             sample_rate,
@@ -82,7 +85,9 @@ impl BandSplitter {
 
     /// Sum the RMS of magnitudes in the range `[lo_hz, hi_hz)`.
     fn band_rms(&self, magnitudes: &[f32], lo_hz: f32, hi_hz: f32) -> f32 {
-        let nyquist = self.fft_size / 2;
+        // Never index past the spectrum the caller actually passed, even if
+        // it is shorter than fft_size / 2 (that used to panic).
+        let nyquist = (self.fft_size / 2).min(magnitudes.len());
         let lo_bin = ((lo_hz / self.sample_rate * self.fft_size as f32) as usize).min(nyquist);
         let hi_bin = ((hi_hz / self.sample_rate * self.fft_size as f32) as usize).min(nyquist);
         if hi_bin <= lo_bin {
@@ -107,6 +112,7 @@ impl BandSplitter {
 
 /// Per-channel EMA smoother for band energies.
 pub struct EnergySmoother {
+    /// EMA coefficient in (0, 1]; smaller values smooth more.
     pub alpha: f32,
     smoothed: BandEnergies,
 }
@@ -130,6 +136,7 @@ impl EnergySmoother {
         self.smoothed
     }
 
+    /// The latest smoothed energies.
     pub fn current(&self) -> BandEnergies {
         self.smoothed
     }
@@ -236,6 +243,18 @@ pub fn start_capture(config: AudioCaptureConfig, energies: SharedEnergies) -> Re
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn short_spectrum_does_not_panic() {
+        let bs = BandSplitter::new(44_100.0, 2048);
+        // Only 10 bins instead of 1024: bands past the end read as silence.
+        let e = bs.split(&[1.0; 10]);
+        assert!(e.bass > 0.0);
+        assert_eq!(e.highs, 0.0);
+        let e = bs.split(&[]);
+        assert_eq!((e.bass, e.mids, e.highs), (0.0, 0.0, 0.0));
+    }
+
     use super::*;
 
     #[test]

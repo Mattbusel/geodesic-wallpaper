@@ -86,6 +86,7 @@ impl Default for ParticleConfig {
 pub struct ParticleSystem {
     pool: Vec<Particle>,
     rng: StdRng,
+    /// Emission and motion settings.
     pub config: ParticleConfig,
     spawn_accumulator: f32,
     color_palette: Vec<[f32; 4]>,

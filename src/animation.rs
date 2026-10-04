@@ -284,12 +284,9 @@ impl AnimationExporter {
         })
     }
 
-    /// Write a minimal valid 1x1 white PNG to the given path (useful for testing without a GPU).
-    ///
-    /// This is a stdlib-only PNG encoder — it writes a valid PNG with no external dependencies.
+    /// Write a `width` x `height` gradient test frame as a PNG (useful for
+    /// testing the exporter without a GPU).
     pub fn write_test_frame(path: &Path, width: u32, height: u32) -> Result<(), ExportError> {
-        use std::io::Write;
-
         let mut pixels = vec![255u8; (width * height * 4) as usize];
         // Fill a simple gradient for visual interest
         for y in 0..height {
@@ -302,127 +299,13 @@ impl AnimationExporter {
             }
         }
 
-        encode_png(path, width, height, &pixels).map_err(ExportError::Io)
+        crate::export::save_rgba_png(path, width, height, &pixels)
+            .map(|_| ())
+            .map_err(|e| match e {
+                crate::export::ExportError::Io(io) => ExportError::Io(io),
+                other => ExportError::Render(other.to_string()),
+            })
     }
-}
-
-/// Minimal PNG encoder using stdlib only (no external crate).
-///
-/// Writes an RGBA PNG file. Uses Zlib level-0 compression (stored, no compression)
-/// to keep the implementation simple and dependency-free.
-fn encode_png(path: &Path, width: u32, height: u32, rgba: &[u8]) -> io::Result<()> {
-    use std::io::Write;
-
-    let mut f = std::fs::File::create(path)?;
-
-    // PNG signature
-    f.write_all(&[137, 80, 78, 71, 13, 10, 26, 10])?;
-
-    // IHDR chunk
-    let ihdr_data: Vec<u8> = {
-        let mut d = Vec::with_capacity(13);
-        d.extend_from_slice(&width.to_be_bytes());
-        d.extend_from_slice(&height.to_be_bytes());
-        d.push(8); // bit depth
-        d.push(6); // RGBA
-        d.push(0); // compression method
-        d.push(0); // filter method
-        d.push(0); // interlace
-        d
-    };
-    write_png_chunk(&mut f, b"IHDR", &ihdr_data)?;
-
-    // Build raw scanlines with filter byte 0 (None)
-    let row_len = (width * 4) as usize;
-    let mut raw = Vec::with_capacity((row_len + 1) * height as usize);
-    for row in 0..height as usize {
-        raw.push(0u8); // filter byte
-        raw.extend_from_slice(&rgba[row * row_len..(row + 1) * row_len]);
-    }
-
-    // Wrap in a Deflate "stored" block (no compression, max DEFLATE block = 65535 bytes)
-    let compressed = deflate_store(&raw);
-
-    // IDAT
-    write_png_chunk(&mut f, b"IDAT", &compressed)?;
-
-    // IEND
-    write_png_chunk(&mut f, b"IEND", &[])?;
-
-    Ok(())
-}
-
-fn write_png_chunk(f: &mut impl std::io::Write, tag: &[u8; 4], data: &[u8]) -> io::Result<()> {
-    let len = (data.len() as u32).to_be_bytes();
-    f.write_all(&len)?;
-    f.write_all(tag)?;
-    f.write_all(data)?;
-    let crc = png_crc(tag, data);
-    f.write_all(&crc.to_be_bytes())?;
-    Ok(())
-}
-
-/// CRC-32 used by PNG.
-fn png_crc(tag: &[u8], data: &[u8]) -> u32 {
-    let table = crc32_table();
-    let mut crc = 0xFFFF_FFFFu32;
-    for &b in tag.iter().chain(data.iter()) {
-        crc = table[((crc ^ b as u32) & 0xFF) as usize] ^ (crc >> 8);
-    }
-    crc ^ 0xFFFF_FFFF
-}
-
-fn crc32_table() -> [u32; 256] {
-    let mut table = [0u32; 256];
-    for n in 0u32..256 {
-        let mut c = n;
-        for _ in 0..8 {
-            if c & 1 != 0 {
-                c = 0xEDB8_8320 ^ (c >> 1);
-            } else {
-                c >>= 1;
-            }
-        }
-        table[n as usize] = c;
-    }
-    table
-}
-
-/// Wrap raw bytes in a DEFLATE "stored" (uncompressed) stream with Zlib header/trailer.
-fn deflate_store(data: &[u8]) -> Vec<u8> {
-    const BLOCK_MAX: usize = 65535;
-    let mut out = Vec::new();
-
-    // Zlib header: CMF=0x78, FLG computed so CMF*256+FLG is divisible by 31
-    // 0x78 = deflate + window 32KiB; 0x01 makes the check pass (0x7801 % 31 == 0)
-    out.push(0x78);
-    out.push(0x01);
-
-    let chunks: Vec<&[u8]> = data.chunks(BLOCK_MAX).collect();
-    for (i, chunk) in chunks.iter().enumerate() {
-        let is_last = i == chunks.len() - 1;
-        out.push(if is_last { 1 } else { 0 }); // BFINAL, BTYPE=00 (stored)
-        let len = chunk.len() as u16;
-        let nlen = !len;
-        out.extend_from_slice(&len.to_le_bytes());
-        out.extend_from_slice(&nlen.to_le_bytes());
-        out.extend_from_slice(chunk);
-    }
-    if data.is_empty() {
-        out.push(1); // BFINAL=1, BTYPE=00
-        out.extend_from_slice(&[0x00, 0x00, 0xFF, 0xFF]); // LEN=0, NLEN=~0
-    }
-
-    // Adler-32 checksum
-    let (s1, s2) = data.iter().fold((1u32, 0u32), |(s1, s2), &b| {
-        let s1 = (s1 + b as u32) % 65521;
-        let s2 = (s2 + s1) % 65521;
-        (s1, s2)
-    });
-    let adler = (s2 << 16) | s1;
-    out.extend_from_slice(&adler.to_be_bytes());
-
-    out
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

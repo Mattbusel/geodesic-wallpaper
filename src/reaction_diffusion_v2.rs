@@ -44,21 +44,33 @@ pub fn laplacian(grid: &[f64], width: usize, height: usize, x: usize, y: usize) 
 /// Diffusion and reaction-rate parameters for the 3-chemical system.
 #[derive(Debug, Clone)]
 pub struct TuringParams {
+    /// Diffusion rate of u.
     pub du: f64,
+    /// Diffusion rate of v.
     pub dv: f64,
+    /// Diffusion rate of w.
     pub dw: f64,
+    /// Feed rate of u (the `a` in `a(1 - u)`).
     pub a: f64,
+    /// Extra removal rate of v (v decays at `b + a`).
     pub b: f64,
+    /// Decay rate of w.
     pub c: f64,
+    /// Time step per update.
     pub dt: f64,
 }
 
 /// Grid holding concentrations of three chemicals u, v, w.
 pub struct ThreeChemGrid {
+    /// Grid width in cells.
     pub width: usize,
+    /// Grid height in cells.
     pub height: usize,
+    /// Concentration of u, row-major, `width * height` values.
     pub u: Vec<f64>,
+    /// Concentration of v, row-major.
     pub v: Vec<f64>,
+    /// Concentration of w, row-major.
     pub w: Vec<f64>,
 }
 
@@ -174,16 +186,23 @@ pub struct GrayScottParams {
     pub f: f64,
     /// Kill rate.
     pub k: f64,
+    /// Diffusion rate of u.
     pub du: f64,
+    /// Diffusion rate of v.
     pub dv: f64,
+    /// Time step per update.
     pub dt: f64,
 }
 
 /// Grid holding concentrations of two chemicals u and v.
 pub struct TwoChemGrid {
+    /// Grid width in cells.
     pub width: usize,
+    /// Grid height in cells.
     pub height: usize,
+    /// Concentration of u, row-major, `width * height` values.
     pub u: Vec<f64>,
+    /// Concentration of v, row-major.
     pub v: Vec<f64>,
 }
 

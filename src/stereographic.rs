@@ -83,9 +83,13 @@ pub fn plane_to_sphere(x: f64, y: f64, config: &StereographicConfig) -> (f64, f6
 /// where all coefficients are complex numbers stored as `(real, imag)` pairs.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MobiusTransform {
+    /// Coefficient `a` as `(re, im)`.
     pub a: (f64, f64),
+    /// Coefficient `b` as `(re, im)`.
     pub b: (f64, f64),
+    /// Coefficient `c` as `(re, im)`.
     pub c: (f64, f64),
+    /// Coefficient `d` as `(re, im)`.
     pub d: (f64, f64),
 }
 

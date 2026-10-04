@@ -7,15 +7,25 @@ use std::f64::consts::PI;
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, PartialEq)]
+/// Shape repeated across the tiling.
 pub enum PatternType {
-    Star { points: u8 },
+    /// Star polygons.
+    Star {
+        /// Number of star points.
+        points: u8,
+    },
+    /// Regular hexagons.
     Hexagonal,
+    /// Regular octagons.
     Octagonal,
+    /// Regular dodecagons (12 sides).
     Twelve,
+    /// Girih-style tiles, approximated by an irregular pentagon.
     Girih,
 }
 
 impl PatternType {
+    /// Default spacing in pixels between tile centres for this pattern.
     pub fn default_grid_unit(&self) -> f64 {
         match self {
             PatternType::Star { points } => 40.0 + (*points as f64 * 2.0),
@@ -32,13 +42,18 @@ impl PatternType {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
+/// One polygon of a tiled pattern.
 pub struct PatternTile {
+    /// Polygon vertices in pixels, in order.
     pub vertices: Vec<(f64, f64)>,
+    /// Fill colour (RGB).
     pub fill_color: [u8; 3],
+    /// Whether to draw the polygon outline.
     pub outline: bool,
 }
 
 impl PatternTile {
+    /// Create a tile from its vertices, fill colour and outline flag.
     pub fn new(vertices: Vec<(f64, f64)>, fill_color: [u8; 3], outline: bool) -> Self {
         Self {
             vertices,
@@ -52,6 +67,7 @@ impl PatternTile {
 // IslamicPatternGenerator
 // ---------------------------------------------------------------------------
 
+/// Generates star and polygon tilings in the style of Islamic geometric art.
 pub struct IslamicPatternGenerator;
 
 impl IslamicPatternGenerator {

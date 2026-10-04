@@ -4,8 +4,12 @@
 //! ![geodesic-wallpaper rendering a torus, a torus knot and two presets](https://gitlab.com/mattbusel/geodesic-wallpaper/-/raw/master/assets/hero.gif)
 //!
 //! Most people want the app, not the library: download it from the
-//! [latest release](https://gitlab.com/mattbusel/geodesic-wallpaper/-/releases)
+//! [latest release](https://github.com/Mattbusel/geodesic-wallpaper/releases/latest)
 //! or run `cargo install geodesic-wallpaper` on Windows.
+//!
+//! The library needs no window and no GPU for the maths: surfaces, the RK4
+//! integrator, trails, the expression parsers and the GIF / APNG / PNG
+//! writers all run headless. Only [`renderer`] uses wgpu.
 //!
 //! # Example: follow one geodesic on a torus
 //!
@@ -32,6 +36,27 @@
 //! - [`trail::TrailBuffer`]: the fading ring buffer drawn behind each geodesic.
 //! - [`config::Config`]: everything `config.toml` can set.
 //! - [`renderer::Renderer`]: the wgpu renderer (window or offscreen).
+//! - [`recorder::GifWriter`], [`recorder::ApngWriter`],
+//!   [`recorder::FfmpegWriter`]: stream frames to a GIF, a full-colour
+//!   animated PNG, or an MP4 through an installed ffmpeg.
+//! - [`surface::user_defined::UserDefinedSurface`] and
+//!   [`surface::procedural::parse_expression`]: surfaces from a formula
+//!   typed by a user; bad input is an error, never a panic.
+//! - [`hot_reload::watch_config`]: debounced `config.toml` reloading.
+//!
+//! # Examples
+//!
+//! In the repository: `cargo run --example follow_geodesic`,
+//! `cargo run --example custom_surface` and
+//! `cargo run --example trails_to_gif` (draws trails on the CPU and writes a
+//! GIF and an APNG).
+//!
+//! # Cargo features
+//!
+//! | Feature | Default | Adds |
+//! | --- | --- | --- |
+//! | `lua` | off | [`lua_surface`]: a surface metric written in Lua 5.4 (compiled in, needs a C compiler) |
+//! | `palette` | off | `From` conversions between [`colorspace`] types and the `palette` crate |
 //!
 //! Many other modules (tilings, fractals, reaction-diffusion and so on) are
 //! library-only experiments that the wallpaper binary does not use yet.
@@ -39,6 +64,7 @@
 // Many of the generative-art modules below are library-only experiments that
 // the wallpaper binary does not call. Keep CI's `clippy -D warnings` gate
 // meaningful for the core while tolerating their style lints.
+#![warn(missing_docs)]
 #![allow(
     dead_code,
     unused_imports,
@@ -68,8 +94,7 @@
     clippy::type_complexity,
     clippy::unnecessary_cast,
     clippy::unnecessary_map_or,
-    clippy::useless_vec,
-    rustdoc::broken_intra_doc_links
+    clippy::useless_vec
 )]
 
 pub mod animation;
@@ -99,6 +124,7 @@ pub mod gallery;
 pub mod generative_art;
 pub mod geodesic;
 pub mod gradient;
+pub mod hot_reload;
 pub mod hyperbolic_tiling;
 pub mod interactive;
 pub mod interference;

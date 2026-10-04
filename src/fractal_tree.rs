@@ -5,20 +5,32 @@
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, PartialEq)]
+/// Season, which sets the branch colour gradient from trunk to tips.
 pub enum Season {
+    /// Brown trunk to light green tips.
     Spring,
+    /// Brown trunk to dark green tips.
     Summer,
+    /// Brown trunk to orange and red tips.
     Autumn,
+    /// Dark brown trunk to pale grey tips.
     Winter,
 }
 
 #[derive(Debug, Clone)]
+/// Settings for generating a fractal tree.
 pub struct TreeConfig {
+    /// Branching depth (the trunk is depth 0).
     pub iterations: usize,
+    /// Angle in degrees between a branch and each of its two children.
     pub angle_deg: f64,
+    /// Length of each child branch relative to its parent.
     pub branch_ratio: f64,
+    /// Length of the trunk in pixels.
     pub trunk_length: f64,
+    /// Season that picks the colour gradient.
     pub season: Season,
+    /// Seed for the random angle jitter.
     pub seed: u64,
 }
 
@@ -36,12 +48,19 @@ impl Default for TreeConfig {
 }
 
 #[derive(Debug, Clone)]
+/// One straight branch segment of the tree, in image coordinates.
 pub struct TreeSegment {
+    /// Start x in pixels.
     pub x1: f32,
+    /// Start y in pixels (y grows downward).
     pub y1: f32,
+    /// End x in pixels.
     pub x2: f32,
+    /// End y in pixels.
     pub y2: f32,
+    /// Branching depth of this segment (0 is the trunk).
     pub depth: usize,
+    /// Segment colour (RGB).
     pub color: [u8; 3],
 }
 

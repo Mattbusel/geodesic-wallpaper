@@ -184,7 +184,9 @@ impl AsciiPreview {
 /// Error type for the preview/TUI module.
 #[derive(Debug)]
 pub enum TuiError {
+    /// Writing to the terminal failed.
     Io(io::Error),
+    /// Any other preview error, with a message.
     Other(String),
 }
 
@@ -222,6 +224,7 @@ pub struct TuiResult {
 /// a one-shot render to stdout. An interactive event loop can be added in a
 /// future version when `ratatui` + `crossterm` are added to the crate.
 pub struct TuiApp {
+    /// Wallpaper parameters the preview is drawn from.
     pub params: WallpaperParams,
     /// Preview width in characters (each "pixel" is 2 chars wide).
     pub width: usize,

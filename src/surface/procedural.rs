@@ -34,21 +34,37 @@ use crate::surface::Surface;
 /// AST node for the expression parser.
 #[derive(Debug, Clone)]
 pub enum Expr {
+    /// A number literal.
     Lit(f32),
+    /// The `x` coordinate.
     X,
+    /// The `y` coordinate.
     Y,
+    /// `a + b`.
     Add(Box<Expr>, Box<Expr>),
+    /// `a - b`.
     Sub(Box<Expr>, Box<Expr>),
+    /// `a * b`.
     Mul(Box<Expr>, Box<Expr>),
+    /// `a / b` (0 when `|b|` is below 1e-10).
     Div(Box<Expr>, Box<Expr>),
+    /// `a ^ b`.
     Pow(Box<Expr>, Box<Expr>),
+    /// `-a`.
     Neg(Box<Expr>),
+    /// `sin(a)`, radians.
     Sin(Box<Expr>),
+    /// `cos(a)`, radians.
     Cos(Box<Expr>),
+    /// `tan(a)`, radians.
     Tan(Box<Expr>),
+    /// `sqrt(|a|)`.
     Sqrt(Box<Expr>),
+    /// `|a|`.
     Abs(Box<Expr>),
+    /// `e^a`.
     Exp(Box<Expr>),
+    /// Natural log of `|a|` (`ln` and `log` both parse to this).
     Ln(Box<Expr>),
 }
 
@@ -90,18 +106,26 @@ impl Expr {
 /// Grammar (recursive descent):
 /// ```text
 /// expr   = term { ('+' | '-') term }
-/// term   = factor { ('*' | '/') factor }
-/// factor = base ('^' factor)?
-/// base   = number | 'x' | 'y' | 'pi' | 'e' | func '(' expr ')' | '(' expr ')' | '-' base
+/// term   = unary { ('*' | '/') unary }
+/// unary  = '-' unary | factor
+/// factor = base ('^' unary)?
+/// base   = number | 'x' | 'y' | 'pi' | 'e' | func '(' expr ')' | '(' expr ')'
 /// ```
+///
+/// Numbers may use scientific notation (`1e-3`). Nesting deeper than 64
+/// levels is rejected.
 pub fn parse_expression(input: &str) -> Result<Expr, String> {
     let tokens = tokenize(input)?;
-    let mut pos = 0usize;
-    let expr = parse_expr(&tokens, &mut pos)?;
-    if pos < tokens.len() {
+    let mut p = Parser {
+        tokens: &tokens,
+        pos: 0,
+        depth: 0,
+    };
+    let expr = p.expr()?;
+    if p.pos < tokens.len() {
         return Err(format!(
-            "unexpected token at position {pos}: {:?}",
-            tokens[pos]
+            "unexpected token at position {}: {:?}",
+            p.pos, tokens[p.pos]
         ));
     }
     Ok(expr)
@@ -162,6 +186,19 @@ fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                 while i < chars.len() && (chars[i].is_ascii_digit() || chars[i] == '.') {
                     i += 1;
                 }
+                // Optional exponent: e or E, an optional sign, then digits.
+                if i < chars.len() && (chars[i] == 'e' || chars[i] == 'E') {
+                    let mut j = i + 1;
+                    if j < chars.len() && (chars[j] == '+' || chars[j] == '-') {
+                        j += 1;
+                    }
+                    if j < chars.len() && chars[j].is_ascii_digit() {
+                        while j < chars.len() && chars[j].is_ascii_digit() {
+                            j += 1;
+                        }
+                        i = j;
+                    }
+                }
                 let s: String = chars[start..i].iter().collect();
                 let v: f32 = s.parse().map_err(|_| format!("invalid number: {s}"))?;
                 tokens.push(Token::Num(v));
@@ -180,109 +217,134 @@ fn tokenize(input: &str) -> Result<Vec<Token>, String> {
     Ok(tokens)
 }
 
-fn parse_expr(tokens: &[Token], pos: &mut usize) -> Result<Expr, String> {
-    let mut left = parse_term(tokens, pos)?;
-    while *pos < tokens.len() {
-        match tokens[*pos] {
-            Token::Plus => {
-                *pos += 1;
-                left = Expr::Add(Box::new(left), Box::new(parse_term(tokens, pos)?));
-            }
-            Token::Minus => {
-                *pos += 1;
-                left = Expr::Sub(Box::new(left), Box::new(parse_term(tokens, pos)?));
-            }
-            _ => break,
-        }
-    }
-    Ok(left)
+/// Deepest nesting of parentheses, function calls, unary minus and powers
+/// accepted, so hostile input cannot overflow the stack.
+const MAX_DEPTH: usize = 64;
+
+struct Parser<'t> {
+    tokens: &'t [Token],
+    pos: usize,
+    depth: usize,
 }
 
-fn parse_term(tokens: &[Token], pos: &mut usize) -> Result<Expr, String> {
-    let mut left = parse_factor(tokens, pos)?;
-    while *pos < tokens.len() {
-        match tokens[*pos] {
-            Token::Star => {
-                *pos += 1;
-                left = Expr::Mul(Box::new(left), Box::new(parse_factor(tokens, pos)?));
-            }
-            Token::Slash => {
-                *pos += 1;
-                left = Expr::Div(Box::new(left), Box::new(parse_factor(tokens, pos)?));
-            }
-            _ => break,
-        }
+impl Parser<'_> {
+    fn peek(&self) -> Option<&Token> {
+        self.tokens.get(self.pos)
     }
-    Ok(left)
-}
 
-fn parse_factor(tokens: &[Token], pos: &mut usize) -> Result<Expr, String> {
-    let base = parse_base(tokens, pos)?;
-    if *pos < tokens.len() && tokens[*pos] == Token::Caret {
-        *pos += 1;
-        let exp = parse_factor(tokens, pos)?; // right-associative
-        return Ok(Expr::Pow(Box::new(base), Box::new(exp)));
+    fn nested<T>(&mut self, f: impl FnOnce(&mut Self) -> Result<T, String>) -> Result<T, String> {
+        if self.depth >= MAX_DEPTH {
+            return Err(format!("expression nested deeper than {MAX_DEPTH} levels"));
+        }
+        self.depth += 1;
+        let r = f(self);
+        self.depth -= 1;
+        r
     }
-    Ok(base)
-}
 
-fn parse_base(tokens: &[Token], pos: &mut usize) -> Result<Expr, String> {
-    if *pos >= tokens.len() {
-        return Err("unexpected end of expression".into());
+    /// `expr = term { ('+' | '-') term }`
+    fn expr(&mut self) -> Result<Expr, String> {
+        let mut left = self.term()?;
+        loop {
+            match self.peek() {
+                Some(Token::Plus) => {
+                    self.pos += 1;
+                    left = Expr::Add(Box::new(left), Box::new(self.term()?));
+                }
+                Some(Token::Minus) => {
+                    self.pos += 1;
+                    left = Expr::Sub(Box::new(left), Box::new(self.term()?));
+                }
+                _ => return Ok(left),
+            }
+        }
     }
-    match &tokens[*pos] {
-        Token::Minus => {
-            *pos += 1;
-            Ok(Expr::Neg(Box::new(parse_base(tokens, pos)?)))
+
+    /// `term = unary { ('*' | '/') unary }`
+    fn term(&mut self) -> Result<Expr, String> {
+        let mut left = self.unary()?;
+        loop {
+            match self.peek() {
+                Some(Token::Star) => {
+                    self.pos += 1;
+                    left = Expr::Mul(Box::new(left), Box::new(self.unary()?));
+                }
+                Some(Token::Slash) => {
+                    self.pos += 1;
+                    left = Expr::Div(Box::new(left), Box::new(self.unary()?));
+                }
+                _ => return Ok(left),
+            }
         }
-        Token::Num(v) => {
-            let v = *v;
-            *pos += 1;
-            Ok(Expr::Lit(v))
+    }
+
+    /// `unary = '-' unary | factor`: minus binds looser than `^`.
+    fn unary(&mut self) -> Result<Expr, String> {
+        if self.peek() == Some(&Token::Minus) {
+            self.pos += 1;
+            let inner = self.nested(|p| p.unary())?;
+            return Ok(Expr::Neg(Box::new(inner)));
         }
-        Token::Ident(name) => {
-            let name = name.clone();
-            *pos += 1;
-            match name.as_str() {
+        self.factor()
+    }
+
+    /// `factor = base ('^' unary)?`, right-associative.
+    fn factor(&mut self) -> Result<Expr, String> {
+        let base = self.base()?;
+        if self.peek() == Some(&Token::Caret) {
+            self.pos += 1;
+            let exp = self.nested(|p| p.unary())?;
+            return Ok(Expr::Pow(Box::new(base), Box::new(exp)));
+        }
+        Ok(base)
+    }
+
+    /// `base = number | 'x' | 'y' | 'pi' | 'e' | func '(' expr ')' | '(' expr ')'`
+    fn base(&mut self) -> Result<Expr, String> {
+        let Some(tok) = self.peek().cloned() else {
+            return Err("unexpected end of expression".into());
+        };
+        self.pos += 1;
+        match tok {
+            Token::Num(v) => Ok(Expr::Lit(v)),
+            Token::Ident(name) => match name.as_str() {
                 "x" => Ok(Expr::X),
                 "y" => Ok(Expr::Y),
                 "pi" => Ok(Expr::Lit(std::f32::consts::PI)),
                 "e" => Ok(Expr::Lit(std::f32::consts::E)),
                 func => {
-                    // Expect a parenthesised argument.
-                    if *pos >= tokens.len() || tokens[*pos] != Token::LParen {
+                    let make: fn(Box<Expr>) -> Expr = match func {
+                        "sin" => Expr::Sin,
+                        "cos" => Expr::Cos,
+                        "tan" => Expr::Tan,
+                        "sqrt" => Expr::Sqrt,
+                        "abs" => Expr::Abs,
+                        "exp" => Expr::Exp,
+                        "ln" | "log" => Expr::Ln,
+                        other => return Err(format!("unknown function: '{other}'")),
+                    };
+                    if self.peek() != Some(&Token::LParen) {
                         return Err(format!("expected '(' after function '{func}'"));
                     }
-                    *pos += 1;
-                    let arg = parse_expr(tokens, pos)?;
-                    if *pos >= tokens.len() || tokens[*pos] != Token::RParen {
+                    self.pos += 1;
+                    let arg = self.nested(|p| p.expr())?;
+                    if self.peek() != Some(&Token::RParen) {
                         return Err(format!("expected ')' after argument of '{func}'"));
                     }
-                    *pos += 1;
-                    let b = Box::new(arg);
-                    match func {
-                        "sin" => Ok(Expr::Sin(b)),
-                        "cos" => Ok(Expr::Cos(b)),
-                        "tan" => Ok(Expr::Tan(b)),
-                        "sqrt" => Ok(Expr::Sqrt(b)),
-                        "abs" => Ok(Expr::Abs(b)),
-                        "exp" => Ok(Expr::Exp(b)),
-                        "ln" | "log" => Ok(Expr::Ln(b)),
-                        other => Err(format!("unknown function: '{other}'")),
-                    }
+                    self.pos += 1;
+                    Ok(make(Box::new(arg)))
                 }
+            },
+            Token::LParen => {
+                let inner = self.nested(|p| p.expr())?;
+                if self.peek() != Some(&Token::RParen) {
+                    return Err("expected ')'".into());
+                }
+                self.pos += 1;
+                Ok(inner)
             }
+            other => Err(format!("unexpected token: {other:?}")),
         }
-        Token::LParen => {
-            *pos += 1;
-            let inner = parse_expr(tokens, pos)?;
-            if *pos >= tokens.len() || tokens[*pos] != Token::RParen {
-                return Err("expected ')'".into());
-            }
-            *pos += 1;
-            Ok(inner)
-        }
-        other => Err(format!("unexpected token: {other:?}")),
     }
 }
 
@@ -343,9 +405,13 @@ pub fn fbm(x: f32, y: f32, octaves: u32, seed: u32) -> f32 {
 pub enum ProceduralMode {
     /// Fractal Brownian motion noise.
     Perlin {
+        /// Spatial frequency: larger values give smaller hills.
         scale: f32,
+        /// Number of noise layers summed (each at double frequency).
         octaves: u32,
+        /// Height multiplier applied to the noise.
         amplitude: f32,
+        /// Seed that selects the noise pattern.
         seed: u32,
     },
     /// Runtime-parsed mathematical expression.
@@ -358,11 +424,15 @@ pub enum ProceduralMode {
 /// integrator and the wgpu renderer.
 #[derive(Clone)]
 pub struct ProceduralSurface {
+    /// How the height is computed.
     pub mode: ProceduralMode,
-    /// Domain bounds.
+    /// Smallest `x` (the `u` parameter) of the domain.
     pub u_min: f32,
+    /// Largest `x` of the domain.
     pub u_max: f32,
+    /// Smallest `y` (the `v` parameter) of the domain.
     pub v_min: f32,
+    /// Largest `y` of the domain.
     pub v_max: f32,
     /// Finite difference step for metric / Christoffel computation.
     eps: f32,
@@ -549,6 +619,37 @@ impl Surface for ProceduralSurface {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn ev(src: &str, x: f32, y: f32) -> f32 {
+        parse_expression(src).expect("parse").eval(x, y)
+    }
+
+    // Unary minus binds looser than `^`: -x^2 is -(x^2), as in maths and
+    // most languages. It used to parse as (-x)^2.
+    #[test]
+    fn bug_unary_minus_vs_power() {
+        assert_eq!(ev("-x^2", 3.0, 0.0), -9.0);
+        assert_eq!(ev("2^-1", 0.0, 0.0), 0.5);
+        assert_eq!(ev("-(x)", 3.0, 0.0), -3.0);
+    }
+
+    // Scientific notation used to be split into a number and the constant e.
+    #[test]
+    fn bug_scientific_notation() {
+        assert!((ev("1e-3", 0.0, 0.0) - 0.001).abs() < 1e-9);
+        assert!((ev("2.5E2 * x", 2.0, 0.0) - 500.0).abs() < 1e-3);
+        // The constant e still works on its own.
+        assert!((ev("e", 0.0, 0.0) - std::f32::consts::E).abs() < 1e-6);
+    }
+
+    #[test]
+    fn bug_deep_nesting_is_error() {
+        let deep = format!("{}x{}", "(".repeat(100_000), ")".repeat(100_000));
+        assert!(parse_expression(&deep).is_err());
+        let minus = format!("{}x", "-".repeat(100_000));
+        assert!(parse_expression(&minus).is_err());
+        assert_eq!(ev("((x))", 4.0, 0.0), 4.0);
+    }
 
     #[test]
     fn test_expression_parse_and_eval() {

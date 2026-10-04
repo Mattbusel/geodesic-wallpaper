@@ -69,7 +69,7 @@ impl LSystem {
         Self::new("F-G-G").rule('F', "F-G+F+G-F").rule('G', "GG")
     }
 
-    /// Fractal plant: axiom "X", rules X→F+[[X]-X]-F[-FX]+X, F→FF; angle=25°.
+    /// Fractal plant: axiom `X`, rules `X -> F+[[X]-X]-F[-FX]+X` and `F -> FF`, angle 25 degrees.
     pub fn plant() -> Self {
         Self::new("X")
             .rule('X', "F+[[X]-X]-F[-FX]+X")
@@ -89,7 +89,9 @@ impl LSystem {
 /// The turtle's current drawing state.
 #[derive(Debug, Clone)]
 pub struct TurtleState {
+    /// X position.
     pub x: f64,
+    /// Y position.
     pub y: f64,
     /// Current heading in degrees (0° = right, 90° = up).
     pub angle_deg: f64,

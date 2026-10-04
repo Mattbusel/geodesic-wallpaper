@@ -5,11 +5,17 @@
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, PartialEq)]
+/// Traditional quilt block designs.
 pub enum QuiltBlock {
+    /// Nine-patch: a 3x3 grid of squares.
     NinePatches,
+    /// Pinwheel of four rotated triangles.
     PinwheelBlock,
+    /// Star block.
     StarBlock,
+    /// Basket weave of alternating stripes.
     BasketWeave,
+    /// Log cabin: strips spiralling out from a centre square.
     LogCabin,
 }
 
@@ -31,11 +37,14 @@ impl QuiltBlock {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
+/// Colours a quilt draws from.
 pub struct ColorPalette {
+    /// Palette colours (RGB).
     pub colors: Vec<[u8; 3]>,
 }
 
 impl ColorPalette {
+    /// Create a palette from the given colours.
     pub fn new(colors: Vec<[u8; 3]>) -> Self {
         Self { colors }
     }
@@ -84,6 +93,7 @@ impl Lcg {
 // QuiltPattern — block generators
 // ---------------------------------------------------------------------------
 
+/// Draws individual quilt blocks.
 pub struct QuiltPattern;
 
 impl QuiltPattern {
@@ -203,6 +213,7 @@ impl QuiltPattern {
 // QuiltGenerator
 // ---------------------------------------------------------------------------
 
+/// Lays out quilt blocks into a full quilt image.
 pub struct QuiltGenerator;
 
 impl QuiltGenerator {
@@ -278,17 +289,17 @@ impl QuiltGenerator {
                 let cell_row = py / (stripe * 2);
                 let cell_col = px / (stripe * 2);
                 // Alternate orientation per cell
-                let horizontal = (cell_row + cell_col) % 2 == 0;
+                let horizontal = (cell_row + cell_col).is_multiple_of(2);
                 let color = if horizontal {
                     // Horizontal stripes: alternate by row within cell
-                    if (py / stripe) % 2 == 0 {
+                    if (py / stripe).is_multiple_of(2) {
                         c0
                     } else {
                         c1
                     }
                 } else {
                     // Vertical stripes: alternate by col within cell
-                    if (px / stripe) % 2 == 0 {
+                    if (px / stripe).is_multiple_of(2) {
                         c0
                     } else {
                         c1

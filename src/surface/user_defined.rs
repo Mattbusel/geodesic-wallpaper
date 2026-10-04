@@ -210,9 +210,22 @@ fn eval(e: &Expr, x: f64, y: f64) -> f64 {
 
 // ── Parser ────────────────────────────────────────────────────────────────────
 
+/// Deepest nesting of parentheses, function calls and powers accepted.
+/// Deeper input is rejected so a hostile config cannot overflow the stack.
+const MAX_DEPTH: usize = 64;
+
+/// One-argument functions understood by the parser.
+const FUNCS1: &[&str] = &[
+    "sin", "cos", "tan", "exp", "ln", "log", "sqrt", "abs", "sinh", "cosh", "tanh", "asin", "acos",
+    "atan", "sign", "floor", "ceil",
+];
+/// Two-argument functions understood by the parser.
+const FUNCS2: &[&str] = &["atan2", "pow"];
+
 struct Parser<'a> {
     input: &'a [u8],
     pos: usize,
+    depth: usize,
 }
 
 impl<'a> Parser<'a> {
@@ -220,6 +233,7 @@ impl<'a> Parser<'a> {
         Self {
             input: s.as_bytes(),
             pos: 0,
+            depth: 0,
         }
     }
 
@@ -258,6 +272,22 @@ impl<'a> Parser<'a> {
         self.parse_add()
     }
 
+    /// Run `f` one nesting level deeper, failing past [`MAX_DEPTH`].
+    fn nested<T>(
+        &mut self,
+        f: impl FnOnce(&mut Self) -> Result<T, ParseError>,
+    ) -> Result<T, ParseError> {
+        if self.depth >= MAX_DEPTH {
+            return Err(ParseError(format!(
+                "expression nested deeper than {MAX_DEPTH} levels"
+            )));
+        }
+        self.depth += 1;
+        let r = f(self);
+        self.depth -= 1;
+        r
+    }
+
     fn parse_add(&mut self) -> Result<Expr, ParseError> {
         let mut left = self.parse_mul()?;
         loop {
@@ -283,14 +313,9 @@ impl<'a> Parser<'a> {
             self.skip_ws();
             match self.peek() {
                 Some(b'*') => {
+                    // `**` (power) is consumed by `parse_pow`, so this is `*`.
                     self.pos += 1;
-                    // Check for ** (power).
-                    if self.peek() == Some(b'*') {
-                        self.pos += 1;
-                        left = Expr::Pow(Box::new(left), Box::new(self.parse_unary()?));
-                    } else {
-                        left = Expr::Mul(Box::new(left), Box::new(self.parse_unary()?));
-                    }
+                    left = Expr::Mul(Box::new(left), Box::new(self.parse_unary()?));
                 }
                 Some(b'/') => {
                     self.pos += 1;
@@ -314,12 +339,20 @@ impl<'a> Parser<'a> {
         self.parse_pow()
     }
 
+    /// `primary (('^' | '**') unary)?`, right-associative, so `2^3^2` and
+    /// `2**3**2` are both 512 and `-x**2` is `-(x**2)`.
     fn parse_pow(&mut self) -> Result<Expr, ParseError> {
         let base = self.parse_primary()?;
         self.skip_ws();
-        if self.peek() == Some(b'^') {
-            self.pos += 1;
-            return Ok(Expr::Pow(Box::new(base), Box::new(self.parse_unary()?)));
+        let op_len = match (self.peek(), self.input.get(self.pos + 1)) {
+            (Some(b'^'), _) => 1,
+            (Some(b'*'), Some(b'*')) => 2,
+            _ => 0,
+        };
+        if op_len > 0 {
+            self.pos += op_len;
+            let exp = self.nested(|p| p.parse_unary())?;
+            return Ok(Expr::Pow(Box::new(base), Box::new(exp)));
         }
         Ok(base)
     }
@@ -329,7 +362,7 @@ impl<'a> Parser<'a> {
         match self.peek() {
             Some(b'(') => {
                 self.pos += 1;
-                let e = self.parse_expr()?;
+                let e = self.nested(|p| p.parse_expr())?;
                 self.expect(b')')?;
                 Ok(e)
             }
@@ -392,11 +425,17 @@ impl<'a> Parser<'a> {
         self.skip_ws();
         if self.peek() == Some(b'(') {
             self.pos += 1;
-            let arg1 = self.parse_expr()?;
+            let arg1 = self.nested(|p| p.parse_expr())?;
             self.skip_ws();
             if self.peek() == Some(b',') {
                 self.pos += 1;
-                let arg2 = self.parse_expr()?;
+                if !FUNCS2.contains(&name) {
+                    return Err(ParseError(format!(
+                        "unknown two-argument function: {name} (known: {})",
+                        FUNCS2.join(", ")
+                    )));
+                }
+                let arg2 = self.nested(|p| p.parse_expr())?;
                 self.expect(b')')?;
                 return Ok(Expr::Func2(
                     name.to_string(),
@@ -405,6 +444,12 @@ impl<'a> Parser<'a> {
                 ));
             }
             self.expect(b')')?;
+            if !FUNCS1.contains(&name) {
+                return Err(ParseError(format!(
+                    "unknown function: {name} (known: {})",
+                    FUNCS1.join(", ")
+                )));
+            }
             return Ok(Expr::Func1(name.to_string(), Box::new(arg1)));
         }
         Err(ParseError(format!("unknown identifier: {name}")))
@@ -428,6 +473,60 @@ fn parse_expr(s: &str) -> Result<Expr, ParseError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn z(expr: &str, x: f64, y: f64) -> f64 {
+        let s = UserDefinedSurface::new(UserSurfaceConfig {
+            z_expr: expr.to_string(),
+            z_scale: 1.0,
+            ..UserSurfaceConfig::default()
+        })
+        .expect("parse should succeed");
+        s.eval_at(x, y)
+    }
+
+    // `**` is a power operator and must bind tighter than `*` (it used to be
+    // parsed at the `*` level, so 2*x**2 meant (2*x)**2).
+    #[test]
+    fn bug_double_star_precedence() {
+        assert_eq!(z("2*x**2", 3.0, 0.0), 18.0);
+        assert_eq!(z("2**3**2", 0.0, 0.0), 512.0);
+        assert_eq!(z("-x**2", 3.0, 0.0), -9.0);
+        assert_eq!(z("x^2*2", 3.0, 0.0), 18.0);
+    }
+
+    // Unknown function names are a parse error, not a silent NaN surface.
+    #[test]
+    fn bug_unknown_function_is_error() {
+        let r = UserDefinedSurface::new(UserSurfaceConfig {
+            z_expr: "sinn(x)".to_string(),
+            ..UserSurfaceConfig::default()
+        });
+        assert!(r.is_err());
+        let r = UserDefinedSurface::new(UserSurfaceConfig {
+            z_expr: "atan3(x, y)".to_string(),
+            ..UserSurfaceConfig::default()
+        });
+        assert!(r.is_err());
+    }
+
+    // Deeply nested input is rejected instead of overflowing the stack.
+    #[test]
+    fn bug_deep_nesting_is_error() {
+        let deep = format!("{}x{}", "(".repeat(100_000), ")".repeat(100_000));
+        let r = UserDefinedSurface::new(UserSurfaceConfig {
+            z_expr: deep,
+            ..UserSurfaceConfig::default()
+        });
+        assert!(r.is_err());
+        let towers = vec!["x"; 50_000].join("^");
+        assert!(UserDefinedSurface::new(UserSurfaceConfig {
+            z_expr: towers,
+            ..UserSurfaceConfig::default()
+        })
+        .is_err());
+        // Ordinary nesting still works.
+        assert_eq!(z("((((x))))", 2.0, 0.0), 2.0);
+    }
 
     fn surface(expr: &str) -> UserDefinedSurface {
         UserDefinedSurface::new(UserSurfaceConfig {

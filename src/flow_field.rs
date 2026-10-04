@@ -19,15 +19,19 @@
 /// A 2-D floating-point vector.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vector2 {
+    /// X component.
     pub x: f64,
+    /// Y component.
     pub y: f64,
 }
 
 impl Vector2 {
+    /// Create a vector from its components.
     pub fn new(x: f64, y: f64) -> Self {
         Self { x, y }
     }
 
+    /// The zero vector.
     pub fn zero() -> Self {
         Self { x: 0.0, y: 0.0 }
     }
@@ -59,6 +63,7 @@ impl Vector2 {
         }
     }
 
+    /// Component-wise sum.
     pub fn add(&self, other: &Self) -> Self {
         Self {
             x: self.x + other.x,
@@ -66,6 +71,7 @@ impl Vector2 {
         }
     }
 
+    /// Multiply both components by `s`.
     pub fn scale(&self, s: f64) -> Self {
         Self {
             x: self.x * s,
@@ -78,7 +84,9 @@ impl Vector2 {
 
 /// A 2-D grid of vectors representing a flow field.
 pub struct FlowField {
+    /// Number of columns.
     pub width: usize,
+    /// Number of rows.
     pub height: usize,
     /// `field[y][x]` = vector at grid cell (x, y).
     pub field: Vec<Vec<Vector2>>,
@@ -224,6 +232,7 @@ fn gradient_noise(x: f64, y: f64, seed: u64) -> f64 {
 
 /// A traced streamline through a flow field.
 pub struct Streamline {
+    /// Points visited, in order.
     pub points: Vec<(f64, f64)>,
 }
 

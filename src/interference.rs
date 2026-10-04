@@ -5,10 +5,15 @@ use std::f64::consts::PI;
 /// A single wave source.
 #[derive(Debug, Clone)]
 pub struct WaveSource {
+    /// Source x position.
     pub x: f64,
+    /// Source y position.
     pub y: f64,
+    /// Peak amplitude of the wave.
     pub amplitude: f64,
+    /// Frequency; the wavelength is `1 / frequency` with unit wave speed.
     pub frequency: f64,
+    /// Phase offset in radians.
     pub phase: f64,
 }
 
@@ -29,12 +34,16 @@ pub fn superpose(sources: &[WaveSource], px: f64, py: f64, time: f64) -> f64 {
 
 /// An interference pattern over a 2D region.
 pub struct InterferencePattern {
+    /// Pattern width in pixels.
     pub width: u32,
+    /// Pattern height in pixels.
     pub height: u32,
+    /// Wave sources that are superposed.
     pub sources: Vec<WaveSource>,
 }
 
 impl InterferencePattern {
+    /// Create a pattern of the given size from the given sources.
     pub fn new(width: u32, height: u32, sources: Vec<WaveSource>) -> Self {
         Self {
             width,
@@ -104,8 +113,11 @@ pub fn interference_type_at(sources: &[WaveSource], px: f64, py: f64, t: f64) ->
 
 /// Double-slit experiment model.
 pub struct DoubleSlit {
+    /// Distance between the two slits (same unit as `wavelength`).
     pub slit_separation: f64,
+    /// Wavelength of the light.
     pub wavelength: f64,
+    /// Distance from the slits to the screen (same unit as screen offsets).
     pub screen_distance: f64,
 }
 
@@ -135,7 +147,9 @@ impl DoubleSlit {
 
 /// Single-slit diffraction model.
 pub struct SingleSlit {
+    /// Width of the slit (same unit as `wavelength`).
     pub slit_width: f64,
+    /// Wavelength of the light.
     pub wavelength: f64,
 }
 

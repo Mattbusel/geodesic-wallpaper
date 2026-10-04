@@ -1,8 +1,8 @@
-<p align="center"><img src="assets/banner.png" alt="Geodesic Flow: live wallpaper for Windows" width="100%"></p>
-
 # geodesic-wallpaper
 
-**An animated wallpaper for Windows: glowing lines flow over slowly turning 3D shapes (a donut, a knot, a Klein bottle) behind your desktop icons.**
+**An animated wallpaper for Windows users: glowing lines flow over slowly turning 3D shapes (a donut, a knot, a Klein bottle) behind your desktop icons.**
+
+<p align="center"><img src="assets/banner.png" alt="Geodesic Flow: live wallpaper for Windows" width="100%"></p>
 
 <p align="center"><img src="assets/hero.gif" alt="Real frames from the wallpaper renderer: torus, torus knot, ocean preset, fire preset, catenoid" width="900"></p>
 <p align="center"><sub>Real frames from the app's own renderer (<code>--headless --record</code>), 15 fps. <a href="https://gitlab.com/mattbusel/geodesic-wallpaper/-/raw/master/assets/demo.mp4">Download the 15 s MP4</a>.</sub></p>
@@ -16,7 +16,7 @@
 | --- | --- |
 | **PowerShell one-liner** (easiest) | `irm https://gitlab.com/mattbusel/geodesic-wallpaper/-/raw/master/install.ps1 \| iex` |
 | Scoop | `scoop bucket add mattbusel https://gitlab.com/mattbusel/scoop-bucket; scoop install mattbusel/geodesic-wallpaper` |
-| Zip download | [Latest release](https://gitlab.com/mattbusel/geodesic-wallpaper/-/releases): extract, run `geodesic-wallpaper.exe` |
+| Zip download | [Latest release](https://github.com/Mattbusel/geodesic-wallpaper/releases/latest): extract, run `geodesic-wallpaper.exe` |
 | cargo-binstall (prebuilt) | `cargo binstall geodesic-wallpaper` |
 | Cargo (build from source) | `cargo install geodesic-wallpaper` |
 
@@ -34,7 +34,20 @@ Want a still or a clip without touching your desktop? Headless mode renders offs
 geodesic-wallpaper --headless --output shot.png        # one 1920x1080 PNG
 geodesic-wallpaper --headless --frames 240 --record frames --record-start 150 --record-every 2
 ffmpeg -framerate 15 -i frames/frame_%05d.png -pix_fmt yuv420p clip.mp4
+
+# or write the clip directly: GIF (no ffmpeg), full-colour APNG, or MP4 (pipes to ffmpeg)
+geodesic-wallpaper --headless --width 480 --height 270 --frames 120 --record-start 60 --record-every 2 --gif loop.gif --apng loop.png --mp4 clip.mp4
 ```
+
+That last command, run for this release on Windows 11:
+
+```text
+Wrote 30-frame GIF (480x270, 15 fps) to loop.gif
+Wrote 30-frame APNG (480x270, 15 fps) to loop.png
+Wrote 30-frame MP4 (480x270, 15 fps) to clip.mp4
+```
+
+The GIF was 425 KB (256 colours per frame), the APNG 2.4 MB (exact colours, plays in every current browser), the MP4 59 KB.
 
 ## Results
 
@@ -50,14 +63,14 @@ Recorded 45 frames (900x506) to rec_torus
 Make a video: ffmpeg -framerate 15 -i rec_torus/frame_%05d.png -pix_fmt yuv420p out.mp4
 ```
 
-Each line is one particle sliding along the surface under the geodesic equation, integrated with RK4 using exact (analytic) Christoffel symbols; the trail behind it fades by a power law. On a sphere the paths close into great circles, on a torus they wind forever without repeating, and on the pseudosphere neighbours spread apart exponentially.
+Each line is one particle sliding along the surface under the geodesic equation, integrated with RK4 (Christoffel symbols are exact formulas for the classic surfaces and central finite differences for the Klein bottle, Boy's surface, ellipsoid, torus knot and trefoil); the trail behind it fades by a power law. On a sphere the paths close into great circles, on a torus they wind forever without repeating, and on the pseudosphere neighbours spread apart exponentially.
 
 ## What it does
 
 - **Fourteen surfaces**: torus, sphere, saddle, catenoid, helicoid, hyperboloid, hyperbolic paraboloid, ellipsoid, Enneper, Klein bottle, Boy's surface, torus knot, pseudosphere and trefoil tube.
 - **Behaves like a wallpaper**: a borderless window pinned below all apps, so icons stay clickable. Primary monitor, a chosen monitor, or all of them.
 - **Live config**: edit `config.toml` and save; the change shows up without a restart. Five presets ship in `presets/`.
-- **Offscreen rendering** to PNG, PPM, BMP or SVG, plus numbered PNG frames for GIFs and videos, with no window at all.
+- **Offscreen rendering** to PNG, PPM, BMP or SVG, numbered PNG frames for videos, or a looping animated GIF, with no window at all.
 - **A Rust library** too: the surfaces and the RK4 integrator work on their own ([docs.rs](https://docs.rs/geodesic-wallpaper)).
 
 <details>
@@ -119,11 +132,15 @@ color_palette    = ["#4488FF", "#88DDFF", "#FFD700", "#88FF88", "#FF88CC"]
 | `--preset NAME` | Merge `presets/NAME.toml` over `config.toml` |
 | `--headless [--frames N] [--output FILE] [--output-format png\|ppm\|bmp\|svg]` | Simulate N frames offscreen (no window) and save the last one |
 | `--record DIR [--record-start N] [--record-every N]` | With `--headless`: also save frames as `DIR/frame_00000.png`, ... |
+| `--gif FILE` | With `--headless`: write the recorded frames (same `--record-start` / `--record-every` schedule) as a looping GIF at 30 / every fps |
+| `--apng FILE` | Same, as a looping animated PNG (full colour) |
+| `--mp4 FILE [--ffmpeg PATH]` | Same, as an H.264 MP4 by piping frames to ffmpeg (install it separately, for example `winget install Gyan.FFmpeg`) |
+| `--completions SHELL` | Print a completion script for bash, zsh, fish, powershell or elvish |
 | `--width N --height N` | Size of headless renders (default 1920x1080) |
 | `--preview` | Print an ASCII block preview of the pattern and exit |
 | `--animate [--frames N] [--fps N] [--out-dir DIR]` | Exercise the frame exporter; writes gradient test frames, not wallpaper renders |
 | `--palette TYPE[:HUE] [--palette-steps N]` | Print a generated palette (rainbow, monochromatic, complementary, triadic, analogous) |
-| `--gradient`, `--colorspace`, `--fractal`, `--tile` | Print diagnostics from the gradient, color space, fractal and tiling modules |
+| `--gradient`, `--colorspace`, `--fractal`, `--tile` | Print diagnostics from the gradient, color space, fractal and tiling modules, then exit |
 | `--version`, `--help` | Version, and help with examples |
 
 Set `NO_COLOR=1` for plain log output and `RUST_LOG=debug` for more detail.
@@ -181,7 +198,7 @@ On a Riemannian surface with metric `g_{ij}` a geodesic `γ(t)` satisfies:
 d²uⁱ/dt² + Γⁱⱼₖ (duʲ/dt)(duᵏ/dt) = 0
 ```
 
-where `Γⁱⱼₖ = ½ gⁱˡ (∂ⱼgₗₖ + ∂ₖgₗⱼ − ∂ₗgⱼₖ)` are the Christoffel symbols of the second kind. All fourteen built-in surfaces provide analytic `christoffel()` implementations so that the RK4 integrator never approximates these symbols numerically.
+where `Γⁱⱼₖ = ½ gⁱˡ (∂ⱼgₗₖ + ∂ₖgₗⱼ − ∂ₗgⱼₖ)` are the Christoffel symbols of the second kind. The torus, sphere, saddle, catenoid, helicoid, hyperboloids, Enneper surface and pseudosphere implement `christoffel()` with exact formulas. The Klein bottle, Boy's surface, ellipsoid, torus knot and trefoil tube use central finite differences of the metric.
 
 #### Curvature comparison
 
@@ -223,6 +240,74 @@ where `χ` is the Euler characteristic. This connects the local curvature of eac
 The crate is also a library (`geodesic_wallpaper`) with a large set of additional modules that are unit tested but **not yet wired into the wallpaper binary**: gallery mode, a live parameter tuner, phase portrait recording, mouse-driven geodesic shooting, a geodesic field (basin) view, per-monitor surface assignment, a financial OHLCV data driver, Lua-scripted surfaces (`--features lua`), scene presets, and generative-art modules (wallpaper symmetry groups, Penrose and Escher tilings, reaction-diffusion, L-systems, strange attractors, Voronoi, fractals, color spaces and export formats). Their `config.toml` keys (for example `gallery_mode`) parse but currently have no effect on the running wallpaper.
 
 </details>
+
+## Use it as a library
+
+```sh
+cargo add geodesic-wallpaper
+```
+
+Follow one geodesic around a torus (this is [`examples/follow_geodesic.rs`](examples/follow_geodesic.rs); run it with `cargo run --example follow_geodesic`):
+
+```rust
+use geodesic_wallpaper::geodesic::Geodesic;
+use geodesic_wallpaper::surface::{torus::Torus, Surface};
+
+fn main() {
+    let torus = Torus::new(2.0, 0.7);
+    // Start at (u, v) = (0, 0) heading in direction (1, 0.3); live 300 steps.
+    let mut g = Geodesic::new(0.0, 0.0, 1.0, 0.3, 300, 0);
+    for step in 0..=100 {
+        if step % 25 == 0 {
+            let p = torus.position(g.u, g.v);
+            println!("step {step:3}: ({:+.3}, {:+.3}, {:+.3})", p.x, p.y, p.z);
+        }
+        g.step(&torus, 0.016); // one RK4 step of the geodesic equation
+    }
+}
+```
+
+More examples, none of which open a window:
+
+| Example | What it shows |
+| --- | --- |
+| `cargo run --example follow_geodesic` | The snippet above |
+| `cargo run --example custom_surface` | A surface from a typed formula (`sin(sqrt(x^2 + y^2) * 3) * ...`), and what bad formulas return |
+| `cargo run --example trails_to_gif` | Twelve geodesics on a torus drawn on the CPU and saved as a GIF and an APNG |
+
+### Cargo features
+
+| Feature | Default | What it adds |
+| --- | --- | --- |
+| `lua` | off | `lua_surface::LuaSurface`: define a surface's metric in a Lua script (Lua 5.4 is compiled in via `mlua`, so a C compiler is needed) |
+| `palette` | off | `From` conversions between this crate's `Rgb`, `Lab` and `Oklab` and the [`palette`](https://crates.io/crates/palette) crate's types |
+
+Already using `palette`? Turn on the feature and convert either way:
+
+```rust,ignore
+let ours: geodesic_wallpaper::colorspace::Rgb = palette::Srgb::new(255u8, 128, 0).into();
+let back: palette::Srgb<u8> = ours.into();
+```
+
+The hand-written Lab and Oklab conversions are checked against `palette` in the test suite (4,913 colours; Oklab within 0.001, Lab within 0.05).
+
+### Performance
+
+`cargo bench --bench simulation` times the CPU work of one frame (30 geodesics, 300-point trails: RK4 step, trail update, flatten for upload). Same bench file, built against 1.5.1 and 1.6.0 on an i7-13700KF:
+
+| Surface | 1.5.1 | 1.6.0 |
+| --- | --- | --- |
+| torus | 110.9 µs | 28.4 µs |
+| sphere | 105.1 µs | 29.8 µs |
+| pseudosphere | 122.1 µs | 40.4 µs |
+| Klein bottle | 193.3 µs | 106.7 µs |
+
+The gain is in trail flattening (no modulo or `powf` per vertex, no allocation per trail); the RK4 step itself is unchanged. A whole `--headless` run (1280x720, 300 frames, 50 PNGs) takes the same time (about 0.75 s, mostly GPU start-up and PNG encoding) and the same peak memory (243 MB) in both versions, and writes byte-identical images.
+
+### Why this and not ...
+
+- **Wallpaper Engine / Lively**: full wallpaper platforms with workshops of content. geodesic-wallpaper is one free, open-source program that generates its own animation from maths; there is nothing to download or subscribe to.
+- **[bevy_live_wallpaper](https://crates.io/crates/bevy_live_wallpaper)**: a Bevy plugin for building your own live wallpaper. Use it if you are writing a Bevy app; use this if you want a finished wallpaper, or geodesic maths as a small library.
 
 ## Build from source
 

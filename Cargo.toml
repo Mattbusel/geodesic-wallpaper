@@ -1,9 +1,9 @@
 [package]
 name = "geodesic-wallpaper"
-version = "1.5.1"
+version = "1.6.0"
 edition = "2021"
-rust-version = "1.75"
-description = "Animated Windows desktop wallpaper that draws glowing geodesics flowing over curved 3D surfaces (torus, Klein bottle, pseudosphere and more), rendered with wgpu."
+rust-version = "1.88"
+description = "Animated Windows desktop wallpaper that draws glowing geodesics flowing over curved 3D surfaces (torus, Klein bottle, pseudosphere and more), rendered with wgpu. Also renders PNGs and GIFs headless."
 license = "MIT"
 repository = "https://gitlab.com/mattbusel/geodesic-wallpaper"
 homepage = "https://gitlab.com/mattbusel/geodesic-wallpaper"
@@ -11,20 +11,31 @@ documentation = "https://docs.rs/geodesic-wallpaper"
 readme = "README.md"
 keywords = ["wallpaper", "live-wallpaper", "geodesic", "wgpu", "generative-art"]
 categories = ["graphics", "visualization", "rendering"]
-exclude = [".github/", ".claude/", "assets/", "packaging/", "*.png", "*.gif", "*.mp4"]
-
-[package.metadata]
-msrv = "1.75.0"
-platform = "windows"
+include = [
+    "src/**/*",
+    "examples/**/*",
+    "tests/**/*",
+    "benches/**/*",
+    "presets/*.toml",
+    "config.toml",
+    "Cargo.toml",
+    "Cargo.lock",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+]
 
 [package.metadata.docs.rs]
 default-target = "x86_64-pc-windows-msvc"
 targets = ["x86_64-pc-windows-msvc"]
+all-features = true
 
 # `cargo binstall geodesic-wallpaper` downloads the prebuilt Windows zip from
-# GitHub Releases instead of compiling. Windows only.
+# GitHub Releases (built by .github/workflows/release.yml) instead of
+# compiling. Windows only. `{ repo }` would point at GitLab, which has no
+# release files, so the URL is spelled out.
 [package.metadata.binstall]
-pkg-url = "{ repo }/releases/download/v{ version }/{ name }-v{ version }-{ target }.zip"
+pkg-url = "https://github.com/Mattbusel/geodesic-wallpaper/releases/download/v{ version }/{ name }-v{ version }-{ target }.zip"
 bin-dir = "{ name }-v{ version }-{ target }/{ bin }{ binary-ext }"
 pkg-fmt = "zip"
 
@@ -50,7 +61,7 @@ bytemuck = { version = "1", features = ["derive"] }
 glam = "0.29"
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
-notify = "6"
+notify-debouncer-mini = "0.7"
 rand = "0.8"
 rayon = "1"
 log = "0.4"
@@ -61,17 +72,24 @@ thiserror = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 clap = { version = "4", features = ["derive"] }
-image = { version = "0.25", default-features = false, features = ["png", "gif"] }
-mlua  = { version = "0.10", optional = true, features = ["lua54", "vendored"] }
+png = "0.18"
+image = { version = "0.25", default-features = false, features = ["png", "gif", "bmp", "pnm"] }
+palette = { version = "0.7", optional = true, default-features = false, features = ["std"] }
+mlua  = { version = "0.10", optional = true, features = ["lua54", "vendored", "send"] }
+clap_complete = "4"
 
 [features]
 ## Enable Lua-scriptable custom surfaces via the `mlua` crate.
 lua = ["dep:mlua"]
+## Conversions between `colorspace` types and the `palette` crate.
+palette = ["dep:palette"]
 
 [dev-dependencies]
 tempfile = "3"
 rand = { version = "0.8", features = ["std", "std_rng"] }
 proptest = "1"
+exmex = "0.21"
+criterion = { version = "0.8", default-features = false }
 
 
 [profile.release]
@@ -79,3 +97,7 @@ opt-level = 3
 lto = true
 strip = true
 codegen-units = 1
+
+[[bench]]
+name = "simulation"
+harness = false

@@ -115,14 +115,20 @@ pub fn fbm2d(
 
 /// Noise field with configurable parameters.
 pub struct NoiseField {
+    /// Permutation table (256 entries repeated twice) derived from the seed.
     pub perm: [u8; 512],
+    /// Frequency multiplier applied to input coordinates.
     pub scale: f64,
+    /// Number of fractal octaves.
     pub octaves: u32,
+    /// Amplitude multiplier per octave.
     pub persistence: f64,
+    /// Frequency multiplier per octave.
     pub lacunarity: f64,
 }
 
 impl NoiseField {
+    /// Create a field from a seed, scale and octave count (persistence 0.5, lacunarity 2).
     pub fn new(seed: u64, scale: f64, octaves: u32) -> Self {
         Self {
             perm: permutation_table(seed),

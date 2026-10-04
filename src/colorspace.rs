@@ -5,11 +5,14 @@
 
 // ── Color types ───────────────────────────────────────────────────────────────
 
-/// 8-bit linear RGB.
+/// 8-bit sRGB colour (gamma-encoded, as in CSS hex colours).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Rgb {
+    /// Red, 0 to 255.
     pub r: u8,
+    /// Green, 0 to 255.
     pub g: u8,
+    /// Blue, 0 to 255.
     pub b: u8,
 }
 
@@ -17,8 +20,11 @@ pub struct Rgb {
 /// h ∈ [0, 360), s ∈ [0, 1], v ∈ [0, 1].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Hsv {
+    /// Hue in degrees, 0 up to (not including) 360.
     pub h: f32,
+    /// Saturation, 0 to 1.
     pub s: f32,
+    /// Value (brightness), 0 to 1.
     pub v: f32,
 }
 
@@ -26,8 +32,11 @@ pub struct Hsv {
 /// l ∈ [0, 100], a ∈ [-128, 127], b ∈ [-128, 127].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Lab {
+    /// Lightness, 0 to 100.
     pub l: f32,
+    /// Green (negative) to red (positive) axis.
     pub a: f32,
+    /// Blue (negative) to yellow (positive) axis.
     pub b: f32,
 }
 
@@ -35,8 +44,11 @@ pub struct Lab {
 /// l ∈ [0, 1], a ∈ [-0.5, 0.5], b ∈ [-0.5, 0.5].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Oklab {
+    /// Perceived lightness, 0 to 1.
     pub l: f32,
+    /// Green (negative) to red (positive) axis.
     pub a: f32,
+    /// Blue (negative) to yellow (positive) axis.
     pub b: f32,
 }
 
@@ -330,6 +342,137 @@ fn lab_to_xyz(lab: Lab) -> (f32, f32, f32) {
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
+
+// ── palette interop (feature `palette`) ──────────────────────────────────────
+
+/// Conversions to and from the [`palette`](https://docs.rs/palette) crate,
+/// for code that already uses its colour types. Enabled by the `palette`
+/// feature.
+///
+/// ```
+/// # #[cfg(feature = "palette")] {
+/// use geodesic_wallpaper::colorspace::{Oklab, Rgb};
+/// let ours = Rgb { r: 255, g: 128, b: 0 };
+/// let theirs: palette::Srgb<u8> = ours.into();
+/// assert_eq!(Rgb::from(theirs), ours);
+/// let ok: palette::Oklab = Oklab::from(ours).into();
+/// assert!(ok.l > 0.7);
+/// # }
+/// ```
+#[cfg(feature = "palette")]
+mod palette_interop {
+    use super::{lab_to_rgb, oklab_to_rgb, rgb_to_lab, rgb_to_oklab, Lab, Oklab, Rgb};
+
+    impl From<palette::Srgb<u8>> for Rgb {
+        fn from(c: palette::Srgb<u8>) -> Self {
+            Rgb {
+                r: c.red,
+                g: c.green,
+                b: c.blue,
+            }
+        }
+    }
+
+    impl From<Rgb> for palette::Srgb<u8> {
+        fn from(c: Rgb) -> Self {
+            palette::Srgb::new(c.r, c.g, c.b)
+        }
+    }
+
+    impl From<palette::Oklab> for Oklab {
+        fn from(c: palette::Oklab) -> Self {
+            Oklab {
+                l: c.l,
+                a: c.a,
+                b: c.b,
+            }
+        }
+    }
+
+    impl From<Oklab> for palette::Oklab {
+        fn from(c: Oklab) -> Self {
+            palette::Oklab::new(c.l, c.a, c.b)
+        }
+    }
+
+    impl From<palette::Lab> for Lab {
+        fn from(c: palette::Lab) -> Self {
+            Lab {
+                l: c.l,
+                a: c.a,
+                b: c.b,
+            }
+        }
+    }
+
+    impl From<Lab> for palette::Lab {
+        fn from(c: Lab) -> Self {
+            palette::Lab::new(c.l, c.a, c.b)
+        }
+    }
+
+    impl From<Rgb> for Oklab {
+        fn from(c: Rgb) -> Self {
+            rgb_to_oklab(c)
+        }
+    }
+
+    impl From<Oklab> for Rgb {
+        fn from(c: Oklab) -> Self {
+            oklab_to_rgb(c)
+        }
+    }
+
+    impl From<Rgb> for Lab {
+        fn from(c: Rgb) -> Self {
+            rgb_to_lab(c)
+        }
+    }
+
+    impl From<Lab> for Rgb {
+        fn from(c: Lab) -> Self {
+            lab_to_rgb(c)
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use palette::{FromColor, IntoColor};
+
+        /// Our hand-written conversions agree with `palette` on every 17th
+        /// sRGB value (4913 colours).
+        #[test]
+        fn matches_palette_on_srgb_grid() {
+            let mut worst_ok = 0.0f32;
+            let mut worst_lab = 0.0f32;
+            for r in (0..=255u8).step_by(17) {
+                for g in (0..=255u8).step_by(17) {
+                    for b in (0..=255u8).step_by(17) {
+                        let ours = Rgb { r, g, b };
+                        let lin: palette::LinSrgb = palette::Srgb::new(r, g, b).into_linear();
+                        let ok_ref = palette::Oklab::from_color(lin);
+                        let ok = rgb_to_oklab(ours);
+                        worst_ok = worst_ok
+                            .max((ok.l - ok_ref.l).abs())
+                            .max((ok.a - ok_ref.a).abs())
+                            .max((ok.b - ok_ref.b).abs());
+                        let lab_ref: palette::Lab = lin.into_color();
+                        let lab = rgb_to_lab(ours);
+                        worst_lab = worst_lab
+                            .max((lab.l - lab_ref.l).abs())
+                            .max((lab.a - lab_ref.a).abs())
+                            .max((lab.b - lab_ref.b).abs());
+                        // Round trips land on the same 8-bit colour.
+                        assert_eq!(oklab_to_rgb(ok), ours);
+                    }
+                }
+            }
+            assert!(worst_ok < 1e-3, "Oklab differs from palette by {worst_ok}");
+            assert!(worst_lab < 0.05, "Lab differs from palette by {worst_lab}");
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {

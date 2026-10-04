@@ -309,128 +309,16 @@ pub fn compile_to_mp4(cfg: &TimelapseConfig) -> Result<String, String> {
     }
 }
 
-// ── Minimal PNG writer ────────────────────────────────────────────────────────
+// ── PNG writer ────────────────────────────────────────────────────────────────
 
-/// Write raw RGBA pixel data as a valid PNG file.
+/// Write raw RGBA pixel data as a compressed PNG (via the `image` crate).
 ///
-/// Uses only `std` (Deflate via `flate2` is not available, so this writes an
-/// uncompressed PNG by using compression level 0).  For production use, swap
-/// this for the `image` or `png` crate; for tests the output is structurally
-/// valid.
+/// Fails, instead of writing a corrupt file, when `rgba` is not exactly
+/// `width * height * 4` bytes.
 fn write_png_rgba(path: &Path, rgba: &[u8], width: u32, height: u32) -> Result<(), String> {
-    use std::io::Write;
-
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| format!("cannot create output dir: {e}"))?;
-    }
-
-    let mut file = std::fs::File::create(path)
-        .map_err(|e| format!("cannot create {}: {e}", path.display()))?;
-
-    // PNG signature.
-    file.write_all(b"\x89PNG\r\n\x1a\n")
-        .map_err(|e| e.to_string())?;
-
-    // IHDR chunk: width, height, bit depth=8, color type=6 (RGBA), compression=0, filter=0, interlace=0.
-    let mut ihdr = Vec::with_capacity(13);
-    ihdr.extend_from_slice(&width.to_be_bytes());
-    ihdr.extend_from_slice(&height.to_be_bytes());
-    ihdr.extend_from_slice(&[8u8, 6, 0, 0, 0]);
-    write_png_chunk(&mut file, b"IHDR", &ihdr)?;
-
-    // IDAT chunk: filtered scanlines, stored uncompressed (zlib with no compression).
-    let row_bytes = (width * 4) as usize;
-    let mut raw_data = Vec::with_capacity(height as usize * (row_bytes + 1));
-    for y in 0..height as usize {
-        raw_data.push(0u8); // filter type = None
-        let row_start = y * row_bytes;
-        let row_end = row_start + row_bytes.min(rgba.len().saturating_sub(row_start));
-        raw_data.extend_from_slice(&rgba[row_start..row_end]);
-    }
-    let compressed = zlib_store(&raw_data);
-    write_png_chunk(&mut file, b"IDAT", &compressed)?;
-
-    // IEND chunk.
-    write_png_chunk(&mut file, b"IEND", &[])?;
-
-    Ok(())
-}
-
-fn write_png_chunk(
-    file: &mut std::fs::File,
-    chunk_type: &[u8; 4],
-    data: &[u8],
-) -> Result<(), String> {
-    use std::io::Write;
-    let len = (data.len() as u32).to_be_bytes();
-    file.write_all(&len).map_err(|e| e.to_string())?;
-    file.write_all(chunk_type).map_err(|e| e.to_string())?;
-    file.write_all(data).map_err(|e| e.to_string())?;
-    let crc = png_crc(chunk_type, data);
-    file.write_all(&crc.to_be_bytes())
-        .map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-/// Produce a zlib DEFLATE "stored" (no compression) wrapper.
-fn zlib_store(data: &[u8]) -> Vec<u8> {
-    // zlib header: CMF=0x78 (deflate, window=32K), FLG=0x01 (no dict, check bits).
-    let mut out = vec![0x78u8, 0x01];
-    // Stored blocks: each block can hold up to 65535 bytes.
-    let mut remaining = data;
-    loop {
-        let block_len = remaining.len().min(65535);
-        let is_final = block_len == remaining.len();
-        out.push(if is_final { 0x01 } else { 0x00 }); // BFINAL + BTYPE=00 (stored)
-        let len = block_len as u16;
-        let nlen = !len;
-        out.extend_from_slice(&len.to_le_bytes());
-        out.extend_from_slice(&nlen.to_le_bytes());
-        out.extend_from_slice(&remaining[..block_len]);
-        remaining = &remaining[block_len..];
-        if is_final {
-            break;
-        }
-    }
-    // Adler-32 checksum.
-    let adler = adler32(data);
-    out.extend_from_slice(&adler.to_be_bytes());
-    out
-}
-
-fn adler32(data: &[u8]) -> u32 {
-    let mut s1 = 1u32;
-    let mut s2 = 0u32;
-    for &b in data {
-        s1 = (s1 + b as u32) % 65521;
-        s2 = (s2 + s1) % 65521;
-    }
-    (s2 << 16) | s1
-}
-
-fn png_crc(chunk_type: &[u8; 4], data: &[u8]) -> u32 {
-    // CRC-32 (ISO 3309) used by PNG.
-    static CRC_TABLE: std::sync::OnceLock<[u32; 256]> = std::sync::OnceLock::new();
-    let table = CRC_TABLE.get_or_init(|| {
-        let mut t = [0u32; 256];
-        for n in 0..256u32 {
-            let mut c = n;
-            for _ in 0..8 {
-                c = if c & 1 != 0 {
-                    0xEDB88320 ^ (c >> 1)
-                } else {
-                    c >> 1
-                };
-            }
-            t[n as usize] = c;
-        }
-        t
-    });
-    let mut crc = 0xFFFF_FFFFu32;
-    for &b in chunk_type.iter().chain(data) {
-        crc = table[((crc ^ b as u32) & 0xFF) as usize] ^ (crc >> 8);
-    }
-    crc ^ 0xFFFF_FFFF
+    crate::export::save_rgba_png(path, width, height, rgba)
+        .map(|_| ())
+        .map_err(|e| format!("cannot write {}: {e}", path.display()))
 }
 
 #[cfg(test)]

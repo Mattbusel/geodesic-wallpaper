@@ -9,7 +9,9 @@
 /// The state of a single cell on the grid.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CellState {
+    /// An empty cell.
     Dead,
+    /// A live cell.
     Alive,
 }
 
@@ -21,15 +23,12 @@ impl CellState {
 
 // ── RuleSet ───────────────────────────────────────────────────────────────────
 
-/// Birth/Survival rule in the B/S notation.
-///
-/// - `birth[n]`   = true → a dead cell with exactly `n` alive neighbours is born
-/// - `survival[n]` = true → a living cell with exactly `n` alive neighbours survives
+/// Birth/Survival rule in the B/S notation (B3/S23 is Conway).
 #[derive(Debug, Clone)]
 pub struct RuleSet {
-    /// birth[n] for n in 0..=8
+    /// Neighbour counts (0 to 8) at which a dead cell is born, e.g. `[3]` for Conway.
     pub birth: Vec<u8>,
-    /// survival[n] for n in 0..=8
+    /// Neighbour counts (0 to 8) at which a live cell survives, e.g. `[2, 3]` for Conway.
     pub survival: Vec<u8>,
 }
 
@@ -114,7 +113,9 @@ impl Lcg {
 /// A 2D cellular automaton grid.
 #[derive(Debug, Clone)]
 pub struct CaGrid {
+    /// Number of columns.
     pub width: usize,
+    /// Number of rows.
     pub height: usize,
     /// Row-major flat storage: cells[y * width + x]
     pub cells: Vec<CellState>,

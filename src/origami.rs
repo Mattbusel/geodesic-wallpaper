@@ -36,10 +36,15 @@ impl CreaseType {
 /// A single line segment in a crease pattern.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CreaseLine {
+    /// Start x.
     pub x1: f64,
+    /// Start y.
     pub y1: f64,
+    /// End x.
     pub x2: f64,
+    /// End y.
     pub y2: f64,
+    /// Whether this is a mountain, valley or flat crease.
     pub crease_type: CreaseType,
 }
 
@@ -66,7 +71,14 @@ pub enum FoldOperation {
     /// Unfold (no-op here — returns pattern unchanged for symmetry).
     Unfold,
     /// Rotate all points around `(cx, cy)` by `angle` radians.
-    RotatePoint { cx: f64, cy: f64, angle: f64 },
+    RotatePoint {
+        /// Rotation centre x.
+        cx: f64,
+        /// Rotation centre y.
+        cy: f64,
+        /// Rotation angle in radians.
+        angle: f64,
+    },
     /// Mirror all points about the vertical axis (negate x).
     MirrorY,
     /// Mirror all points about the horizontal axis (negate y).

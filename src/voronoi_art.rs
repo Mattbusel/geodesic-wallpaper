@@ -5,25 +5,39 @@
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
+/// A Voronoi seed point with its colour and weight.
 pub struct Site {
+    /// Horizontal position in pixels.
     pub x: f64,
+    /// Vertical position in pixels.
     pub y: f64,
+    /// Fill colour of this site's cell.
     pub color: [u8; 3],
+    /// Weight in [0.5, 1); with weighted mode, larger weights grow larger cells.
     pub weight: f64,
 }
 
 #[derive(Debug, Clone)]
+/// One rendered cell and how many pixels it covered.
 pub struct VoronoiCell {
+    /// The site that owns the cell.
     pub site: Site,
+    /// Number of pixels assigned to the cell.
     pub pixel_count: u32,
 }
 
 #[derive(Debug, Clone)]
+/// Colour palette for the cells.
 pub enum ColorScheme {
+    /// Low-saturation hues around the colour wheel.
     Pastel,
+    /// Saturated hues around the colour wheel.
     Vibrant,
+    /// Greys from dark to light.
     Monochrome,
+    /// Red to orange to purple.
     Sunset,
+    /// Dark blue to cyan.
     Ocean,
 }
 
@@ -106,11 +120,17 @@ pub fn color_for_scheme(scheme: &ColorScheme, index: usize, total: usize) -> [u8
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
+/// Settings for [`VoronoiArt`].
 pub struct VoronoiArtConfig {
+    /// Number of seed points.
     pub num_sites: usize,
+    /// Colour palette for the cells.
     pub scheme: ColorScheme,
+    /// Border thickness in pixels (0 for no borders).
     pub border_width: u32,
+    /// Border colour (RGB).
     pub border_color: [u8; 3],
+    /// Use weighted distance (dist / sqrt(weight)) when assigning pixels.
     pub weighted: bool,
 }
 
@@ -127,8 +147,11 @@ impl Default for VoronoiArtConfig {
 }
 
 #[derive(Debug, Clone)]
+/// A Voronoi image generator: settings plus the generated sites.
 pub struct VoronoiArt {
+    /// Settings used to generate and render.
     pub config: VoronoiArtConfig,
+    /// Seed points.
     pub sites: Vec<Site>,
 }
 

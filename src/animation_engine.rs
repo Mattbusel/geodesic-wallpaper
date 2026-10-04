@@ -9,13 +9,21 @@ use std::collections::HashMap;
 /// A family of easing curves that remap a normalised time parameter.
 #[derive(Debug, Clone, PartialEq)]
 pub enum EasingFunction {
+    /// No easing: progress equals time.
     Linear,
+    /// Quadratic ease-in: starts slow, speeds up.
     EaseIn,
+    /// Quadratic ease-out: starts fast, slows down.
     EaseOut,
+    /// Quadratic ease-in for the first half, ease-out for the second.
     EaseInOut,
+    /// Ease-out bounce: settles with decaying bounces at the end.
     Bounce,
+    /// Elastic ease-in: winds up with a growing oscillation before the end.
     Elastic,
+    /// Back ease-in: dips slightly below 0 before moving forward.
     Back,
+    /// Cubic ease-in-out.
     Cubic,
 }
 
@@ -82,8 +90,11 @@ impl EasingFunction {
 /// A value that can be interpolated between keyframes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum TweenTarget {
+    /// A single scalar value.
     Float(f64),
+    /// An RGB colour, interpolated per channel.
     Color([u8; 3]),
+    /// A 2D point `(x, y)`.
     Vec2(f64, f64),
 }
 
@@ -92,9 +103,13 @@ pub enum TweenTarget {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
+/// A value pinned to a point in time on an [`AnimTrack`].
 pub struct Keyframe {
+    /// Time of this keyframe in seconds from the start of the clip.
     pub time_secs: f64,
+    /// Value the property takes at `time_secs`.
     pub value: TweenTarget,
+    /// Easing applied on the segment that ends at this keyframe.
     pub easing: EasingFunction,
 }
 
@@ -105,11 +120,14 @@ pub struct Keyframe {
 /// A single animated property over time, defined by sorted keyframes.
 #[derive(Debug, Clone)]
 pub struct AnimTrack {
+    /// Name of the animated property (the key in the state map).
     pub property: String,
+    /// Keyframes, kept sorted by `time_secs`.
     pub keyframes: Vec<Keyframe>,
 }
 
 impl AnimTrack {
+    /// Create an empty track for the property named `property`.
     pub fn new(property: impl Into<String>) -> Self {
         Self {
             property: property.into(),
@@ -117,10 +135,11 @@ impl AnimTrack {
         }
     }
 
+    /// Insert a keyframe, keeping the track sorted by time.
     pub fn add_keyframe(&mut self, kf: Keyframe) {
         self.keyframes.push(kf);
         self.keyframes
-            .sort_by(|a, b| a.time_secs.partial_cmp(&b.time_secs).unwrap());
+            .sort_by(|a, b| a.time_secs.total_cmp(&b.time_secs));
     }
 
     /// Interpolate the track value at `time_secs`.
@@ -190,13 +209,18 @@ impl AnimTrack {
 /// A named animation clip containing multiple tracks.
 #[derive(Debug, Clone)]
 pub struct AnimClip {
+    /// Clip name, used to look it up in [`AnimationEngine`].
     pub name: String,
+    /// Length of the clip in seconds.
     pub duration_secs: f64,
+    /// Animated properties in this clip.
     pub tracks: Vec<AnimTrack>,
+    /// Whether time wraps around at `duration_secs` instead of holding the last frame.
     pub loop_: bool,
 }
 
 impl AnimClip {
+    /// Create an empty clip with the given name, length in seconds and loop flag.
     pub fn new(name: impl Into<String>, duration_secs: f64, loop_: bool) -> Self {
         Self {
             name: name.into(),
@@ -206,6 +230,7 @@ impl AnimClip {
         }
     }
 
+    /// Add a track to the clip.
     pub fn add_track(&mut self, track: AnimTrack) {
         self.tracks.push(track);
     }
@@ -231,6 +256,7 @@ impl AnimClip {
 // FrameRenderer trait
 // ---------------------------------------------------------------------------
 
+/// Draws one frame of an animation from the evaluated property values.
 pub trait FrameRenderer {
     /// Render a single frame given the animated state, returning an RGB pixel grid.
     fn render_frame(
@@ -248,10 +274,15 @@ pub trait FrameRenderer {
 /// Summary information about a rendered animation clip.
 #[derive(Debug, Clone)]
 pub struct AnimMetadata {
+    /// Number of frames rendered.
     pub frame_count: usize,
+    /// Frames per second the clip was rendered at.
     pub fps: f64,
+    /// Clip length in seconds.
     pub duration_secs: f64,
+    /// Frame width in pixels.
     pub width: u32,
+    /// Frame height in pixels.
     pub height: u32,
 }
 
@@ -261,13 +292,18 @@ pub struct AnimMetadata {
 
 /// Manages a collection of animation clips and drives rendering.
 pub struct AnimationEngine {
+    /// Clips available for rendering.
     pub clips: Vec<AnimClip>,
+    /// Frames per second used when rendering clips.
     pub fps: f64,
+    /// Output frame width in pixels.
     pub width: u32,
+    /// Output frame height in pixels.
     pub height: u32,
 }
 
 impl AnimationEngine {
+    /// Create an engine with no clips that renders at `fps` and `width` x `height` pixels.
     pub fn new(fps: f64, width: u32, height: u32) -> Self {
         Self {
             clips: Vec::new(),
@@ -277,6 +313,7 @@ impl AnimationEngine {
         }
     }
 
+    /// Add a clip that can then be rendered by name.
     pub fn add_clip(&mut self, clip: AnimClip) {
         self.clips.push(clip);
     }
@@ -353,6 +390,20 @@ impl AnimationEngine {
 
 #[cfg(test)]
 mod tests {
+
+    // A NaN keyframe time used to panic inside the sort (partial_cmp unwrap).
+    #[test]
+    fn nan_keyframe_time_does_not_panic() {
+        let mut track = float_track("x", 0.0, 1.0, 2.0);
+        track.add_keyframe(Keyframe {
+            time_secs: f64::NAN,
+            value: TweenTarget::Float(5.0),
+            easing: EasingFunction::Linear,
+        });
+        assert_eq!(track.keyframes.len(), 3);
+        let _ = track.value_at(1.0);
+    }
+
     use super::*;
 
     fn float_track(property: &str, from: f64, to: f64, duration: f64) -> AnimTrack {

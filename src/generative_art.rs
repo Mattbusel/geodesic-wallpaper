@@ -3,14 +3,16 @@
 /// A color palette for mapping scalar values to RGB colors.
 #[derive(Debug, Clone)]
 pub struct ColorPalette {
+    /// Colours from the low end of the scale to the high end.
     pub colors: Vec<[u8; 3]>,
+    /// Palette name (empty for palettes built from stops).
     pub name: String,
 }
 
 impl ColorPalette {
     /// Build a palette by sampling `n` colors from gradient stops.
     ///
-    /// Each stop is `([r,g,b], position)` where position ∈ [0,1].
+    /// Each stop is `([r,g,b], position)` where position is in `0.0..=1.0`.
     pub fn from_stops(stops: Vec<([u8; 3], f64)>, n: usize) -> Self {
         assert!(!stops.is_empty());
         let n = n.max(2);
@@ -135,24 +137,38 @@ impl ColorPalette {
 /// Available generative art styles.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ArtStyle {
+    /// Fractal noise mapped straight through the palette.
     NoiseLandscape,
+    /// Particle traces following a noise-derived flow field.
     FlowFieldArt,
+    /// Cell-like regions around random seed points.
     OrganicCells,
+    /// A noise nebula with scattered stars.
     CosmicDust,
+    /// Crystals grown outward from random seeds.
     CrystalGrowth,
+    /// Domain-warped noise that looks like marbled paper.
     MarbledPaper,
 }
 
 /// Parameters controlling generative art rendering.
 #[derive(Debug, Clone)]
 pub struct GenerativeParams {
+    /// Image width in pixels.
     pub width: u32,
+    /// Image height in pixels.
     pub height: u32,
+    /// Seed for the noise and random placement.
     pub seed: u64,
+    /// Palette used to colour the output.
     pub palette: ColorPalette,
+    /// Noise-space units across the image (higher zooms out).
     pub scale: f64,
+    /// Number of fractal noise octaves.
     pub octaves: u8,
+    /// Offset added to the noise x coordinate; change it over time to animate.
     pub time_offset: f64,
+    /// Which style to render.
     pub style: ArtStyle,
 }
 

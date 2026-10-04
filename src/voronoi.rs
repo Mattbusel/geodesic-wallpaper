@@ -8,7 +8,9 @@
 /// A 2D point in continuous space.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Point {
+    /// X coordinate.
     pub x: f64,
+    /// Y coordinate.
     pub y: f64,
 }
 
@@ -48,8 +50,11 @@ pub struct VoronoiCell {
 
 /// A Voronoi diagram over an integer pixel grid.
 pub struct VoronoiDiagram {
+    /// Grid width in pixels.
     pub width: usize,
+    /// Grid height in pixels.
     pub height: usize,
+    /// Sites and their colours.
     pub cells: Vec<VoronoiCell>,
 }
 

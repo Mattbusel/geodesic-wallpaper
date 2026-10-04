@@ -15,14 +15,20 @@ fn hash2(x: i32, y: i32) -> (f64, f64) {
     (px, py)
 }
 
+/// How distance to a feature point is measured.
 pub enum DistanceMetric {
+    /// Straight-line distance, sqrt(dx^2 + dy^2): round cells.
     Euclidean,
+    /// |dx| + |dy|: diamond-shaped cells.
     Manhattan,
+    /// max(|dx|, |dy|): square cells.
     Chebyshev,
+    /// (|dx|^p + |dy|^p)^(1/p) with the given exponent p.
     Minkowski(f64), // exponent p
 }
 
 impl DistanceMetric {
+    /// Distance for the offset `(dx, dy)` under this metric.
     pub fn distance(&self, dx: f64, dy: f64) -> f64 {
         match self {
             DistanceMetric::Euclidean => (dx * dx + dy * dy).sqrt(),
@@ -60,14 +66,21 @@ pub fn worley_f1_f2(x: f64, y: f64, metric: &DistanceMetric) -> (f64, f64) {
     (f1, f2)
 }
 
+/// Which combination of the nearest (F1) and second-nearest (F2) distances to output.
 pub enum CellularMode {
+    /// Distance to the nearest feature point.
     F1,
+    /// Distance to the second-nearest feature point.
     F2,
+    /// F2 - F1 (capped at 1): bright cell borders.
     F2MinusF1, // Cell borders
+    /// Mean of F1 and F2.
     F1PlusF2,
+    /// F1 * F2 (capped at 1).
     F1TimesF2,
 }
 
+/// Single-octave Worley noise at `(x, y)` (one feature point per unit cell).
 pub fn cellular_noise(x: f64, y: f64, mode: &CellularMode, metric: &DistanceMetric) -> f64 {
     let (f1, f2) = worley_f1_f2(x, y, metric);
     match mode {
@@ -102,14 +115,20 @@ pub fn fbm_cellular(
     value / max_val
 }
 
+/// Renders fractal cellular noise into an RGBA pixel buffer.
 pub struct CellularNoiseRenderer {
+    /// Output width in pixels.
     pub width: u32,
+    /// Output height in pixels.
     pub height: u32,
+    /// Noise-space units spanned by the image (higher means more, smaller cells).
     pub scale: f64,
+    /// Number of fractal octaves summed per pixel.
     pub octaves: u32,
 }
 
 impl CellularNoiseRenderer {
+    /// Create a renderer of `width` x `height` pixels at the given scale, with 4 octaves.
     pub fn new(width: u32, height: u32, scale: f64) -> Self {
         CellularNoiseRenderer {
             width,
@@ -119,6 +138,7 @@ impl CellularNoiseRenderer {
         }
     }
 
+    /// Render to RGBA bytes (`width * height * 4`), colouring each noise value with `palette_fn`.
     pub fn render(
         &self,
         mode: &CellularMode,

@@ -9,9 +9,13 @@
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Model used to draw the hyperbolic plane.
 pub enum HyperbolicModel {
+    /// Poincare disk model (conformal, geodesics are circular arcs).
     Poincare,
+    /// Beltrami-Klein disk model (geodesics are straight chords).
     Beltrami,
+    /// Upper half-plane model.
     Halfplane,
 }
 
@@ -20,12 +24,16 @@ pub enum HyperbolicModel {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy)]
+/// A point in a hyperbolic disk model (inside the unit disk).
 pub struct HyperbolicPoint {
+    /// X coordinate.
     pub x: f64,
+    /// Y coordinate.
     pub y: f64,
 }
 
 impl HyperbolicPoint {
+    /// Create a point from its coordinates.
     pub fn new(x: f64, y: f64) -> Self {
         Self { x, y }
     }
@@ -256,9 +264,13 @@ pub fn render_poincare_disk(width: u32, height: u32, num_geodesics: usize, seed:
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
+/// A circle used for circle inversion.
 pub struct InversiveCircle {
+    /// Centre x.
     pub cx: f64,
+    /// Centre y.
     pub cy: f64,
+    /// Radius.
     pub r: f64,
 }
 

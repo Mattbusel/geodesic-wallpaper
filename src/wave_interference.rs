@@ -28,7 +28,10 @@ pub enum WaveType {
     /// Emanates radially from `Wave::origin`.
     Circular,
     /// Plane wave travelling in `direction` (will be normalised internally).
-    Plane { direction: (f64, f64) },
+    Plane {
+        /// Direction of travel `(dx, dy)`; need not be unit length.
+        direction: (f64, f64),
+    },
     /// Standing wave oscillating along the x-axis.
     Standing,
 }
@@ -38,11 +41,15 @@ pub enum WaveType {
 /// A single physical wave.
 #[derive(Debug, Clone)]
 pub struct Wave {
+    /// Peak amplitude.
     pub amplitude: f64,
+    /// Frequency; with unit wave speed this is also the spatial wavenumber per 2 pi.
     pub frequency: f64,
+    /// Phase offset in radians.
     pub phase: f64,
     /// Spatial origin (used for [`WaveType::Circular`]).
     pub origin: (f64, f64),
+    /// Spatial pattern of the wave.
     pub wave_type: WaveType,
 }
 
@@ -85,9 +92,13 @@ pub fn wave_value(wave: &Wave, x: f64, y: f64, t: f64) -> f64 {
 /// Colormap used when converting interference values to RGB.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InterferenceColormap {
+    /// Black at -1 to white at +1.
     Grayscale,
+    /// Blue for negative, white near zero, red for positive.
     BlueRed,
+    /// Full hue cycle from -1 to +1.
     RainbowWave,
+    /// Black, blue, cyan, green, yellow, red, white from -1 to +1.
     Heatmap,
 }
 
@@ -182,12 +193,16 @@ fn heatmap_rgb(t: f64) -> (u8, u8, u8) {
 
 /// A superposition of multiple waves rendered to a pixel grid.
 pub struct InterferencePattern {
+    /// Grid width in pixels.
     pub width: usize,
+    /// Grid height in pixels.
     pub height: usize,
+    /// Waves that are summed at every pixel.
     pub waves: Vec<Wave>,
 }
 
 impl InterferencePattern {
+    /// Create an empty pattern of the given size.
     pub fn new(width: usize, height: usize) -> Self {
         Self {
             width,

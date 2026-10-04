@@ -8,11 +8,17 @@
 /// A single affine transform in an IFS: (x,y) → (ax+by+e, cx+dy+f).
 #[derive(Debug, Clone)]
 pub struct IfsTransform {
+    /// Coefficient of x in the new x.
     pub a: f64,
+    /// Coefficient of y in the new x.
     pub b: f64,
+    /// Coefficient of x in the new y.
     pub c: f64,
+    /// Coefficient of y in the new y.
     pub d: f64,
+    /// Translation added to the new x.
     pub e: f64,
+    /// Translation added to the new y.
     pub f: f64,
     /// Probability weight (should sum to ~1.0 across all transforms).
     pub probability: f64,
@@ -31,6 +37,7 @@ impl IfsTransform {
 /// An Iterated Function System consisting of multiple affine transforms.
 #[derive(Debug, Clone)]
 pub struct IteratedFunctionSystem {
+    /// Affine maps, picked at random by their `probability` each iteration.
     pub transforms: Vec<IfsTransform>,
 }
 

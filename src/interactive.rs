@@ -36,13 +36,21 @@ use crate::surface::Surface;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MouseEvent {
     /// Left mouse button pressed at `(x, y)` in screen pixels.
-    LeftClick { x: i32, y: i32 },
+    LeftClick {
+        /// Horizontal screen position in pixels.
+        x: i32,
+        /// Vertical screen position in pixels.
+        y: i32,
+    },
     /// Right mouse button pressed — reset all geodesics.
     RightClick,
     /// Middle mouse button pressed — cycle to next surface.
     MiddleClick,
     /// Scroll wheel moved; `delta` is positive for scroll-up (speed increase).
-    Scroll { delta: f32 },
+    Scroll {
+        /// Scroll amount; positive is scroll-up.
+        delta: f32,
+    },
 }
 
 // ---------------------------------------------------------------------------

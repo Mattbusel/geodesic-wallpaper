@@ -8,19 +8,25 @@
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// An 8-bit sRGB colour.
 pub struct Rgb {
+    /// Red channel, 0 to 255.
     pub r: u8,
+    /// Green channel, 0 to 255.
     pub g: u8,
+    /// Blue channel, 0 to 255.
     pub b: u8,
 }
 
 impl Rgb {
+    /// Create a colour from its red, green and blue channels.
     pub fn new(r: u8, g: u8, b: u8) -> Self {
         Self { r, g, b }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+/// A colour as hue, saturation and value.
 pub struct Hsv {
     /// Hue in [0, 360).
     pub h: f64,
@@ -31,6 +37,7 @@ pub struct Hsv {
 }
 
 impl Hsv {
+    /// Create an HSV colour, wrapping hue into [0, 360) and clamping s and v to [0, 1].
     pub fn new(h: f64, s: f64, v: f64) -> Self {
         Self {
             h: h.rem_euclid(360.0),
@@ -41,13 +48,18 @@ impl Hsv {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+/// A colour as hue, saturation and lightness.
 pub struct Hsl {
+    /// Hue in degrees, [0, 360).
     pub h: f64,
+    /// Saturation in [0, 1].
     pub s: f64,
+    /// Lightness in [0, 1].
     pub l: f64,
 }
 
 impl Hsl {
+    /// Create an HSL colour, wrapping hue into [0, 360) and clamping s and l to [0, 1].
     pub fn new(h: f64, s: f64, l: f64) -> Self {
         Self {
             h: h.rem_euclid(360.0),
@@ -58,9 +70,13 @@ impl Hsl {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+/// A CIELAB colour (D65 white point).
 pub struct Lab {
+    /// Lightness L*, 0 (black) to 100 (white).
     pub l: f64,
+    /// Green (negative) to red (positive) axis a*.
     pub a: f64,
+    /// Blue (negative) to yellow (positive) axis b*.
     pub b: f64,
 }
 
@@ -68,6 +84,7 @@ pub struct Lab {
 // ColorConversions
 // ---------------------------------------------------------------------------
 
+/// Conversions between RGB, HSV, HSL and CIELAB.
 pub struct ColorConversions;
 
 impl ColorConversions {
@@ -75,6 +92,7 @@ impl ColorConversions {
     // RGB ↔ HSV
     // -----------------------------------------------------------------------
 
+    /// Convert sRGB to HSV.
     pub fn rgb_to_hsv(rgb: Rgb) -> Hsv {
         let r = rgb.r as f64 / 255.0;
         let g = rgb.g as f64 / 255.0;
@@ -100,6 +118,7 @@ impl ColorConversions {
         Hsv::new(h, s, v)
     }
 
+    /// Convert HSV to sRGB.
     pub fn hsv_to_rgb(hsv: Hsv) -> Rgb {
         if hsv.s < 1e-9 {
             let v = (hsv.v * 255.0).round() as u8;
@@ -131,6 +150,7 @@ impl ColorConversions {
     // RGB ↔ HSL
     // -----------------------------------------------------------------------
 
+    /// Convert sRGB to HSL.
     pub fn rgb_to_hsl(rgb: Rgb) -> Hsl {
         let r = rgb.r as f64 / 255.0;
         let g = rgb.g as f64 / 255.0;
@@ -160,6 +180,7 @@ impl ColorConversions {
         Hsl::new(h, s, l)
     }
 
+    /// Convert HSL to sRGB.
     pub fn hsl_to_rgb(hsl: Hsl) -> Rgb {
         if hsl.s < 1e-9 {
             let v = (hsl.l * 255.0).round() as u8;
@@ -189,6 +210,7 @@ impl ColorConversions {
     // RGB ↔ CIELAB (D65 illuminant)
     // -----------------------------------------------------------------------
 
+    /// Convert sRGB to CIELAB (D65).
     pub fn rgb_to_lab(rgb: Rgb) -> Lab {
         let (x, y, z) = Self::rgb_to_xyz(rgb);
         // D65 reference white.
@@ -207,6 +229,7 @@ impl ColorConversions {
         }
     }
 
+    /// Convert CIELAB (D65) to sRGB, clamping out-of-gamut values.
     pub fn lab_to_rgb(lab: Lab) -> Rgb {
         let fy = (lab.l + 16.0) / 116.0;
         let fx = lab.a / 500.0 + fy;
@@ -321,11 +344,17 @@ impl ColorConversions {
 /// Rules for selecting related colours.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorHarmony {
+    /// The base colour and the colour opposite it on the hue wheel.
     Complementary,
+    /// Neighbouring hues 30 degrees apart.
     Analogous,
+    /// Three hues 120 degrees apart.
     Triadic,
+    /// Four hues 90 degrees apart.
     Tetradic,
+    /// The base hue plus the two hues 150 and 210 degrees away.
     SplitComplementary,
+    /// One hue at different saturations and values.
     Monochromatic,
 }
 
@@ -333,6 +362,7 @@ pub enum ColorHarmony {
 // PaletteGenerator
 // ---------------------------------------------------------------------------
 
+/// Builds colour palettes from a base colour and a harmony rule.
 pub struct PaletteGenerator;
 
 impl PaletteGenerator {

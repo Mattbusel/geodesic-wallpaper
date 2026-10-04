@@ -10,8 +10,10 @@ pub const PHI: f64 = 1.618_033_988_749_895;
 // ── PenroseTileType ───────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Which Penrose tile shape a tile is.
 pub enum PenroseTileType {
-    /// Thin rhombus (acute angle 36°).
+    /// Kite-and-dart tiling marker; subdivided with the same rule as the
+    /// thin rhombus by [`subdivide_thin`].
     KiteDart,
     /// Thin rhombus (36°/144°).
     RhombusThin,
@@ -24,9 +26,11 @@ pub enum PenroseTileType {
 /// A single Penrose tile with its geometry and colour.
 #[derive(Debug, Clone)]
 pub struct PenroseTile {
+    /// Shape of the tile.
     pub tile_type: PenroseTileType,
     /// Vertices in order (4 for rhombuses).
     pub vertices: Vec<(f64, f64)>,
+    /// Fill colour (RGB).
     pub color: [u8; 3],
 }
 

@@ -60,7 +60,10 @@ pub enum MorphState {
     /// Not morphing; showing surface B entirely.
     AtB,
     /// Morphing from B → A.
-    MorphingBToA { t: f32 },
+    MorphingBToA {
+        /// Raw (uneased) progress from B toward A, [0, 1].
+        t: f32,
+    },
 }
 
 // ── Surface morph ─────────────────────────────────────────────────────────────
@@ -75,7 +78,9 @@ pub enum MorphState {
 /// vec3 pos = mix(pos_a, pos_b, morph_t);
 /// ```
 pub struct SurfaceMorph {
+    /// Surface shown when the blend is 0.
     pub surface_a: Box<dyn Surface>,
+    /// Surface shown when the blend is 1.
     pub surface_b: Box<dyn Surface>,
     /// Duration of a full A → B or B → A morph in seconds.
     pub duration_s: f32,
@@ -155,10 +160,12 @@ impl SurfaceMorph {
         }
     }
 
+    /// Current morph state.
     pub fn state(&self) -> MorphState {
         self.state
     }
 
+    /// Whether a morph is in progress.
     pub fn is_morphing(&self) -> bool {
         matches!(
             self.state,

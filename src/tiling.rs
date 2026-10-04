@@ -23,9 +23,13 @@ pub enum TileShape {
 
 /// A tiling grid over a pixel canvas.
 pub struct TileGrid {
+    /// Tile shape.
     pub shape: TileShape,
+    /// Canvas width in pixels.
     pub width: u32,
+    /// Canvas height in pixels.
     pub height: u32,
+    /// Tile edge length in pixels.
     pub tile_size: u32,
 }
 

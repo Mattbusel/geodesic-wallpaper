@@ -8,7 +8,9 @@
 /// Configuration parameters for heightmap generation.
 #[derive(Debug, Clone)]
 pub struct TerrainConfig {
+    /// Heightmap width in cells.
     pub width: u32,
+    /// Heightmap height in cells.
     pub height: u32,
     /// Number of fBm octaves.
     pub octaves: u8,
@@ -174,10 +176,15 @@ pub fn generate_heightmap(config: &TerrainConfig) -> Vec<Vec<f64>> {
 /// Terrain classification based on height thresholds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TerrainClass {
+    /// Height below 0.3.
     Ocean,
+    /// Height from 0.3 to 0.4.
     Beach,
+    /// Height from 0.4 to 0.7.
     Grass,
+    /// Height from 0.7 to 0.9.
     Mountain,
+    /// Height 0.9 and above.
     Snow,
 }
 
@@ -202,6 +209,7 @@ impl TerrainClass {
 pub struct TerrainClassifier;
 
 impl TerrainClassifier {
+    /// Classify every cell of a normalised heightmap.
     pub fn classify_map(heightmap: &Vec<Vec<f64>>) -> Vec<Vec<TerrainClass>> {
         heightmap
             .iter()
@@ -217,8 +225,11 @@ impl TerrainClassifier {
 /// Aggregate statistics for a heightmap.
 #[derive(Debug, Clone)]
 pub struct TerrainStats {
+    /// Lowest height in the map.
     pub min_height: f64,
+    /// Highest height in the map.
     pub max_height: f64,
+    /// Mean height.
     pub mean_height: f64,
     /// Fraction of cells classified as Ocean (height < 0.3).
     pub water_fraction: f64,
@@ -308,9 +319,7 @@ pub fn erode(heightmap: &mut Vec<Vec<f64>>, iterations: u32) {
                 let lowest = neighbours
                     .iter()
                     .flatten()
-                    .min_by(|&&(ar, ac), &&(br, bc)| {
-                        snapshot[ar][ac].partial_cmp(&snapshot[br][bc]).unwrap()
-                    })
+                    .min_by(|&&(ar, ac), &&(br, bc)| snapshot[ar][ac].total_cmp(&snapshot[br][bc]))
                     .copied();
 
                 if let Some((nr, nc)) = lowest {

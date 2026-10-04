@@ -1,3 +1,5 @@
+//! Hyperbolic tilings in the Poincare disk, built from Mobius transforms.
+
 use std::f64::consts::PI;
 
 /// Complex number operations for Möbius transforms

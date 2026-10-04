@@ -24,6 +24,7 @@ pub struct KaleidoscopeConfig {
 }
 
 impl KaleidoscopeConfig {
+    /// Create a config; panics if `segments` is less than 2.
     pub fn new(segments: u32, width: u32, height: u32, rotation: f64) -> Self {
         assert!(segments >= 2, "segments must be at least 2");
         KaleidoscopeConfig {
@@ -137,6 +138,7 @@ pub struct KaleidoscopeAnimator {
 }
 
 impl KaleidoscopeAnimator {
+    /// Create an animator starting from `config`.
     pub fn new(config: KaleidoscopeConfig) -> Self {
         KaleidoscopeAnimator { config }
     }
@@ -157,6 +159,7 @@ impl KaleidoscopeAnimator {
         (0..n).map(|_| self.step(source, delta_radians)).collect()
     }
 
+    /// Current rotation in radians.
     pub fn current_rotation(&self) -> f64 {
         self.config.rotation
     }
@@ -169,10 +172,15 @@ impl KaleidoscopeAnimator {
 /// Extended configuration for the new renderer API.
 #[derive(Debug, Clone)]
 pub struct KaleidoscopeConfig2 {
+    /// Number of mirror sectors (each covers pi / n_fold radians).
     pub n_fold: u32,
+    /// Rotation of the mirror pattern in radians.
     pub rotation_offset: f64,
+    /// Magnification; values above 1 zoom in on the source.
     pub zoom: f64,
+    /// Centre of the pattern in normalised coordinates (-1 to 1).
     pub center: (f64, f64),
+    /// Hue shift applied to every output colour, in turns (1.0 is a full cycle).
     pub color_rotation: f64,
 }
 

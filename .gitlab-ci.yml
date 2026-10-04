@@ -1,0 +1,64 @@
+# GitLab CI for geodesic-wallpaper.
+#
+# The app is a Win32 wallpaper, so everything runs on GitLab's hosted Windows
+# runners. Rust is not preinstalled there; rustup is fetched per job.
+# No test needs a GPU; the soak tests are #[ignore]d (run them with --ignored).
+
+stages:
+  - check
+
+.windows:
+  tags:
+    - saas-windows-medium-amd64
+  variables:
+    RUST_TOOLCHAIN: stable
+    CARGO_TERM_COLOR: always
+    CARGO_INCREMENTAL: "0"
+    CARGO_PROFILE_DEV_DEBUG: "0"
+    CARGO_PROFILE_TEST_DEBUG: "0"
+  before_script:
+    - Invoke-WebRequest -Uri https://win.rustup.rs/x86_64 -OutFile rustup-init.exe
+    - .\rustup-init.exe -y --profile minimal --default-toolchain $env:RUST_TOOLCHAIN -c clippy -c rustfmt
+    - $env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+    - rustc --version
+  cache:
+    key: windows-cargo
+    paths:
+      - target/
+
+fmt:
+  extends: .windows
+  stage: check
+  script:
+    - cargo fmt --all -- --check
+
+clippy:
+  extends: .windows
+  stage: check
+  script:
+    - cargo clippy --locked --all-targets -- -D warnings
+    - cargo clippy --locked --all-targets --all-features -- -D warnings
+
+test:
+  extends: .windows
+  stage: check
+  script:
+    - cargo test --locked
+    - cargo test --locked --all-features
+  timeout: 2h
+
+doc:
+  extends: .windows
+  stage: check
+  variables:
+    RUSTDOCFLAGS: "-D warnings"
+  script:
+    - cargo doc --locked --no-deps --all-features
+
+msrv:
+  extends: .windows
+  stage: check
+  variables:
+    RUST_TOOLCHAIN: "1.88"
+  script:
+    - cargo check --locked --all-targets

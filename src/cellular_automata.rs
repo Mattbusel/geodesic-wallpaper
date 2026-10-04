@@ -3,17 +3,24 @@
 /// The state of a single cell.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CellState {
+    /// An empty cell (stored as 0).
     Dead,
+    /// A live cell (stored as 1).
     Alive,
+    /// Any other cell state value.
     Custom(u8),
 }
 
 /// A 2D grid of cells with optional wrapping.
 #[derive(Debug, Clone)]
 pub struct Grid {
+    /// Number of columns.
     pub width: usize,
+    /// Number of rows.
     pub height: usize,
+    /// Cell values indexed `cells[row][col]`; 0 is dead, non-zero is alive.
     pub cells: Vec<Vec<u8>>,
+    /// Whether neighbours wrap around the edges (torus) instead of stopping at them.
     pub wrap: bool,
 }
 
@@ -125,9 +132,13 @@ impl Grid {
 
 /// Langton's Ant simulation.
 pub struct LangtonAnt {
+    /// Ant column.
     pub x: i32,
+    /// Ant row.
     pub y: i32,
+    /// Heading: 0 north, 1 east, 2 south, 3 west.
     pub direction: u8, // 0=N, 1=E, 2=S, 3=W
+    /// The grid the ant walks on and flips.
     pub grid: Grid,
 }
 
@@ -210,20 +221,27 @@ pub fn to_grayscale(grid: &Grid) -> Vec<u8> {
 /// Automaton rule type.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CARule {
+    /// Conway's Game of Life (B3/S23).
     GameOfLife,
+    /// Wolfram's elementary cellular automaton Rule 110.
     Rule110,
+    /// Langton's Ant walking from the grid centre.
     LangtonAnt,
 }
 
 /// Animates a cellular automaton, producing grayscale image frames.
 pub struct CAAnimator {
+    /// Current grid state.
     pub grid: Grid,
+    /// Rule used to advance the grid.
     pub rule: CARule,
+    /// Number of frames produced so far.
     pub frame_count: usize,
     langton_ant: Option<LangtonAnt>,
 }
 
 impl CAAnimator {
+    /// Create an animator for `grid` under `rule` (a Langton's ant starts at the centre for that rule).
     pub fn new(grid: Grid, rule: CARule) -> Self {
         let langton_ant = if rule == CARule::LangtonAnt {
             Some(LangtonAnt::new(grid.clone()))

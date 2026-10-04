@@ -86,7 +86,9 @@ pub fn epitrochoid_point(t: f64, p: &SpirographParams) -> (f64, f64) {
 pub struct RoseCurve {
     /// Petal parameter: odd k → k petals, even k → 2k petals.
     pub k: f64,
+    /// Radius scale `a` in r = a cos(k theta).
     pub amplitude: f64,
+    /// Number of points sampled along the curve.
     pub num_points: usize,
 }
 

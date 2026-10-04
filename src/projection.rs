@@ -21,6 +21,7 @@ pub struct GeoPoint {
 }
 
 impl GeoPoint {
+    /// Create a point from latitude and longitude in degrees.
     pub fn new(lat: f64, lon: f64) -> Self {
         GeoPoint { lat, lon }
     }
@@ -38,11 +39,14 @@ impl GeoPoint {
 /// A point in the projected plane.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PlanePoint {
+    /// Projected x.
     pub x: f64,
+    /// Projected y.
     pub y: f64,
 }
 
 impl PlanePoint {
+    /// Create a point from its coordinates.
     pub fn new(x: f64, y: f64) -> Self {
         PlanePoint { x, y }
     }
@@ -58,9 +62,15 @@ pub enum Projection {
     /// Simple plate carrée: x = lon_rad, y = lat_rad.
     Equirectangular,
     /// Azimuthal equidistant centred on a reference geographic point.
-    AzimuthalEquidistant { center: GeoPoint },
+    AzimuthalEquidistant {
+        /// Point at the centre of the map.
+        center: GeoPoint,
+    },
     /// Stereographic projection; `pole = true` → north pole, `false` → south.
-    Stereographic { pole: bool },
+    Stereographic {
+        /// `true` projects from the north pole, `false` from the south pole.
+        pole: bool,
+    },
     /// Mollweide pseudo-cylindrical equal-area projection.
     Mollweide,
 }
@@ -170,8 +180,11 @@ pub fn unproject(plane: &PlanePoint, proj: &Projection) -> Option<GeoPoint> {
 
 /// Maps between geographic coordinates and pixel coordinates on a canvas.
 pub struct ProjectionMapper {
+    /// Map projection in use.
     pub projection: Projection,
+    /// Canvas width in pixels.
     pub width: usize,
+    /// Canvas height in pixels.
     pub height: usize,
     /// Pixels per projected unit.
     pub scale: f64,
@@ -180,6 +193,7 @@ pub struct ProjectionMapper {
 }
 
 impl ProjectionMapper {
+    /// Create a mapper for the given projection, canvas size, scale and centre.
     pub fn new(
         projection: Projection,
         width: usize,

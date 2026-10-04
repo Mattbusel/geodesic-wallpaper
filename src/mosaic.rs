@@ -3,32 +3,41 @@
 /// How to sample the representative colour of a pixel block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlendMode {
+    /// Mean colour of the block.
     Average,
+    /// Per-channel median colour of the block.
     Median,
+    /// Most frequent colour in the block.
     Dominant,
 }
 
 /// Config for square pixelation.
 #[derive(Debug, Clone)]
 pub struct PixelateConfig {
+    /// Block edge length in pixels.
     pub block_size: u32,
+    /// How each block's colour is chosen.
     pub blend_mode: BlendMode,
 }
 
 /// Config for mosaic (tile) filter.
 #[derive(Debug, Clone)]
 pub struct MosaicConfig {
+    /// Tile edge length in pixels.
     pub tile_size: u32,
+    /// Intended number of tile columns (stored only; tiles are sized by `tile_size`).
     pub grid_cols: u32,
+    /// Intended number of tile rows (stored only; tiles are sized by `tile_size`).
     pub grid_rows: u32,
 }
 
 /// Reduce k colours via simple k-means initialised with evenly-spaced picks.
 pub struct ColorReduction {
+    /// Number of colours to reduce the image to.
     pub palette_size: u8,
 }
 
-// â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── helpers ────────────────────────────────────────────────────────────
 
 fn clamp_block(
     image: &Vec<Vec<[u8; 3]>>,
@@ -107,7 +116,7 @@ fn color_dist_sq(a: [u8; 3], b: [u8; 3]) -> u64 {
     (dr * dr + dg * dg + db * db) as u64
 }
 
-// â”€â”€ public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── public API ─────────────────────────────────────────────────────────
 
 /// Pixelate `image` by downsampling blocks then replacing every pixel in the
 /// block with the representative colour.
@@ -168,6 +177,7 @@ pub fn mosaic_filter(image: &Vec<Vec<[u8; 3]>>, config: &MosaicConfig) -> Vec<Ve
 pub struct CircularPixelate;
 
 impl CircularPixelate {
+    /// Replace the image with circles of radius `cell_radius` pixels, each filled with its average colour.
     pub fn render(image: &Vec<Vec<[u8; 3]>>, cell_radius: u32) -> Vec<Vec<[u8; 3]>> {
         let h = image.len();
         if h == 0 {
@@ -215,6 +225,7 @@ impl CircularPixelate {
 }
 
 impl ColorReduction {
+    /// Create a reducer that targets `palette_size` colours.
     pub fn new(palette_size: u8) -> Self {
         Self { palette_size }
     }

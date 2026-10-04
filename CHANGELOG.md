@@ -13,6 +13,51 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [1.6.0] - 2026-10-03
+
+### Added
+
+- `--gif FILE` (with `--headless`): writes the recorded frames straight to a looping animated GIF, no ffmpeg needed. Frames follow `--record-start` / `--record-every` and play at 30 / every fps.
+- `--apng FILE`: the same frames as a looping animated PNG in full colour (`recorder::ApngWriter`, via the `png` crate).
+- `--mp4 FILE` and `--ffmpeg PATH`: the same frames as an H.264 MP4, piped to an installed ffmpeg (`recorder::FfmpegWriter`). A missing ffmpeg is a clear error that suggests `--gif`/`--apng`.
+- `--completions SHELL`: shell completion scripts via `clap_complete`.
+- `palette` feature: `From` conversions between `colorspace::{Rgb, Lab, Oklab}` and the `palette` crate, with a test that checks our Lab and Oklab maths against palette on 4,913 colours.
+- `TrailBuffer::append_ordered`: flattens a trail into a reused buffer. Per-frame CPU work (30 geodesics, 300-point trails) went from 110.9 to 28.4 µs on the torus (`cargo bench --bench simulation`, same bench built against 1.5.1); output images are byte-identical.
+- Property tests check both expression parsers against the `exmex` crate on random expressions, and that arbitrary text never panics.
+- Examples `custom_surface` and `trails_to_gif`; criterion bench `simulation`; GitLab issue templates; `#![warn(missing_docs)]` with every public item documented.
+- `recorder::GifWriter`: streams RGBA frames into a GIF (NeuQuant palette per frame, speed 10). `encode_to_gif` now uses it.
+- `hot_reload::watch_config`: the debounced `config.toml` watcher, now in the library and tested.
+- `export::save_rgba_png`, and `examples/follow_geodesic.rs`.
+- `.gitlab-ci.yml`: fmt, clippy, tests (including the `lua` feature) and docs on GitLab's Windows runners.
+
+### Changed
+
+- Config hot reload uses `notify-debouncer-mini`. The old watcher reloaded on the first file event and then ignored events for 200 ms, so a second save inside that window could be lost; now the file is read once after it has been quiet for 250 ms.
+- PNG, PPM and BMP export go through the `image` crate. The three hand-written PNG encoders (in `export`, `animation` and `timelapse`) wrote uncompressed (stored) deflate blocks: a 256x256 gradient was 262,289 bytes, now 2,000.
+- GIF frame delays are rounded to the nearest centisecond (15 fps was stored as 6 cs, now 7 cs) and never go below 2 cs, which browsers slow down to 10 cs.
+- `--tile`, `--fractal`, `--gradient`, `--palette` and `--colorspace` print their output and exit, instead of then also starting the live wallpaper.
+- `rust-version` is 1.88, the minimum `image` 0.25.10 declares.
+
+### Fixed
+
+- Expression parsers (user-defined and procedural surfaces) had wrong precedence: `2*x**2` parsed as `(2*x)**2` and `-x^2` as `(-x)^2`. Found by the new property tests against `exmex`; both now follow standard maths precedence.
+- The procedural parser rejected scientific notation (`1e-3`); unknown function names in user-defined surfaces silently produced NaN instead of an error; deeply nested input overflowed the stack. All three are now handled (nesting is capped at 64).
+- The Enneper surface could not be reached with the `]` / `[` keys.
+- `BandSplitter::split` panicked on a spectrum shorter than `fft_size / 2`; a NaN keyframe time panicked in `AnimTrack::add_keyframe`; NaN terrain heights panicked in erosion. All use bounds checks or `total_cmp` now.
+- README claimed every surface had exact Christoffel symbols; five use finite differences, and the README now says which.
+
+- The `lua` feature did not compile (non-`Send` Lua state, two type errors). It now builds with `mlua`'s `send` feature and its tests pass.
+- `ExportStats::bytes_written` was an estimate for PNG; it is now the real file size for every format.
+- Exporting a pixel buffer shorter than `width * height` panicked in the BMP writer; it now returns `ExportError::InvalidDimensions`.
+- The timelapse PNG writer wrote a corrupt file when handed a short buffer; it now returns an error.
+- `cargo binstall` looked for release zips on GitLab, which has none; it now points at the GitHub releases the install script also uses.
+
+### Removed
+
+- A stray `.claude/worktrees` gitlink from the repository.
+
+---
+
 ## [1.5.1] - 2026-09-25
 
 ### Fixed

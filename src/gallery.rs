@@ -113,7 +113,7 @@ impl GalleryMode {
     }
 
     /// Returns `true` and clears the flag if the surface changed since the last
-    /// call to this method.  Call once per frame after [`update`].
+    /// call to this method.  Call once per frame after [`Self::update`].
     pub fn take_surface_changed(&mut self) -> bool {
         let changed = self.surface_changed;
         self.surface_changed = false;
@@ -183,7 +183,7 @@ impl GalleryMode {
     /// Called once per frame.  Drives the automatic timer and transition FSM.
     ///
     /// Returns `true` if the active surface changed this tick (convenience
-    /// alias for [`take_surface_changed`], consumed by this method).
+    /// alias for [`Self::take_surface_changed`], consumed by this method).
     pub fn update(&mut self) -> bool {
         if !self.enabled {
             return false;

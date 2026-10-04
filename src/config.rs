@@ -453,49 +453,92 @@ fn default_gallery_duration_s() -> u32 {
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[allow(non_snake_case)]
 pub struct PartialConfig {
+    /// Overrides [`Config::surface`] when set.
     pub surface: Option<String>,
+    /// Overrides [`Config::num_geodesics`] when set.
     pub num_geodesics: Option<usize>,
+    /// Overrides [`Config::trail_length`] when set.
     pub trail_length: Option<usize>,
+    /// Overrides [`Config::rotation_speed`] when set.
     pub rotation_speed: Option<f32>,
+    /// Overrides [`Config::color_palette`] when set.
     pub color_palette: Option<Vec<String>>,
     #[allow(non_snake_case)]
+    /// Overrides [`Config::torus_R`] when set.
     pub torus_R: Option<f32>,
+    /// Overrides [`Config::torus_r`] when set.
     pub torus_r: Option<f32>,
+    /// Overrides [`Config::time_step`] when set.
     pub time_step: Option<f32>,
+    /// Overrides [`Config::camera_distance`] when set.
     pub camera_distance: Option<f32>,
+    /// Overrides [`Config::camera_elevation`] when set.
     pub camera_elevation: Option<f32>,
+    /// Overrides [`Config::camera_fov`] when set.
     pub camera_fov: Option<f32>,
+    /// Overrides [`Config::camera_elevation_speed`] when set.
     pub camera_elevation_speed: Option<f32>,
+    /// Overrides [`Config::show_wireframe`] when set.
     pub show_wireframe: Option<bool>,
+    /// Overrides [`Config::max_trail_verts`] when set.
     pub max_trail_verts: Option<usize>,
+    /// Overrides [`Config::trail_fade_power`] when set.
     pub trail_fade_power: Option<f32>,
+    /// Overrides [`Config::color_mode`] when set.
     pub color_mode: Option<String>,
+    /// Overrides [`Config::target_fps`] when set.
     pub target_fps: Option<u32>,
+    /// Overrides [`Config::show_hud`] when set.
     pub show_hud: Option<bool>,
+    /// Overrides [`Config::epilepsy_warning`] when set.
     pub epilepsy_warning: Option<bool>,
+    /// Overrides [`Config::multi_monitor`] when set.
     pub multi_monitor: Option<bool>,
+    /// Overrides [`Config::seed`] when set.
     pub seed: Option<u64>,
+    /// Overrides [`Config::background_color`] when set.
     pub background_color: Option<String>,
+    /// Overrides [`Config::trail_mode`] when set.
     pub trail_mode: Option<String>,
+    /// Overrides [`Config::color_cycle_speed`] when set.
     pub color_cycle_speed: Option<f32>,
+    /// Overrides [`Config::gradient_stops`] when set.
     pub gradient_stops: Option<Vec<String>>,
+    /// Overrides [`Config::gradient_mode`] when set.
     pub gradient_mode: Option<String>,
+    /// Overrides [`Config::preset_cycle_secs`] when set.
     pub preset_cycle_secs: Option<f32>,
+    /// Overrides [`Config::presets_order`] when set.
     pub presets_order: Option<Vec<String>>,
+    /// Overrides [`Config::catenoid_c`] when set.
     pub catenoid_c: Option<f32>,
+    /// Overrides [`Config::helicoid_c`] when set.
     pub helicoid_c: Option<f32>,
+    /// Overrides [`Config::hyperboloid_a`] when set.
     pub hyperboloid_a: Option<f32>,
+    /// Overrides [`Config::hyperboloid_b`] when set.
     pub hyperboloid_b: Option<f32>,
+    /// Overrides [`Config::light_dir`] when set.
     pub light_dir: Option<[f32; 3]>,
+    /// Overrides [`Config::color_cycle_enabled`] when set.
     pub color_cycle_enabled: Option<bool>,
+    /// Overrides [`Config::hyperbolic_paraboloid_a`] when set.
     pub hyperbolic_paraboloid_a: Option<f32>,
+    /// Overrides [`Config::hyperbolic_paraboloid_b`] when set.
     pub hyperbolic_paraboloid_b: Option<f32>,
+    /// Overrides [`Config::ellipsoid_a`] when set.
     pub ellipsoid_a: Option<f32>,
+    /// Overrides [`Config::ellipsoid_b`] when set.
     pub ellipsoid_b: Option<f32>,
+    /// Overrides [`Config::ellipsoid_c`] when set.
     pub ellipsoid_c: Option<f32>,
+    /// Overrides [`Config::monitor`] when set.
     pub monitor: Option<String>,
+    /// Overrides [`Config::gallery_mode`] when set.
     pub gallery_mode: Option<bool>,
+    /// Overrides [`Config::gallery_duration_s`] when set.
     pub gallery_duration_s: Option<u32>,
+    /// Overrides [`Config::lua_script`] when set.
     pub lua_script: Option<String>,
 }
 

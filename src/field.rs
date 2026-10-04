@@ -189,7 +189,7 @@ impl GeodesicField {
 
 /// Computes geodesic field arrows in parallel using rayon.
 ///
-/// The renderer is stateless; call [`compute`] each time the surface or
+/// The renderer is stateless; call [`Self::compute`] each time the surface or
 /// configuration changes.  For live wallpaper use, recomputing on parameter
 /// changes (rather than every frame) is sufficient since the field is a
 /// static property of the surface.

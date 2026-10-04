@@ -11,24 +11,31 @@ use std::f64::consts::PI;
 /// Three-dimensional vector.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec3 {
+    /// X component.
     pub x: f64,
+    /// Y component.
     pub y: f64,
+    /// Z component.
     pub z: f64,
 }
 
 impl Vec3 {
+    /// Create a vector from its components.
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Vec3 { x, y, z }
     }
 
+    /// The zero vector.
     pub fn zero() -> Self {
         Vec3::new(0.0, 0.0, 0.0)
     }
 
+    /// Dot product.
     pub fn dot(&self, other: &Vec3) -> f64 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
+    /// Cross product `self x other`.
     pub fn cross(&self, other: &Vec3) -> Vec3 {
         Vec3::new(
             self.y * other.z - self.z * other.y,
@@ -37,10 +44,12 @@ impl Vec3 {
         )
     }
 
+    /// Euclidean length.
     pub fn length(&self) -> f64 {
         self.dot(self).sqrt()
     }
 
+    /// Unit vector in the same direction (unchanged if the length is near zero).
     pub fn normalize(&self) -> Vec3 {
         let len = self.length();
         if len < 1e-12 {
@@ -49,18 +58,22 @@ impl Vec3 {
         self.scale(1.0 / len)
     }
 
+    /// Component-wise sum.
     pub fn add(&self, other: &Vec3) -> Vec3 {
         Vec3::new(self.x + other.x, self.y + other.y, self.z + other.z)
     }
 
+    /// Component-wise difference `self - other`.
     pub fn sub(&self, other: &Vec3) -> Vec3 {
         Vec3::new(self.x - other.x, self.y - other.y, self.z - other.z)
     }
 
+    /// Multiply every component by `s`.
     pub fn scale(&self, s: f64) -> Vec3 {
         Vec3::new(self.x * s, self.y * s, self.z * s)
     }
 
+    /// Point halfway between `self` and `other`.
     pub fn midpoint(&self, other: &Vec3) -> Vec3 {
         self.add(other).scale(0.5)
     }
@@ -71,8 +84,11 @@ impl Vec3 {
 /// A mesh vertex with position, smooth normal, and UV texture coordinates.
 #[derive(Debug, Clone)]
 pub struct Vertex {
+    /// Position in model space.
     pub position: Vec3,
+    /// Unit surface normal used for smooth shading.
     pub normal: Vec3,
+    /// Texture coordinates `(u, v)`.
     pub uv: (f64, f64),
 }
 
@@ -81,8 +97,11 @@ pub struct Vertex {
 /// A triangle referencing three indices into a [`Mesh`]'s vertex list.
 #[derive(Debug, Clone, Copy)]
 pub struct Triangle {
+    /// Index of the first vertex.
     pub a: usize,
+    /// Index of the second vertex.
     pub b: usize,
+    /// Index of the third vertex.
     pub c: usize,
 }
 
@@ -91,7 +110,9 @@ pub struct Triangle {
 /// A 3-D mesh composed of vertices and indexed triangles.
 #[derive(Debug, Clone)]
 pub struct Mesh {
+    /// Vertex list.
     pub vertices: Vec<Vertex>,
+    /// Triangles as indices into `vertices`.
     pub triangles: Vec<Triangle>,
 }
 
@@ -312,7 +333,9 @@ impl Mesh {
 
 /// Pinhole camera for perspective projection.
 pub struct Camera {
+    /// Camera position in world space.
     pub position: Vec3,
+    /// Point the camera looks at.
     pub target: Vec3,
     /// Vertical field of view in degrees.
     pub fov_deg: f64,
@@ -323,6 +346,7 @@ pub struct Camera {
 }
 
 impl Camera {
+    /// Create a camera at `position` looking at `target`, near plane 0.01 and far plane 1000.
     pub fn new(position: Vec3, target: Vec3, fov_deg: f64) -> Self {
         Camera {
             position,

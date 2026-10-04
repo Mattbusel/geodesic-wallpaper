@@ -118,12 +118,11 @@ mod inner {
             let func: mlua::Function = self.lua.globals().get("christoffel").ok()?;
             let table: Table = func.call((u as f64, v as f64)).ok()?;
             let g = |key: &'static str| -> f32 {
-                match table.get::<Value>(key).ok()? {
-                    Value::Number(n) => Some(n as f32),
-                    Value::Integer(n) => Some(n as f32),
-                    _ => None,
+                match table.get::<Value>(key) {
+                    Ok(Value::Number(n)) => n as f32,
+                    Ok(Value::Integer(n)) => n as f32,
+                    _ => 0.0,
                 }
-                .unwrap_or(0.0)
             };
             Some([
                 [[g("g000"), g("g001")], [g("g010"), g("g011")]],
@@ -238,11 +237,11 @@ mod inner {
             };
 
             // Γ^k_ij = ½ g^{kl} (∂_i g_{lj} + ∂_j g_{li} − ∂_l g_{ij})
-            let partial = |coord: usize| -> [[f32; 2]; 2] {
-                let dg = if coord == 0 { dg_du } else { dg_dv };
-                [[dg(0, 0), dg(0, 1)], [dg(1, 0), dg(1, 1)]]
-            };
-            let dg_by = [partial(0), partial(1)]; // dg_by[l][i][j] = ∂_l g_{ij}
+            // dg_by[l][i][j] = ∂_l g_{ij}
+            let dg_by = [
+                [[dg_du(0, 0), dg_du(0, 1)], [dg_du(1, 0), dg_du(1, 1)]],
+                [[dg_dv(0, 0), dg_dv(0, 1)], [dg_dv(1, 0), dg_dv(1, 1)]],
+            ];
 
             let mut gamma = [[[0.0f32; 2]; 2]; 2];
             for k in 0..2 {

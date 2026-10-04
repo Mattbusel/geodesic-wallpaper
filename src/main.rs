@@ -44,6 +44,9 @@ use windows::Win32::UI::WindowsAndMessaging::{
                                               Render one 1920x1080 image, no window
   geodesic-wallpaper --headless --frames 240 --record frames --record-start 150 --record-every 2
                                               Save 45 frames as PNGs for a GIF or video
+  geodesic-wallpaper --headless --width 640 --height 360 --frames 240 --record-start 150 --record-every 2 --gif loop.gif
+                                              Write those 45 frames straight to an animated GIF
+                                              (--apng loop.png for full colour, --mp4 clip.mp4 via ffmpeg)
 
 config.toml and presets/ are read from the current folder first, then from the
 folder that holds the exe. Edit config.toml while it runs and it reloads.
@@ -69,6 +72,28 @@ struct Args {
     /// With --record: save every Nth frame (2 at 30 fps wallpaper speed gives 15 fps).
     #[arg(long, default_value_t = 1, value_name = "N")]
     record_every: u32,
+    /// With --headless: also write the recorded frames (see --record-start and
+    /// --record-every) as a looping animated GIF. No ffmpeg needed. Tip: use a
+    /// smaller --width/--height, since GIF encoding at 1080p is slow.
+    #[arg(long, value_name = "FILE")]
+    gif: Option<String>,
+    /// With --headless: also write the recorded frames as a looping animated
+    /// PNG (APNG). Full colour, unlike GIF; plays in every modern browser.
+    #[arg(long, value_name = "FILE")]
+    apng: Option<String>,
+    /// With --headless: also write the recorded frames as an H.264 MP4 by
+    /// piping them to ffmpeg (must be installed; see --ffmpeg).
+    #[arg(long, value_name = "FILE")]
+    mp4: Option<String>,
+    /// ffmpeg executable used by --mp4.
+    #[arg(long, value_name = "PATH", default_value = "ffmpeg")]
+    ffmpeg: String,
+    /// Print a shell completion script (bash, zsh, fish, powershell, elvish)
+    /// to stdout and exit. PowerShell: add
+    /// `geodesic-wallpaper --completions powershell | Out-String | Invoke-Expression`
+    /// to your $PROFILE.
+    #[arg(long, value_name = "SHELL")]
+    completions: Option<clap_complete::Shell>,
     /// Width in pixels of headless renders.
     #[arg(long, default_value_t = 1920)]
     width: u32,
@@ -148,6 +173,7 @@ const SURFACE_CYCLE: &[&str] = &[
     "torus",
     "sphere",
     "saddle",
+    "enneper",
     "catenoid",
     "helicoid",
     "hyperboloid",
@@ -465,6 +491,18 @@ fn main() {
 
     let args = Args::parse();
 
+    if let Some(shell) = args.completions {
+        use clap::CommandFactory;
+        let mut cmd = Args::command();
+        clap_complete::generate(
+            shell,
+            &mut cmd,
+            "geodesic-wallpaper",
+            &mut std::io::stdout(),
+        );
+        return;
+    }
+
     // --preview: render ASCII block preview and exit
     if args.preview {
         use geodesic_wallpaper::preview::{TuiApp, WallpaperParams};
@@ -651,6 +689,17 @@ fn main() {
         }
     }
 
+    // The flags above only print information. Without --headless they used to
+    // fall through and start the live wallpaper as well; stop here instead.
+    let info_only = args.tile.is_some()
+        || args.fractal.is_some()
+        || args.gradient.is_some()
+        || args.palette.is_some()
+        || args.colorspace != "rgb";
+    if info_only && !args.headless && !args.animate {
+        return;
+    }
+
     // --animate: export a headless animation sequence of PNG frames
     if args.animate {
         use geodesic_wallpaper::animation::{
@@ -784,6 +833,53 @@ fn run_headless(args: &Args, cfg: &Config) -> Result<(), GeodesicError> {
     };
     let record_every = args.record_every.max(1);
     let mut recorded = 0u32;
+    let anim_fps = (30 / record_every).max(1);
+    let anim_frames = recorded_frame_count(args.frames, args.record_start, record_every);
+    let fail = |what: &str, p: &str, e: geodesic_wallpaper::recorder::RecorderError| {
+        GeodesicError::render(format!("could not create {what} {p}: {e}"))
+    };
+    let mut gif = match &args.gif {
+        Some(p) => Some(
+            geodesic_wallpaper::recorder::GifWriter::create(
+                std::path::Path::new(p),
+                width,
+                height,
+                anim_fps,
+            )
+            .map_err(|e| fail("GIF", p, e))?,
+        ),
+        None => None,
+    };
+    let mut apng =
+        match &args.apng {
+            Some(_) if anim_frames == 0 => return Err(GeodesicError::render(
+                "--apng needs at least one recorded frame: --frames must be above --record-start",
+            )),
+            Some(p) => Some(
+                geodesic_wallpaper::recorder::ApngWriter::create(
+                    std::path::Path::new(p),
+                    width,
+                    height,
+                    anim_fps,
+                    anim_frames,
+                )
+                .map_err(|e| fail("APNG", p, e))?,
+            ),
+            None => None,
+        };
+    let mut mp4 = match &args.mp4 {
+        Some(p) => Some(
+            geodesic_wallpaper::recorder::FfmpegWriter::spawn(
+                &args.ffmpeg,
+                std::path::Path::new(p),
+                width,
+                height,
+                anim_fps,
+            )
+            .map_err(|e| fail("MP4", p, e))?,
+        ),
+        None => None,
+    };
 
     let mut rng = match cfg.seed {
         Some(s) => StdRng::seed_from_u64(s),
@@ -837,16 +933,60 @@ fn run_headless(args: &Args, cfg: &Config) -> Result<(), GeodesicError> {
             }
         }
 
-        if let Some(dir) = &record_dir {
-            if frame >= args.record_start && (frame - args.record_start) % record_every == 0 {
-                let (verts, lens) = collect_trail_verts(&trails, &geodesics, &colors);
-                let px = renderer.render_to_texture(&offscreen_tex, &verts, &lens)?;
+        let capture = record_dir.is_some() || gif.is_some() || apng.is_some() || mp4.is_some();
+        if capture
+            && frame >= args.record_start
+            && (frame - args.record_start).is_multiple_of(record_every)
+        {
+            let (verts, lens) = collect_trail_verts(&trails, &geodesics, &colors);
+            let px = renderer.render_to_texture(&offscreen_tex, &verts, &lens)?;
+            if let Some(dir) = &record_dir {
                 let path = dir.join(format!("frame_{recorded:05}.png"));
                 image::save_buffer(&path, &px, width, height, image::ColorType::Rgba8)
                     .map_err(|e| GeodesicError::render(format!("image save failed: {e}")))?;
-                recorded += 1;
             }
+            if let Some(g) = gif.as_mut() {
+                g.push_rgba(&px)
+                    .map_err(|e| GeodesicError::render(format!("GIF frame failed: {e}")))?;
+            }
+            if let Some(a) = apng.as_mut() {
+                a.push_rgba(&px)
+                    .map_err(|e| GeodesicError::render(format!("APNG frame failed: {e}")))?;
+            }
+            if let Some(m) = mp4.as_mut() {
+                m.push_rgba(&px)
+                    .map_err(|e| GeodesicError::render(format!("MP4 frame failed: {e}")))?;
+            }
+            recorded += 1;
         }
+    }
+
+    if let Some(g) = gif.take() {
+        let n = g
+            .finish()
+            .map_err(|e| GeodesicError::render(format!("GIF write failed: {e}")))?;
+        eprintln!(
+            "Wrote {n}-frame GIF ({width}x{height}, {anim_fps} fps) to {}",
+            args.gif.as_deref().unwrap_or_default()
+        );
+    }
+    if let Some(a) = apng.take() {
+        let n = a
+            .finish()
+            .map_err(|e| GeodesicError::render(format!("APNG write failed: {e}")))?;
+        eprintln!(
+            "Wrote {n}-frame APNG ({width}x{height}, {anim_fps} fps) to {}",
+            args.apng.as_deref().unwrap_or_default()
+        );
+    }
+    if let Some(m) = mp4.take() {
+        let n = m
+            .finish()
+            .map_err(|e| GeodesicError::render(format!("MP4 write failed: {e}")))?;
+        eprintln!(
+            "Wrote {n}-frame MP4 ({width}x{height}, {anim_fps} fps) to {}",
+            args.mp4.as_deref().unwrap_or_default()
+        );
     }
 
     if let Some(dir) = &record_dir {
@@ -914,6 +1054,16 @@ fn run_headless(args: &Args, cfg: &Config) -> Result<(), GeodesicError> {
     Ok(())
 }
 
+/// How many frames `--record-start N --record-every K` captures out of
+/// `frames` simulated frames.
+fn recorded_frame_count(frames: u32, start: u32, every: u32) -> u32 {
+    if frames <= start {
+        0
+    } else {
+        (frames - 1 - start) / every.max(1) + 1
+    }
+}
+
 /// Flatten every trail into one vertex list plus per-trail segment lengths,
 /// coloring each trail with its geodesic's palette color.
 fn collect_trail_verts(
@@ -926,14 +1076,9 @@ fn collect_trail_verts(
     for (trail_idx, trail) in trails.iter().enumerate() {
         let ci = geodesics[trail_idx].color_idx % colors.len().max(1);
         let [dr, dg, db, _] = colors[ci];
-        let mut v = trail.ordered_vertices();
-        for vert in &mut v {
-            vert.color[0] = dr;
-            vert.color[1] = dg;
-            vert.color[2] = db;
-        }
-        seg_lens.push(v.len());
-        all_verts.extend(v);
+        let before = all_verts.len();
+        trail.append_ordered(&mut all_verts, Some([dr, dg, db]));
+        seg_lens.push(all_verts.len() - before);
     }
     (all_verts, seg_lens)
 }
@@ -967,87 +1112,31 @@ fn run(args: &Args) -> Result<(), GeodesicError> {
     // Channel for config-reload notifications (used for flash effect).
     let (reload_tx, reload_rx) = std::sync::mpsc::channel::<()>();
 
-    // Spawn hot-reload watcher thread.
-    //
-    // Safety: we use event-kind filtering to handle atomic-write patterns
-    // (temp file + rename).  Many editors write config atomically by writing
-    // a temp file and then renaming it into place.  We treat both
-    // `EventKind::Modify` and `EventKind::Create` (which covers the final
-    // rename step) as a reload trigger so we never read a partially-written
-    // file.  An extra 50 ms debounce lets the OS flush the inode before we
-    // `read_to_string` the canonical path.
-    {
+    // Hot reload: debounced file watcher (see `hot_reload`). The watcher must
+    // stay alive for the whole run, so it is bound to a local here.
+    let _config_watcher = {
         let shared = shared_cfg.clone();
-        let path = config_path.clone();
-        std::thread::spawn(move || {
-            use notify::{recommended_watcher, EventKind, RecursiveMode, Watcher};
-            let (tx, rx) = std::sync::mpsc::channel();
-            let mut watcher = match recommended_watcher(move |res| {
-                let _ = tx.send(res);
-            }) {
-                Ok(w) => w,
-                Err(e) => {
-                    tracing::warn!("Failed to start config watcher: {e}");
-                    return;
-                }
-            };
-            // Watch the parent directory so we also catch rename-into-place events
-            // (the rename target is our file but the event fires on the directory).
-            let watch_dir = path.parent().unwrap_or(&path);
-            let _ = watcher.watch(watch_dir, RecursiveMode::NonRecursive);
-            let mut last_reload = std::time::Instant::now()
-                .checked_sub(std::time::Duration::from_secs(10))
-                .unwrap_or(std::time::Instant::now());
-            loop {
-                match rx.recv() {
-                    Err(_) => break, // channel closed — watcher dropped
-                    Ok(Ok(event)) => {
-                        // Accept Modify (data/metadata change) and Create (rename-into-place).
-                        let relevant =
-                            matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_));
-                        // Check the event concerns our config file.
-                        let for_our_file = event
-                            .paths
-                            .iter()
-                            .any(|p| p.file_name() == path.file_name());
-                        if relevant && for_our_file {
-                            // Debounce: ignore if we reloaded very recently.
-                            if last_reload.elapsed() < std::time::Duration::from_millis(200) {
-                                continue;
-                            }
-                            // Brief wait for the OS to flush write buffers.
-                            std::thread::sleep(std::time::Duration::from_millis(50));
-                            // Verify file is fully readable before adopting new config.
-                            match std::fs::read_to_string(&path) {
-                                Ok(text) => match toml::from_str::<Config>(&text) {
-                                    Ok(new_cfg) => {
-                                        let resolved = new_cfg.resolve_profile();
-                                        if let Ok(mut w) = shared.write() {
-                                            *w = resolved;
-                                            tracing::info!(
-                                                "config reloaded from disk (atomic-safe)"
-                                            );
-                                        }
-                                        let _ = reload_tx.send(());
-                                        last_reload = std::time::Instant::now();
-                                    }
-                                    Err(e) => {
-                                        tracing::warn!("config reload skipped — parse error: {e}");
-                                    }
-                                },
-                                Err(e) => {
-                                    tracing::warn!("config reload skipped — read error: {e}");
-                                }
-                            }
-                        }
+        match geodesic_wallpaper::hot_reload::watch_config(
+            &config_path,
+            Duration::from_millis(250),
+            move |res| match res {
+                Ok(new_cfg) => {
+                    if let Ok(mut w) = shared.write() {
+                        *w = new_cfg;
+                        tracing::info!("config reloaded from disk");
                     }
-                    Ok(Err(e)) => {
-                        tracing::warn!("file watcher error: {e}");
-                    }
+                    let _ = reload_tx.send(());
                 }
+                Err(e) => tracing::warn!("config reload skipped: {e}"),
+            },
+        ) {
+            Ok(w) => Some(w),
+            Err(e) => {
+                tracing::warn!("config hot reload disabled: {e}");
+                None
             }
-        });
-    }
+        }
+    };
 
     // Spawn system tray icon.
     let tray_state = tray::spawn_tray(cfg.surface.clone());
@@ -1159,6 +1248,10 @@ fn run(args: &Args) -> Result<(), GeodesicError> {
     let mut preset_idx: usize = 0;
 
     tracing::info!("entering render loop");
+
+    // Trail vertex buffers reused across frames (no per-frame allocation).
+    let mut all_verts: Vec<geodesic_wallpaper::trail::TrailVertex> = Vec::new();
+    let mut seg_lens: Vec<usize> = Vec::new();
 
     loop {
         // Check for tray-requested quit.
@@ -1574,22 +1667,16 @@ fn run(args: &Args) -> Result<(), GeodesicError> {
             }
         }
 
-        // Collect trail vertices, applying display colors.
-        let mut all_verts = Vec::new();
-        let mut seg_lens = Vec::new();
+        // Collect trail vertices with the display (possibly hue-rotated)
+        // colors, reusing the same two buffers every frame.
+        all_verts.clear();
+        seg_lens.clear();
         for (trail_idx, trail) in trails.iter().enumerate() {
             let ci = geodesics[trail_idx].color_idx % display_colors.len().max(1);
             let [dr, dg, db, _] = display_colors[ci];
-            let mut v = trail.ordered_vertices();
-            // Override the RGB with the display (possibly hue-rotated) color,
-            // while preserving the alpha computed by ordered_vertices.
-            for vert in &mut v {
-                vert.color[0] = dr;
-                vert.color[1] = dg;
-                vert.color[2] = db;
-            }
-            seg_lens.push(v.len());
-            all_verts.extend(v);
+            let before = all_verts.len();
+            trail.append_ordered(&mut all_verts, Some([dr, dg, db]));
+            seg_lens.push(all_verts.len() - before);
         }
 
         renderer.render(&all_verts, &seg_lens);

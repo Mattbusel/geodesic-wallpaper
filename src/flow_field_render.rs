@@ -10,24 +10,31 @@ use std::ops::{Add, Mul, Sub};
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+/// A 2D vector.
 pub struct Vec2 {
+    /// X component.
     pub x: f64,
+    /// Y component.
     pub y: f64,
 }
 
 impl Vec2 {
+    /// Create a vector from its components.
     pub fn new(x: f64, y: f64) -> Self {
         Self { x, y }
     }
 
+    /// The zero vector.
     pub fn zero() -> Self {
         Self { x: 0.0, y: 0.0 }
     }
 
+    /// Euclidean length.
     pub fn magnitude(&self) -> f64 {
         (self.x * self.x + self.y * self.y).sqrt()
     }
 
+    /// Unit vector in the same direction (zero if the length is near zero).
     pub fn normalize(&self) -> Self {
         let mag = self.magnitude();
         if mag < 1e-12 {
@@ -67,9 +74,13 @@ impl Mul<f64> for Vec2 {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
+/// A grid of direction vectors, one per pixel.
 pub struct FlowField {
+    /// Grid width in cells.
     pub width: u32,
+    /// Grid height in cells.
     pub height: u32,
+    /// Vectors in row-major order, `width * height` entries.
     pub field: Vec<Vec2>,
 }
 
@@ -194,8 +205,11 @@ fn hash(xi: i64, yi: i64, seed: u64) -> u64 {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
+/// A traced path through a flow field.
 pub struct Streamline {
+    /// Points visited, in order.
     pub points: Vec<(f64, f64)>,
+    /// Total path length (sum of segment lengths).
     pub length: f64,
 }
 

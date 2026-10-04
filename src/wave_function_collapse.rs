@@ -4,14 +4,17 @@ use std::collections::VecDeque;
 
 /// Adjacency rules: which tiles can appear next to each other
 pub struct TileRules {
+    /// Number of distinct tiles (ids are `0..n_tiles`).
     pub n_tiles: usize,
-    /// allowed_neighbors[tile][direction] = set of valid neighbor tile ids
+    /// `allowed_neighbors[tile][direction]`: the set of tile ids allowed next to `tile` in that direction.
     /// Directions: 0=North, 1=East, 2=South, 3=West
     pub allowed_neighbors: Vec<Vec<Vec<usize>>>,
+    /// Relative probability of choosing each tile when a cell collapses.
     pub tile_weights: Vec<f64>,
 }
 
 impl TileRules {
+    /// Create rules for `n_tiles` tiles with no allowed neighbours and equal weights.
     pub fn new(n_tiles: usize) -> Self {
         TileRules {
             n_tiles,
@@ -20,6 +23,7 @@ impl TileRules {
         }
     }
 
+    /// Allow `tile_b` next to `tile_a` in direction `dir` (and the reverse in the opposite direction).
     pub fn allow(mut self, tile_a: usize, dir: usize, tile_b: usize) -> Self {
         let opposite = [2, 3, 0, 1][dir]; // N<->S, E<->W
         self.allowed_neighbors[tile_a][dir].push(tile_b);
@@ -27,6 +31,7 @@ impl TileRules {
         self
     }
 
+    /// Set the selection weight of `tile`.
     pub fn set_weight(mut self, tile: usize, weight: f64) -> Self {
         self.tile_weights[tile] = weight;
         self
@@ -56,8 +61,11 @@ pub fn default_rules() -> TileRules {
         .allow(1, 3, 2)
 }
 
+/// A grid being solved by wave function collapse.
 pub struct WfcGrid {
+    /// Number of columns.
     pub width: usize,
+    /// Number of rows.
     pub height: usize,
     cells: Vec<Vec<usize>>, // possible tiles at each cell
     collapsed: Vec<bool>,
@@ -65,6 +73,7 @@ pub struct WfcGrid {
 }
 
 impl WfcGrid {
+    /// Create a grid where every cell can still be any tile.
     pub fn new(width: usize, height: usize, rules: TileRules) -> Self {
         let all_tiles: Vec<usize> = (0..rules.n_tiles).collect();
         WfcGrid {

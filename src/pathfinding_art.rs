@@ -20,7 +20,9 @@ const W: usize = 3;
 /// A single cell in the maze grid.
 #[derive(Debug, Clone)]
 pub struct Cell {
+    /// Column of the cell.
     pub x: u32,
+    /// Row of the cell.
     pub y: u32,
     /// Walls present on each side: \[N, E, S, W\].
     pub walls: [bool; 4],
@@ -39,8 +41,11 @@ impl Cell {
 /// A rectangular grid of cells forming a maze.
 #[derive(Debug, Clone)]
 pub struct Maze {
+    /// Number of columns.
     pub width: u32,
+    /// Number of rows.
     pub height: u32,
+    /// Cells indexed `cells[y][x]`.
     pub cells: Vec<Vec<Cell>>,
 }
 
@@ -223,10 +228,15 @@ impl MazeGenerator {
 /// A node in the A* open set.
 #[derive(Debug, Clone)]
 pub struct PathNode {
+    /// Column.
     pub x: u32,
+    /// Row.
     pub y: u32,
+    /// Cost of the best known path from the start.
     pub g: f64,
+    /// Heuristic estimate of the remaining cost to the goal.
     pub h: f64,
+    /// Total estimate `g + h`, used to order the open set.
     pub f: f64,
 }
 

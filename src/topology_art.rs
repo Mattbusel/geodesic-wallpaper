@@ -1,3 +1,5 @@
+//! The Mobius strip as a parametric surface, projected to 2D pixels for drawing.
+
 use std::f64::consts::PI;
 
 /// Möbius strip parametric surface

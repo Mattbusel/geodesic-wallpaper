@@ -10,35 +10,44 @@
 /// A 2-D floating-point vector.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec2 {
+    /// X component.
     pub x: f64,
+    /// Y component.
     pub y: f64,
 }
 
 impl Vec2 {
+    /// Create a vector from its components.
     pub fn new(x: f64, y: f64) -> Self {
         Vec2 { x, y }
     }
 
+    /// The zero vector.
     pub fn zero() -> Self {
         Vec2 { x: 0.0, y: 0.0 }
     }
 
+    /// Component-wise sum.
     pub fn add(self, rhs: Vec2) -> Vec2 {
         Vec2::new(self.x + rhs.x, self.y + rhs.y)
     }
 
+    /// Component-wise difference `self - rhs`.
     pub fn sub(self, rhs: Vec2) -> Vec2 {
         Vec2::new(self.x - rhs.x, self.y - rhs.y)
     }
 
+    /// Multiply both components by `s`.
     pub fn scale(self, s: f64) -> Vec2 {
         Vec2::new(self.x * s, self.y * s)
     }
 
+    /// Euclidean length.
     pub fn magnitude(self) -> f64 {
         (self.x * self.x + self.y * self.y).sqrt()
     }
 
+    /// Unit vector in the same direction (zero if the length is near zero).
     pub fn normalize(self) -> Vec2 {
         let m = self.magnitude();
         if m < 1e-12 {
@@ -48,6 +57,7 @@ impl Vec2 {
         }
     }
 
+    /// Dot product.
     pub fn dot(self, rhs: Vec2) -> f64 {
         self.x * rhs.x + self.y * rhs.y
     }
@@ -81,15 +91,21 @@ impl std::ops::Mul<f64> for Vec2 {
 /// A single particle in the simulation.
 #[derive(Debug, Clone)]
 pub struct Particle {
+    /// Unique id assigned at emission.
     pub id: u64,
+    /// Position in pixels (y grows downward).
     pub position: Vec2,
+    /// Velocity in pixels per millisecond.
     pub velocity: Vec2,
+    /// Mass; attraction and repulsion accelerations are divided by it.
     pub mass: f64,
+    /// Electric charge, stored for callers (the built-in forces ignore it).
     pub charge: f64,
     /// Total lifetime in milliseconds.
     pub lifetime_ms: f64,
     /// Current age in milliseconds.
     pub age_ms: f64,
+    /// Render colour (RGB).
     pub color: [u8; 3],
 }
 
@@ -113,13 +129,31 @@ impl Particle {
 #[derive(Debug, Clone)]
 pub enum Force {
     /// Downward gravity acceleration.
-    Gravity { strength: f64 },
+    Gravity {
+        /// Acceleration added to y each step (positive pulls down the screen).
+        strength: f64,
+    },
     /// Radial repulsion from particle positions (inter-particle or global).
-    Repulsion { radius: f64, strength: f64 },
+    Repulsion {
+        /// Particles farther apart than this (pixels) do not repel.
+        radius: f64,
+        /// Repulsion strength.
+        strength: f64,
+    },
     /// Attraction towards a fixed world-space point.
-    Attraction { target: Vec2, strength: f64 },
+    Attraction {
+        /// Point particles are pulled toward, in pixels.
+        target: Vec2,
+        /// Pull strength; the acceleration is `strength / mass`.
+        strength: f64,
+    },
     /// Constant wind in a given direction.
-    Wind { direction: Vec2, strength: f64 },
+    Wind {
+        /// Wind direction (normalised before use).
+        direction: Vec2,
+        /// Wind acceleration magnitude.
+        strength: f64,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -133,6 +167,7 @@ pub struct ParticleSystem {
 }
 
 impl ParticleSystem {
+    /// Create an empty system.
     pub fn new() -> Self {
         ParticleSystem {
             particles: Vec::new(),

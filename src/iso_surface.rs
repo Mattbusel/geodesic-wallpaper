@@ -9,10 +9,15 @@
 
 /// A 2-D grid of scalar values with optional bilinear sampling.
 pub struct ScalarField2D {
+    /// Samples indexed `values[row][col]`.
     pub values: Vec<Vec<f64>>,
+    /// Number of columns.
     pub width: usize,
+    /// Number of rows.
     pub height: usize,
+    /// World-space x interval covered by the columns.
     pub x_range: (f64, f64),
+    /// World-space y interval covered by the rows.
     pub y_range: (f64, f64),
 }
 
@@ -115,17 +120,24 @@ impl ScalarField2D {
 /// An oriented line segment produced by marching squares.
 #[derive(Debug, Clone)]
 pub struct LineSegment {
+    /// Start x.
     pub x0: f64,
+    /// Start y.
     pub y0: f64,
+    /// End x.
     pub x1: f64,
+    /// End y.
     pub y1: f64,
 }
 
 /// A collection of segments at a specific iso-level with an associated colour.
 #[derive(Debug, Clone)]
 pub struct ContourLevel {
+    /// Iso-value the contour was extracted at.
     pub level: f64,
+    /// Line segments making up the contour.
     pub segments: Vec<LineSegment>,
+    /// Colour to draw the contour with (RGB).
     pub color: [u8; 3],
 }
 

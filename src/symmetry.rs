@@ -52,7 +52,7 @@ pub trait SymmetryGroup: Send + Sync {
 
     /// Apply all symmetry operations to `(x, y)` and return the orbit.
     ///
-    /// The orbit has length equal to [`operations`].
+    /// The orbit has length equal to [`Self::operations`].
     fn orbit(&self, x: f32, y: f32) -> Vec<(f32, f32)>;
 
     /// Evaluate a "coloring function" at `(x, y)` using the fundamental domain.
@@ -80,6 +80,7 @@ pub struct P4g {
 }
 
 impl P4g {
+    /// Create a p4g pattern with the given lattice period (at least 1e-6).
     pub fn new(period: f32) -> Self {
         Self {
             period: period.max(1e-6),
@@ -169,6 +170,7 @@ pub struct P6m {
 }
 
 impl P6m {
+    /// Create a p6m pattern with the given lattice period (at least 1e-6).
     pub fn new(period: f32) -> Self {
         Self {
             period: period.max(1e-6),

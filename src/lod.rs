@@ -62,6 +62,7 @@ impl Default for LodConfig {
 /// Call [`LodController::update`] once per frame with the measured frame time,
 /// then read [`LodController::geodesic_count`] to get the recommended count.
 pub struct LodController {
+    /// Thresholds and limits the controller works within.
     pub config: LodConfig,
     /// Current recommended geodesic count.
     pub geodesic_count: usize,
@@ -96,9 +97,19 @@ pub enum LodAction {
     /// No change this frame.
     Unchanged,
     /// Geodesic count was increased.
-    Increased { from: usize, to: usize },
+    Increased {
+        /// Count before the change.
+        from: usize,
+        /// Count after the change.
+        to: usize,
+    },
     /// Geodesic count was decreased.
-    Decreased { from: usize, to: usize },
+    Decreased {
+        /// Count before the change.
+        from: usize,
+        /// Count after the change.
+        to: usize,
+    },
 }
 
 impl LodController {

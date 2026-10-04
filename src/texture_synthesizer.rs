@@ -6,28 +6,46 @@ use std::f64::consts::PI;
 /// Types of procedural textures that can be synthesized.
 #[derive(Debug, Clone, PartialEq)]
 pub enum TextureType {
+    /// Wood grain rings distorted by turbulence.
     Wood,
+    /// Marble with sinusoidal veins.
     Marble,
+    /// Bricks with mortar gaps.
     Brick,
+    /// Woven fabric.
     Fabric,
+    /// Brushed metal with a specular highlight.
     Metal,
+    /// Water ripples from interfering waves.
     Water,
+    /// Soft clouds from fractal noise.
     Clouds,
+    /// High-contrast orange and black noise.
     Lava,
+    /// Speckled concrete.
     Concrete,
+    /// Sand with fine grain and dunes.
     Sand,
 }
 
 /// Parameters controlling texture synthesis.
 #[derive(Debug, Clone)]
 pub struct TextureParams {
+    /// Which texture to synthesize.
     pub texture_type: TextureType,
+    /// Output width in pixels.
     pub width: u32,
+    /// Output height in pixels.
     pub height: u32,
+    /// Seed for the noise.
     pub seed: u64,
+    /// Noise-space units across the image (higher means finer detail).
     pub scale: f64,
+    /// First (usually darker) colour of the blend.
     pub color_a: [u8; 3],
+    /// Second colour of the blend.
     pub color_b: [u8; 3],
+    /// Strength of the noise distortion, roughly 0 to 1.
     pub variation: f64,
 }
 
@@ -106,7 +124,11 @@ impl TextureSynthesizer {
             for x in 0..w {
                 let row = y / brick_h;
                 // Offset every other row
-                let col_x = if row % 2 == 0 { x } else { x + brick_w / 2 };
+                let col_x = if row.is_multiple_of(2) {
+                    x
+                } else {
+                    x + brick_w / 2
+                };
                 let col = col_x / brick_w;
 
                 // Mortar check

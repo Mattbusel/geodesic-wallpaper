@@ -8,6 +8,7 @@
 /// A fixed colour palette for quantization.
 #[derive(Debug, Clone)]
 pub struct Palette {
+    /// Palette colours as `(r, g, b)`.
     pub colors: Vec<(u8, u8, u8)>,
 }
 
@@ -180,7 +181,9 @@ pub fn floyd_steinberg_dither(
 ) -> Vec<u8> {
     // Work in i32 to handle signed errors.
     let mut buf: Vec<[i32; 3]> = pixels
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|c| [c[0] as i32, c[1] as i32, c[2] as i32])
         .collect();
 
@@ -233,7 +236,9 @@ pub fn floyd_steinberg_dither(
 /// Atkinson dithering: distribute only 6/8 of error to 6 neighbours.
 pub fn atkinson_dither(pixels: &[u8], width: usize, height: usize, palette: &Palette) -> Vec<u8> {
     let mut buf: Vec<[i32; 3]> = pixels
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|c| [c[0] as i32, c[1] as i32, c[2] as i32])
         .collect();
 
@@ -279,7 +284,9 @@ pub fn atkinson_dither(pixels: &[u8], width: usize, height: usize, palette: &Pal
 pub fn reduce_to_palette(pixels: &[u8], width: usize, height: usize, palette: &Palette) -> Vec<u8> {
     let _ = (width, height); // dimensions unused but kept for API symmetry
     pixels
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .flat_map(|c| {
             let (r, g, b) = palette.find_nearest(c[0], c[1], c[2]);
             [r, g, b]
@@ -325,7 +332,7 @@ mod tests {
             pixels.extend_from_slice(&[v, v, v]);
         }
         let out = ordered_dither(&pixels, w, h, &Palette::monochrome(), 4);
-        for chunk in out.chunks_exact(3) {
+        for chunk in out.as_chunks::<3>().0 {
             let (r, g, b) = (chunk[0], chunk[1], chunk[2]);
             assert!(
                 (r == 0 && g == 0 && b == 0) || (r == 255 && g == 255 && b == 255),

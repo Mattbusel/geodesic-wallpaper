@@ -3,47 +3,76 @@
 /// Wallpaper group enumeration (17 plane symmetry groups).
 #[derive(Debug, Clone, PartialEq)]
 pub enum WallpaperGroup {
+    /// Translations only.
     P1,
+    /// Translations and 180 degree rotations.
     P2,
+    /// Translations and parallel mirror lines.
     PM,
+    /// Translations and parallel glide reflections.
     PG,
+    /// Mirror lines with glide reflections between them (rhombic lattice).
     CM,
+    /// Perpendicular mirror lines (rectangular lattice).
     PMM,
+    /// Mirrors in one direction, glides in the other, plus 180 degree rotations.
     PMG,
+    /// Perpendicular glide reflections and 180 degree rotations, no mirrors.
     PGG,
+    /// Perpendicular mirrors on a rhombic lattice.
     CMM,
+    /// 90 degree rotations only.
     P4,
+    /// 90 degree rotations with mirrors through the rotation centres (square).
     P4M,
+    /// 90 degree rotations with mirrors not through the 4-fold centres.
     P4G,
+    /// 120 degree rotations only.
     P3,
+    /// 120 degree rotations with all rotation centres on mirror lines.
     P3M1,
+    /// 120 degree rotations with some rotation centres off the mirror lines.
     P31M,
+    /// 60 degree rotations only.
     P6,
+    /// 60 degree rotations with mirrors (hexagonal, full symmetry).
     P6M,
 }
 
 /// Frieze group enumeration (7 frieze symmetry groups).
 #[derive(Debug, Clone, PartialEq)]
 pub enum FriezeGroup {
+    /// Translation only (hop).
     F1,
+    /// Translation and half-turns (spinning hop).
     F2,
+    /// Translation and a horizontal mirror (jump).
     F11,
+    /// Translation and vertical mirrors (sidle).
     F1M,
+    /// Translation and glide reflection (step).
     FM,
+    /// Horizontal and vertical mirrors (spinning jump).
     F2MM,
+    /// Vertical mirrors and glide reflection (spinning sidle).
     F2MG,
 }
 
 /// A 2D symmetry transform.
 #[derive(Debug, Clone)]
 pub struct SymmetryTransform {
+    /// Translation `(dx, dy)` applied last.
     pub translate: (f64, f64),
+    /// Rotation about the origin in degrees, applied after the reflections.
     pub rotate_deg: f64,
+    /// Mirror across the x axis (negates y).
     pub reflect_x: bool,
+    /// Mirror across the y axis (negates x).
     pub reflect_y: bool,
 }
 
 impl SymmetryTransform {
+    /// The transform that leaves points unchanged.
     pub fn identity() -> Self {
         Self {
             translate: (0.0, 0.0),

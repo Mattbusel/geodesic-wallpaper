@@ -7,6 +7,7 @@
 /// Noise algorithm selector.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NoiseType {
+    /// Uncorrelated random values (no spatial smoothness).
     White,
     /// 2D gradient noise with smooth interpolation (Perlin 1985).
     Perlin,
@@ -146,15 +147,21 @@ impl PerlinNoise {
 
 /// High-level noise generator that wraps `PerlinNoise` with a configurable type.
 pub struct NoiseGenerator {
+    /// Algorithm used.
     pub noise_type: NoiseType,
+    /// Frequency multiplier applied to input coordinates.
     pub scale: f64,
+    /// Number of fractal octaves.
     pub octaves: u32,
+    /// Amplitude multiplier per octave.
     pub persistence: f64,
+    /// Frequency multiplier per octave.
     pub lacunarity: f64,
     perlin: PerlinNoise,
 }
 
 impl NoiseGenerator {
+    /// Create a generator with scale 1, one octave, persistence 0.5 and lacunarity 2.
     pub fn new(noise_type: NoiseType, seed: u64) -> Self {
         Self {
             noise_type,

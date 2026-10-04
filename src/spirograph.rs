@@ -54,7 +54,9 @@ impl Default for SpirographConfig {
 /// A 2-D point.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Point {
+    /// X coordinate.
     pub x: f64,
+    /// Y coordinate.
     pub y: f64,
 }
 

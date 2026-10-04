@@ -53,6 +53,7 @@ pub struct Layer {
 }
 
 impl Layer {
+    /// Create a layer from a pattern function, a weight (clamped to [0, 1]) and a blend mode.
     pub fn new(
         pattern_fn: impl Fn(f32, f32) -> f32 + Send + Sync + 'static,
         weight: f32,
@@ -74,6 +75,7 @@ pub struct PatternComposer {
 }
 
 impl PatternComposer {
+    /// Create a composer with no layers.
     pub fn new() -> Self {
         Self { layers: Vec::new() }
     }

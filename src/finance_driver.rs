@@ -27,10 +27,15 @@
 /// A single OHLCV candlestick bar.
 #[derive(Debug, Clone)]
 pub struct MarketBar {
+    /// Opening price.
     pub open: f64,
+    /// Highest price in the bar.
     pub high: f64,
+    /// Lowest price in the bar.
     pub low: f64,
+    /// Closing price.
     pub close: f64,
+    /// Traded volume.
     pub volume: f64,
     /// UNIX timestamp in seconds.
     pub timestamp: u64,

@@ -11,41 +11,72 @@
 /// Which attractor to render and its parameters.
 #[derive(Debug, Clone)]
 pub enum AttractorType {
+    /// Lorenz system: dx = sigma(y - x), dy = x(rho - z) - y, dz = xy - beta z.
     Lorenz {
+        /// Prandtl number (classic value 10).
         sigma: f64,
+        /// Rayleigh number (classic value 28).
         rho: f64,
+        /// Geometric factor (classic value 8/3).
         beta: f64,
     },
+    /// Rossler system, a continuous-time attractor with one spiral lobe.
     Rossler {
+        /// Coefficient of y in dy/dt.
         a: f64,
+        /// Constant term in dz/dt.
         b: f64,
+        /// Offset subtracted from x in dz/dt.
         c: f64,
     },
+    /// Clifford map, a 2D iterated map (z stays 0).
     Clifford {
+        /// Map parameter a.
         a: f64,
+        /// Map parameter b.
         b: f64,
+        /// Map parameter c.
         c: f64,
+        /// Map parameter d.
         d: f64,
     },
+    /// Peter de Jong map, a 2D iterated map (z stays 0).
     DeJong {
+        /// Map parameter a.
         a: f64,
+        /// Map parameter b.
         b: f64,
+        /// Map parameter c.
         c: f64,
+        /// Map parameter d.
         d: f64,
     },
+    /// Forced Duffing oscillator (x is position, y velocity, z the forcing phase omega*t).
     Duffing {
+        /// Linear stiffness coefficient.
         alpha: f64,
+        /// Cubic stiffness coefficient.
         beta: f64,
+        /// Amplitude of the periodic driving force.
         gamma: f64,
+        /// Angular frequency of the driving force.
         omega: f64,
+        /// Damping coefficient.
         delta: f64,
     },
+    /// Aizawa attractor, a continuous-time system with a sphere-like shape.
     Aizawa {
+        /// Aizawa parameter a.
         a: f64,
+        /// Aizawa parameter b.
         b: f64,
+        /// Aizawa parameter c.
         c: f64,
+        /// Aizawa parameter d.
         d: f64,
+        /// Aizawa parameter e.
         e: f64,
+        /// Aizawa parameter f.
         f: f64,
     },
 }
@@ -53,12 +84,16 @@ pub enum AttractorType {
 /// A 3-D point.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Point3 {
+    /// X coordinate.
     pub x: f64,
+    /// Y coordinate.
     pub y: f64,
+    /// Z coordinate.
     pub z: f64,
 }
 
 impl Point3 {
+    /// Create a point from its three coordinates.
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
     }
@@ -79,10 +114,15 @@ impl Point3 {
 /// Colour palette used when rendering density maps.
 #[derive(Debug, Clone, Copy)]
 pub enum ColorScheme {
+    /// Black to red to yellow to white.
     Fire,
+    /// Black to blue to cyan to white.
     Ice,
+    /// Purple to magenta to orange to yellow.
     Plasma,
+    /// Approximation of Matplotlib's Viridis (purple to green to yellow).
     Viridis,
+    /// Greyscale, black to white.
     Monochrome,
 }
 
@@ -131,6 +171,7 @@ impl ColorScheme {
 // AttractorRenderer
 // ---------------------------------------------------------------------------
 
+/// Integrates attractors and renders their point density as images.
 pub struct AttractorRenderer;
 
 impl AttractorRenderer {

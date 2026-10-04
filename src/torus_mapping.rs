@@ -15,9 +15,13 @@ use std::f64::consts::PI;
 /// * `v_steps`      — number of parameter steps around the tube.
 #[derive(Debug, Clone)]
 pub struct TorusParams {
+    /// Distance from the torus centre to the tube centre.
     pub major_radius: f64,
+    /// Radius of the tube.
     pub minor_radius: f64,
+    /// Steps around the major circle.
     pub u_steps: u32,
+    /// Steps around the tube.
     pub v_steps: u32,
 }
 
@@ -53,8 +57,11 @@ pub fn torus_point(u: f64, v: f64, params: &TorusParams) -> (f64, f64, f64) {
 /// * `v_steps` — latitude steps.
 #[derive(Debug, Clone)]
 pub struct SphereParams {
+    /// Sphere radius.
     pub radius: f64,
+    /// Longitude steps.
     pub u_steps: u32,
+    /// Latitude steps.
     pub v_steps: u32,
 }
 

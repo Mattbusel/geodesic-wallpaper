@@ -32,6 +32,7 @@ pub struct GradientStop {
 }
 
 impl GradientStop {
+    /// Create a stop, clamping `position` to [0, 1].
     pub fn new(position: f32, color: [u8; 3]) -> Self {
         Self {
             position: position.clamp(0.0, 1.0),
@@ -126,11 +127,17 @@ impl Gradient {
 /// Built-in gradient presets.
 #[derive(Debug, Clone, PartialEq)]
 pub enum GradientPreset {
+    /// Navy to purple to orange to pale yellow.
     Sunset,
+    /// Deep blue to light cyan.
     Ocean,
+    /// Dark green to pale green.
     Forest,
+    /// Plasma-style purple to yellow.
     Plasma,
+    /// Black to white.
     Greyscale,
+    /// User-supplied stops.
     Custom(Vec<GradientStop>),
 }
 

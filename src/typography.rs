@@ -201,8 +201,11 @@ pub const FONT_5X7: [[u8; 7]; 95] = [
 /// A rendered glyph as a row-column bit matrix.
 #[derive(Debug, Clone)]
 pub struct GlyphBitmap {
+    /// Glyph width in pixels (at most 8).
     pub width: u8,
+    /// Glyph height in pixels.
     pub height: u8,
+    /// One byte per row; the low `width` bits hold the pixels, most significant first.
     pub rows: Vec<u8>,
 }
 
@@ -217,6 +220,7 @@ impl GlyphBitmap {
     }
 }
 
+/// Renders text with the built-in bitmap font.
 pub struct FontRenderer;
 
 impl FontRenderer {
