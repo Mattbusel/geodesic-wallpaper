@@ -1,5 +1,13 @@
 # geodesic-wallpaper
 
+<!-- outcome-block -->
+**A desktop that moves: glowing lines flowing over slowly turning 3D shapes behind your icons, installed with one PowerShell line.**
+
+**Why this over the alternatives:** Paid wallpaper apps charge for this; geodesic-wallpaper is free and open source, and the installer checks the download's SHA-256.
+
+**Guarantee:** if it doesn't do what this README says, [open an issue](https://github.com/Mattbusel/geodesic-wallpaper/issues) and I'll fix it.
+<!-- outcome-block -->
+
 **An animated wallpaper for Windows users: glowing lines flow over slowly turning 3D shapes (a donut, a knot, a Klein bottle) behind your desktop icons.**
 
 <p align="center"><img src="assets/banner.png" alt="Geodesic Flow: live wallpaper for Windows" width="100%"></p>
