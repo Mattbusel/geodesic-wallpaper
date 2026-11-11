@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Geodesic Wallpaper: a live desktop you can stare at</title>
+<meta name="description" content="A live animated Windows wallpaper of glowing geodesics flowing over a torus. Staring at it counts as studying differential geometry. Pay what you want.">
+<meta property="og:image" content="/cover.png">
+<style>
+:root{--bg:#06080f;--text:#eef2ff;--dim:#9aa6c8;--gold:#ffd700;--blue:#88ddff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:17px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:760px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:38px;line-height:1.12;margin:0 0 10px}h1 em{font-style:normal;color:var(--blue)}
+.lede{color:var(--dim);margin:0 0 20px}
+img{width:100%;border-radius:14px;display:block;border:1px solid #1c2440}
+.cta{display:inline-block;margin:22px 0 6px;background:var(--gold);color:#1a1400;font-weight:800;padding:14px 22px;border-radius:12px;text-decoration:none;font-size:18px}
+.fine{color:var(--dim);font-size:14px}
+h2{font-size:20px;margin:34px 0 8px}ul{padding-left:20px;color:var(--dim)}li{margin:4px 0}b{color:var(--text)}
+code{background:#121a30;padding:1px 6px;border-radius:6px}
+</style>
+</head>
+<body>
+<main>
+  <h1>A desktop you'll stare at. <em>Officially, that's math.</em></h1>
+  <p class="lede">Glowing trails flow behind your desktop icons, each one the shortest path across a curved surface. It looks like a screensaver. It is actually the geodesic equation, solved live with Christoffel symbols. So the ten minutes you just lost watching it? Technically, you were studying differential geometry.</p>
+  <img src="/cover.png" alt="Glowing colored geodesic trails wrapping around a dark torus">
+  <a class="cta" href="https://mattitude8861.gumroad.com/l/geodesic-wallpaper">Get it, pay what you want</a>
+  <p class="fine">Suggested $4. Instant download for Windows 10/11. No account, no installer, no ads.</p>
+
+  <h2>What you get</h2>
+  <ul>
+    <li><b>Live wallpaper</b> behind your icons: 30 trails on a torus, sphere or saddle, fading from bright to dark.</li>
+    <li><b>Slow camera orbit</b>, one lap about every 10 minutes, so it never looks the same twice.</li>
+    <li><b>Tweak it live</b>: edit <code>config.toml</code> in Notepad (colors, trail count, surface) and it updates while running.</li>
+    <li><b>Light on your PC</b>: native Rust + GPU, no browser, no taskbar icon.</li>
+  </ul>
+
+  <h2>Fine print</h2>
+  <ul>
+    <li>Needs a DirectX 12 or Vulkan GPU (any modern PC). Windows only for now.</li>
+    <li>The exe is not code-signed, so Windows may say "protected your PC". Click More info, then Run anyway.</li>
+    <li>It is open source (MIT): <a style="color:var(--blue)" href="https://gitlab.com/mattbusel/geodesic-wallpaper">gitlab.com/mattbusel/geodesic-wallpaper</a>. Paying gets you the ready-to-run build and supports more surfaces.</li>
+    <li>Watching it will not make you better at math. It is, however, real math.</li>
+  </ul>
+</main>
+</body>
+</html>
