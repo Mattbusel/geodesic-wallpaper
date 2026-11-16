@@ -1,6 +1,6 @@
 [package]
 name = "geodesic-wallpaper"
-version = "1.6.0"
+version = "1.6.2"
 edition = "2021"
 rust-version = "1.88"
 description = "Animated Windows desktop wallpaper that draws glowing geodesics flowing over curved 3D surfaces (torus, Klein bottle, pseudosphere and more), rendered with wgpu. Also renders PNGs and GIFs headless."
@@ -25,10 +25,13 @@ include = [
     "LICENSE",
 ]
 
+# docs.rs builds on Linux for the Windows target. The `lua` feature vendors and
+# compiles Lua's C sources, which fails in that cross build (it broke the 1.6.0
+# and 1.6.1 docs), so docs.rs documents every feature except `lua`.
 [package.metadata.docs.rs]
 default-target = "x86_64-pc-windows-msvc"
 targets = ["x86_64-pc-windows-msvc"]
-all-features = true
+features = ["palette"]
 
 # `cargo binstall geodesic-wallpaper` downloads the prebuilt Windows zip from
 # GitHub Releases (built by .github/workflows/release.yml) instead of

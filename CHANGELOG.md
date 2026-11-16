@@ -13,6 +13,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [1.6.2] - 2026-11-15
+
+### Fixed
+
+- docs.rs builds again. Since 1.6.0 the docs.rs config enabled every feature, and the `lua` feature compiles vendored Lua C sources, which fails in docs.rs's Linux-to-Windows cross build. docs.rs now documents the default features plus `palette`. Nothing changes for people who build the app.
+- `cargo binstall geodesic-wallpaper` finds a prebuilt zip again: 1.6.1 went to crates.io without a GitHub release, so the binstall URL had nothing to download. This version is tagged and released.
+
+---
+
+## [1.6.1] - 2026-10-21
+
+- README wording only (published to crates.io; no GitHub release).
+
+---
+
 ## [1.6.0] - 2026-10-03
 
 ### Added
